@@ -27,7 +27,7 @@ import { rutinaApi } from "@/lib/rutina/api";
 import { ScreenHeader, SectionCard, Pill } from "@/components/rutina/primitives";
 import { MetricBar } from "@/components/rutina/charts";
 import { formatNumber } from "@/lib/rutina/format";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -420,6 +420,7 @@ export default function ProfileScreen() {
         <DialogContent className="max-h-[85dvh] overflow-y-auto scroll-thin">
           <DialogHeader>
             <DialogTitle>Edit Profil</DialogTitle>
+            <DialogDescription>Perbarui nama dan suara identitasmu.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3.5">
             <div className="space-y-1.5">
@@ -460,6 +461,7 @@ export default function ProfileScreen() {
         <DialogContent className="max-h-[85dvh] overflow-y-auto scroll-thin">
           <DialogHeader>
             <DialogTitle>Pertanyaan Umum</DialogTitle>
+            <DialogDescription>Hal-hal yang sering ditanyakan tentang Rutina.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {FAQ_ITEMS.map((f) => (
