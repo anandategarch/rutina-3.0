@@ -1,0 +1,198 @@
+"use client";
+
+import * as React from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Pin, Laugh, Smile, Meh, Frown, CloudRain } from "lucide-react";
+import { toast } from "sonner";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { rutinaApi } from "@/lib/rutina/api";
+import { cn } from "@/lib/utils";
+
+const FOLDERS = ["Umum", "Refleksi", "Ide", "Sorotan"];
+
+export const JOURNAL_MOODS = [
+  { key: "great", label: "Luar biasa", icon: Laugh },
+  { key: "good", label: "Baik", icon: Smile },
+  { key: "neutral", label: "Biasa", icon: Meh },
+  { key: "tough", label: "Berat", icon: Frown },
+  { key: "low", label: "Kurang", icon: CloudRain },
+] as const;
+
+export interface JournalPrefill {
+  title?: string;
+  content?: string;
+  folder?: string;
+}
+
+export default function AddJournalSheet({
+  open,
+  onClose,
+  prefill,
+}: {
+  open: boolean;
+  onClose: () => void;
+  prefill?: JournalPrefill;
+}) {
+  const qc = useQueryClient();
+  const [title, setTitle] = React.useState("");
+  const [content, setContent] = React.useState("");
+  const [folder, setFolder] = React.useState<string>("Umum");
+  const [mood, setMood] = React.useState<string | null>(null);
+  const [pinned, setPinned] = React.useState(false);
+
+  // Inisialisasi form setiap kali sheet dibuka (dukung prefill kutipan)
+  React.useEffect(() => {
+    if (open) {
+      setTitle(prefill?.title ?? "");
+      setContent(prefill?.content ?? "");
+      setFolder(prefill?.folder && FOLDERS.includes(prefill.folder) ? prefill.folder : "Umum");
+      setMood(null);
+      setPinned(false);
+    }
+  }, [open, prefill]);
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      rutinaApi.createJournal({
+        title: title.trim(),
+        content: content.trim(),
+        folder,
+        mood,
+        pinned,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["journal"] });
+      qc.invalidateQueries({ queryKey: ["home"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+      toast.success("Catatan tersimpan");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const canSubmit = content.trim().length > 0 && !createMutation.isPending;
+
+  const handleSubmit = () => {
+    if (!content.trim()) {
+      toast.error("Isi catatan belum ditulis");
+      return;
+    }
+    createMutation.mutate();
+  };
+
+  return (
+    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent className="max-h-[92dvh]">
+        <DrawerHeader className="pb-2">
+          <DrawerTitle className="text-writer-deep">Tulis Catatan</DrawerTitle>
+          <p className="text-xs text-muted-foreground">
+            Unting apa pun yang layak diingat — refleksi, ide, atau sorotan hari ini.
+          </p>
+        </DrawerHeader>
+
+        <div className="px-4 pb-6 overflow-y-auto scroll-thin space-y-4">
+          <div className="space-y-1.5">
+            <label htmlFor="journal-title" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+              Judul
+            </label>
+            <Input
+              id="journal-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Tanpa judul juga boleh"
+              maxLength={200}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="journal-content" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+              Isi catatan <span className="text-writer-deep">*</span>
+            </label>
+            <Textarea
+              id="journal-content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Hari ini aku ..."
+              className="min-h-40 resize-none"
+            />
+            <p className="text-[11px] text-muted-foreground tabular text-right">
+              {content.trim() ? content.trim().split(/\s+/).length : 0} kata
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Folder</p>
+            <Select value={folder} onValueChange={setFolder}>
+              <SelectTrigger className="w-full" aria-label="Pilih folder catatan">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FOLDERS.map((f) => (
+                  <SelectItem key={f} value={f}>
+                    {f}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Mood</p>
+            <div className="grid grid-cols-5 gap-2">
+              {JOURNAL_MOODS.map((m) => {
+                const Icon = m.icon;
+                const active = mood === m.key;
+                return (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => setMood(active ? null : m.key)}
+                    aria-pressed={active}
+                    aria-label={`Mood ${m.label}`}
+                    className={cn(
+                      "press flex flex-col items-center justify-center gap-1 rounded-xl border py-3 min-h-[64px]",
+                      active
+                        ? "bg-writer-soft border-writer/40 text-writer-deep"
+                        : "bg-secondary border-border/60 text-muted-foreground"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="text-[10px] font-semibold leading-none">{m.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-xl bg-secondary px-3.5 py-3">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Pin className="h-4 w-4 text-writer-deep" />
+              Sematkan di atas
+            </div>
+            <Switch checked={pinned} onCheckedChange={setPinned} aria-label="Sematkan catatan" />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="press w-full min-h-[48px] rounded-2xl bg-writer-deep text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            Simpan Catatan
+          </button>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}

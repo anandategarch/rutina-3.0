@@ -1,0 +1,626 @@
+"use client";
+
+import * as React from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Moon,
+  Languages,
+  Target,
+  HeartPulse,
+  Download,
+  FileUp,
+  CloudDownload,
+  ShieldAlert,
+  HelpCircle,
+  Pencil,
+  Loader2,
+  Smartphone,
+  Sparkles,
+  Minus,
+  Plus,
+  Info,
+  type LucideIcon,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useTheme } from "next-themes";
+import { useRutinaStore } from "@/store/rutina";
+import { rutinaApi } from "@/lib/rutina/api";
+import { ScreenHeader, SectionCard, Pill } from "@/components/rutina/primitives";
+import { MetricBar } from "@/components/rutina/charts";
+import { formatNumber } from "@/lib/rutina/format";
+import LogCheckInSheet from "@/components/rutina/sheets/log-checkin-sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+export default function ProfileScreen() {
+  const setPage = useRutinaStore((s) => s.setPage);
+  const qc = useQueryClient();
+
+  const { data: profileData } = useQuery({ queryKey: ["profile"], queryFn: rutinaApi.profile });
+  const { data: statsData } = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
+
+  const profile = profileData?.profile ?? null;
+  const level = statsData?.level ?? null;
+  const xp = statsData?.xp ?? null;
+  const levelProgress = statsData?.levelProgress ?? 0;
+  const xpToNext = statsData?.xpToNextLevel ?? null;
+
+  // ===== Dialog edit identitas =====
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editName, setEditName] = React.useState("");
+  const [editVoice, setEditVoice] = React.useState("");
+
+  React.useEffect(() => {
+    if (editOpen && profile) {
+      setEditName(profile.name);
+      setEditVoice(profile.identityVoice);
+    }
+  }, [editOpen, profile]);
+
+  const updateMutation = useMutation({
+    mutationFn: (body: { name?: string; identityVoice?: string; dailyMissionTarget?: number }) =>
+      rutinaApi.updateProfile(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      qc.invalidateQueries({ queryKey: ["home"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const saveEdit = () => {
+    if (!editName.trim()) {
+      toast.error("Nama tidak boleh kosong");
+      return;
+    }
+    updateMutation.mutate(
+      { name: editName.trim(), identityVoice: editVoice.trim() },
+      {
+        onSuccess: () => {
+          toast.success("Profil diperbarui");
+          setEditOpen(false);
+        },
+      }
+    );
+  };
+
+  const changeTarget = (delta: number) => {
+    const current = profile?.dailyMissionTarget ?? 4;
+    const next = Math.min(8, Math.max(1, current + delta));
+    if (next === current) return;
+    updateMutation.mutate(
+      { dailyMissionTarget: next },
+      { onSuccess: () => toast.success(`Target misi harian: ${next}`) }
+    );
+  };
+
+  // ===== Check-in =====
+  const [checkinOpen, setCheckinOpen] = React.useState(false);
+
+  // ===== Ekspor / impor data =====
+  const [busyExport, setBusyExport] = React.useState<"json" | "csv" | null>(null);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+  const [resetOpen, setResetOpen] = React.useState(false);
+  const [resetStep, setResetStep] = React.useState<1 | 2>(1);
+  const [faqOpen, setFaqOpen] = React.useState(false);
+
+  const downloadExport = async (format: "json" | "csv") => {
+    setBusyExport(format);
+    try {
+      const res = await fetch(`/api/export?format=${format}`);
+      if (!res.ok) throw new Error("Gagal membuat berkas ekspor");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = format === "json" ? "rutina-backup.json" : "rutina-transactions.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(
+        format === "json" ? "Cadangan JSON berhasil diunduh" : "Transaksi CSV berhasil diunduh"
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengekspor data");
+    } finally {
+      setBusyExport(null);
+    }
+  };
+
+  const importMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const text = await file.text();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        throw new Error("Berkas bukan JSON yang valid");
+      }
+      const res = await fetch("/api/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as { error?: string }).error || "Gagal memulihkan data");
+      return body;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries();
+      toast.success("Data berhasil dipulihkan dari cadangan");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/danger/reset", { method: "POST" });
+      if (!res.ok) throw new Error("Gagal menghapus data");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries();
+      toast.success("Seluruh data aktivitas telah dihapus");
+      setResetOpen(false);
+      setResetStep(1);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // ===== Mode gelap =====
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  const darkActive = mounted && theme === "dark";
+
+  return (
+    <div className="flex flex-col min-h-full">
+      <ScreenHeader
+        title="Profil"
+        subtitle="Control Room"
+        onBack={() => setPage("home")}
+      />
+
+      <div className="p-4 space-y-4">
+        {/* ===== Kartu identitas ===== */}
+        <SectionCard>
+          {profile ? (
+            <div className="flex items-start gap-3.5">
+              <div className="h-16 w-16 rounded-2xl bg-garden text-white flex items-center justify-center text-2xl font-bold shrink-0 shadow-soft">
+                {profile.name.slice(0, 1).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-base font-bold truncate">{profile.name}</p>
+                  {level != null && <Pill tone="garden">Lv{level}</Pill>}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Penghuni Rutina 2.0</p>
+                <div className="mt-3 rounded-xl bg-sage-soft border border-sage/20 px-3.5 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-sage-deep mb-1">Suara Identitas</p>
+                  <p className="font-script text-lg leading-snug text-foreground">
+                    &ldquo;{profile.identityVoice}&rdquo;
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditOpen(true)}
+                aria-label="Edit profil"
+                className="press h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground shrink-0"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="h-32 rounded-xl bg-secondary animate-pulse" />
+          )}
+        </SectionCard>
+
+        {/* ===== Level & XP ===== */}
+        <SectionCard title="Level & XP" tone="garden" icon={<SettingsIcon icon={Sparkles} />}>
+          {level != null ? (
+            <div className="space-y-3">
+              <div className="flex items-end justify-between gap-3">
+                <p className="flex items-baseline gap-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Level</span>
+                  <span className="text-2xl font-extrabold tabular leading-none text-garden-deep">{level}</span>
+                </p>
+                <span className="text-xs text-muted-foreground tabular">{formatNumber(xp ?? 0)} XP total</span>
+              </div>
+              <MetricBar value={levelProgress} max={1} height={10} />
+              <p className="text-[11px] text-muted-foreground">
+                {formatNumber(Math.max(0, xpToNext ?? 0))} XP lagi menuju Level {level + 1}
+              </p>
+            </div>
+          ) : (
+            <div className="h-16 rounded-xl bg-secondary animate-pulse" />
+          )}
+        </SectionCard>
+
+        {/* ===== Preferensi ===== */}
+        <SectionCard title="Preferensi" icon={<SettingsIcon icon={Moon} />}>
+          <div className="divide-y divide-border/60">
+            <Row icon={Moon} label="Mode gelap" desc="Sesuaikan tema dengan kenyamanan mata">
+              <Switch
+                checked={darkActive}
+                onCheckedChange={(v) => setTheme(v ? "dark" : "light")}
+                aria-label="Aktifkan mode gelap"
+              />
+            </Row>
+            <Row icon={Languages} label="Bahasa" desc="Bahasa antarmuka aplikasi">
+              <span className="text-sm font-semibold text-muted-foreground">Indonesia</span>
+            </Row>
+            <div className="py-3">
+              <div className="flex items-center gap-3">
+                <span className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground shrink-0">
+                  <Target className="h-4.5 w-4.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold leading-tight">Target misi harian</p>
+                  <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">Jumlah misi ideal per hari</p>
+                </div>
+                <div className="shrink-0 flex items-center gap-2">
+                  <button
+                    onClick={() => changeTarget(-1)}
+                    disabled={updateMutation.isPending || (profile?.dailyMissionTarget ?? 4) <= 1}
+                    aria-label="Kurangi target misi"
+                    className="press h-9 w-9 rounded-full bg-secondary flex items-center justify-center disabled:opacity-40"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="text-base font-bold tabular w-6 text-center">{profile?.dailyMissionTarget ?? "-"}</span>
+                  <button
+                    onClick={() => changeTarget(1)}
+                    disabled={updateMutation.isPending || (profile?.dailyMissionTarget ?? 4) >= 8}
+                    aria-label="Tambah target misi"
+                    className="press h-9 w-9 rounded-full bg-garden text-white flex items-center justify-center disabled:opacity-40"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              {profile && (
+                <div
+                  className="mt-2.5 pl-12 flex items-center gap-1.5"
+                  role="img"
+                  aria-label={`Visual target misi harian: ${profile.dailyMissionTarget} dari maksimum 8`}
+                >
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <span
+                      key={i}
+                      className={cn(
+                        "h-2 flex-1 max-w-[22px] rounded-full transition-colors",
+                        i < profile.dailyMissionTarget ? "bg-sage" : "bg-secondary"
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* ===== Check-in ===== */}
+        <SectionCard title="Check-in" icon={<SettingsIcon icon={HeartPulse} />}>
+          <div className="flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-sage-soft text-sage-deep flex items-center justify-center shrink-0">
+              <HeartPulse className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">Isi Check-in Harian</p>
+              <p className="text-xs text-muted-foreground">Mood, energi, tidur — 30 detik selesai.</p>
+            </div>
+            <button
+              onClick={() => setCheckinOpen(true)}
+              className="press rounded-full bg-sage text-white text-xs font-bold px-4 min-h-[44px] shrink-0"
+            >
+              Isi
+            </button>
+          </div>
+        </SectionCard>
+
+        {/* ===== Data & penyimpanan ===== */}
+        <SectionCard title="Data & Penyimpanan" icon={<SettingsIcon icon={Download} />}>
+          <div className="space-y-2">
+            <ActionRow
+              icon={Download}
+              label="Ekspor Cadangan JSON"
+              desc="Seluruh data Rutina dalam satu berkas"
+              busy={busyExport === "json"}
+              onClick={() => downloadExport("json")}
+            />
+            <ActionRow
+              icon={Download}
+              label="Ekspor Transaksi CSV"
+              desc="Riwayat arus kas untuk spreadsheet"
+              busy={busyExport === "csv"}
+              onClick={() => downloadExport("csv")}
+            />
+            <ActionRow
+              icon={FileUp}
+              label="Pulihkan dari JSON"
+              desc="Ganti data saat ini dengan isi cadangan"
+              busy={importMutation.isPending}
+              onClick={() => fileRef.current?.click()}
+            />
+            <ActionRow
+              icon={CloudDownload}
+              label="Tarik ulang snapshot cloud"
+              desc="Sinkronkan salinan tersimpan di cloud"
+              onClick={() => toast.success("Snapshot cloud tersinkron (simulasi)")}
+            />
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            aria-label="Pilih berkas cadangan JSON"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) importMutation.mutate(f);
+              e.target.value = "";
+            }}
+          />
+        </SectionCard>
+
+        {/* ===== PWA & bantuan ===== */}
+        <SectionCard title="PWA & Bantuan" icon={<SettingsIcon icon={Smartphone} />}>
+          <div className="divide-y divide-border/60">
+            <Row icon={Smartphone} label="Pasang sebagai aplikasi" desc="Buka menu browser lalu pilih Tambahkan ke Layar Utama agar Rutina terasa seperti aplikasi native">
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </Row>
+            <Row icon={HelpCircle} label="Pertanyaan umum" desc="Streak, hari jeda, dan cara cadangan">
+              <button
+                onClick={() => setFaqOpen(true)}
+                className="press rounded-full bg-secondary text-xs font-bold px-3.5 min-h-[36px] text-muted-foreground"
+              >
+                Buka
+              </button>
+            </Row>
+          </div>
+        </SectionCard>
+
+        {/* ===== Zona kritis ===== */}
+        <section className="rounded-2xl border border-clay/40 bg-clay-soft p-4 shadow-soft">
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldAlert className="h-4 w-4 text-clay" />
+            <h2 className="text-sm font-bold uppercase tracking-wide text-clay-deep">Zona Kritis</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Tindakan di area ini menghapus data secara permanen dan tidak dapat dibatalkan.
+          </p>
+          <button
+            onClick={() => {
+              setResetStep(1);
+              setResetOpen(true);
+            }}
+            className="press w-full min-h-[48px] rounded-xl border border-clay/50 text-clay-deep font-bold text-sm"
+          >
+            Hapus Seluruh Data
+          </button>
+        </section>
+
+        <p className="text-center text-[11px] text-muted-foreground pb-2">Rutina 2.0 — dibuat dengan disiplin hangat</p>
+      </div>
+
+      {/* ===== Dialog edit identitas ===== */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto scroll-thin">
+          <DialogHeader>
+            <DialogTitle>Edit Profil</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3.5">
+            <div className="space-y-1.5">
+              <label htmlFor="edit-name" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                Nama
+              </label>
+              <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} maxLength={60} />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="edit-voice" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                Suara identitas
+              </label>
+              <Textarea
+                id="edit-voice"
+                value={editVoice}
+                onChange={(e) => setEditVoice(e.target.value)}
+                placeholder="Aku adalah orang yang ..."
+                className="min-h-24 resize-none"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Kalimat ini tampil sebagai pengingat siapa dirimu — baca setiap pagi.
+              </p>
+            </div>
+            <button
+              onClick={saveEdit}
+              disabled={updateMutation.isPending}
+              className="press w-full min-h-[48px] rounded-2xl bg-garden text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Simpan Perubahan
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Dialog FAQ ===== */}
+      <Dialog open={faqOpen} onOpenChange={setFaqOpen}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto scroll-thin">
+          <DialogHeader>
+            <DialogTitle>Pertanyaan Umum</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {FAQ_ITEMS.map((f) => (
+              <div key={f.q} className="rounded-xl bg-secondary/60 p-3.5">
+                <p className="text-sm font-bold">{f.q}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed mt-1">{f.a}</p>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== AlertDialog hapus seluruh data (dua langkah) ===== */}
+      <AlertDialog
+        open={resetOpen}
+        onOpenChange={(o) => {
+          if (!o) {
+            setResetOpen(false);
+            setResetStep(1);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          {resetStep === 1 ? (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Hapus seluruh data?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Seluruh kebiasaan, log, latihan, transaksi, jurnal, check-in, dan tabungan akan dihapus permanen. Kutipan
+                  harian dan profil tetap dipertahankan.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <Button variant="outline" onClick={() => setResetOpen(false)}>
+                  Batal
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setResetStep(2)}
+                  className="flex items-center gap-1.5"
+                >
+                  Lanjutkan
+                </Button>
+              </AlertDialogFooter>
+            </>
+          ) : (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Konfirmasi terakhir</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tindakan ini tidak dapat dibatalkan. Semua catatanmu akan hilang dan statistik kembali ke nol.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <Button variant="outline" onClick={() => setResetOpen(false)}>
+                  Batal
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => resetMutation.mutate()}
+                  disabled={resetMutation.isPending}
+                  className="flex items-center gap-1.5"
+                >
+                  {resetMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Ya, hapus semua
+                </Button>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ===== Sheet check-in (modul lain) ===== */}
+      <LogCheckInSheet open={checkinOpen} onClose={() => setCheckinOpen(false)} />
+    </div>
+  );
+}
+
+// ====== Elemen baris pengaturan ======
+
+function SettingsIcon({ icon: Icon }: { icon: LucideIcon }) {
+  return (
+    <span className="h-7 w-7 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground">
+      <Icon className="h-4 w-4" />
+    </span>
+  );
+}
+
+function Row({
+  icon: Icon,
+  label,
+  desc,
+  children,
+}: {
+  icon: LucideIcon;
+  label: string;
+  desc?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 py-3">
+      <span className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground shrink-0">
+        <Icon className="h-4.5 w-4.5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold leading-tight">{label}</p>
+        {desc && <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{desc}</p>}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  );
+}
+
+function ActionRow({
+  icon: Icon,
+  label,
+  desc,
+  busy,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  desc: string;
+  busy?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className={cn(
+        "press w-full flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-left min-h-[64px] disabled:opacity-60"
+      )}
+    >
+      <span className="h-9 w-9 rounded-xl bg-vault-soft flex items-center justify-center text-vault-deep shrink-0">
+        {busy ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Icon className="h-4.5 w-4.5" />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold leading-tight">{label}</span>
+        <span className="block text-[11px] text-muted-foreground leading-snug mt-0.5">{desc}</span>
+      </span>
+    </button>
+  );
+}
+
+const FAQ_ITEMS = [
+  {
+    q: "Apa itu Rutina?",
+    a: "Rutina adalah ruang kerja pribadi untuk mengelola kebiasaan (Taman), kebugaran (Studio), keuangan (Vault), dan jurnal (Writing Room) dalam satu aplikasi yang hangat dan tenang.",
+  },
+  {
+    q: "Apa itu streak?",
+    a: "Streak adalah jumlah hari berturut-turut kamu menyelesaikan setidaknya satu misi kebiasaan. Angka terbaikmu juga direkam di Observatorium sebagai rekor pribadi.",
+  },
+  {
+    q: "Bagaimana jika aku jeda sehari?",
+    a: "Jika tidak ada satu pun misi selesai pada hari itu, runtun streak akan terputus dan kembali menghitung dari nol keesokan harinya. XP dan statistik lain tetap aman.",
+  },
+  {
+    q: "Bagaimana cara mencadangkan data?",
+    a: "Buka Profil, lalu Data & Penyimpanan. Gunakan Ekspor Cadangan JSON untuk mengunduh seluruh data, dan Pulihkan dari JSON untuk memuatnya kembali kapan pun.",
+  },
+];

@@ -1,0 +1,337 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jakarta), ui-monospace, monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-out: var(--chart-out);
+  --color-chart-neutral: var(--chart-neutral);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  /* Rutina semantic tokens (legacy tone names kept as aliases) */
+  --color-garden: var(--garden);
+  --color-garden-deep: var(--garden-deep);
+  --color-garden-soft: var(--garden-soft);
+  --color-studio: var(--studio);
+  --color-studio-deep: var(--studio-deep);
+  --color-studio-soft: var(--studio-soft);
+  --color-vault: var(--vault);
+  --color-vault-deep: var(--vault-deep);
+  --color-vault-soft: var(--vault-soft);
+  --color-writer: var(--writer);
+  --color-writer-deep: var(--writer-deep);
+  --color-writer-soft: var(--writer-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-cream: var(--cream);
+  --color-sage: var(--sage);
+  --color-sage-deep: var(--sage-deep);
+  --color-sage-soft: var(--sage-soft);
+  --color-clay: var(--clay);
+  --color-clay-deep: var(--clay-deep);
+  --color-clay-soft: var(--clay-soft);
+}
+
+:root {
+  --radius: 1rem;
+  /* ============================================================
+     RUTINA "SAGE & CLAY" PALETTE — restrained, professional
+     1 signature hue (sage green) + 1 semantic hue (clay) + warm
+     neutrals. Tone aliases map every legacy module color onto
+     this single system so the UI stays calm and unified.
+     ============================================================ */
+  --background: #faf9f6;
+  --foreground: #22211e;
+  --card: #ffffff;
+  --card-foreground: #22211e;
+  --popover: #ffffff;
+  --popover-foreground: #22211e;
+  --primary: #3e6b4e;
+  --primary-foreground: #faf9f6;
+  --secondary: #f1efe8;
+  --secondary-foreground: #44423c;
+  --muted: #f1efe8;
+  --muted-foreground: #8a8578;
+  --accent: #eef2ec;
+  --accent-foreground: #2a5137;
+  --destructive: #b0503c;
+  --border: #e9e6dd;
+  --input: #e3e0d6;
+  --ring: #3e6b4e;
+  /* Chart ramp — monochrome sage steps + neutral */
+  --chart-1: #2a5137;
+  --chart-2: #3e6b4e;
+  --chart-3: #5f8a6d;
+  --chart-4: #8fb29a;
+  --chart-5: #c3d6c7;
+  --chart-out: #b0503c;
+  --chart-neutral: #aaa69a;
+  --sidebar: #faf9f6;
+  --sidebar-foreground: #22211e;
+  --sidebar-primary: #3e6b4e;
+  --sidebar-primary-foreground: #faf9f6;
+  --sidebar-accent: #f1efe8;
+  --sidebar-accent-foreground: #44423c;
+  --sidebar-border: #e9e6dd;
+  --sidebar-ring: #3e6b4e;
+  /* Signature hues */
+  --sage: #3e6b4e;
+  --sage-deep: #2a5137;
+  --sage-soft: #ecf1ea;
+  --clay: #b0503c;
+  --clay-deep: #93402f;
+  --clay-soft: #f5ebe6;
+  /* Legacy tone aliases → unified system */
+  --garden: #3e6b4e;
+  --garden-deep: #2a5137;
+  --garden-soft: #ecf1ea;
+  --studio: #4e7d5f;
+  --studio-deep: #33573f;
+  --studio-soft: #ecf1ea;
+  --vault: #35573f;
+  --vault-deep: #24402c;
+  --vault-soft: #ecf1ea;
+  --writer: #57544b;
+  --writer-deep: #33312b;
+  --writer-soft: #f0eee7;
+  --gold: #b0503c;
+  --gold-soft: #f5ebe6;
+  --cream: #f7f4ea;
+}
+
+.dark {
+  --background: #141311;
+  --foreground: #ece9df;
+  --card: #1d1c18;
+  --card-foreground: #ece9df;
+  --popover: #1d1c18;
+  --popover-foreground: #ece9df;
+  --primary: #8fb49a;
+  --primary-foreground: #141311;
+  --secondary: #262521;
+  --secondary-foreground: #d6d2c6;
+  --muted: #262521;
+  --muted-foreground: #9c978a;
+  --accent: #1f2820;
+  --accent-foreground: #a9c7b0;
+  --destructive: #d08b72;
+  --border: #2c2a25;
+  --input: #35322c;
+  --ring: #8fb49a;
+  --chart-1: #a9c7b0;
+  --chart-2: #8fb49a;
+  --chart-3: #6f947c;
+  --chart-4: #526f5c;
+  --chart-5: #3a4f41;
+  --chart-out: #d08b72;
+  --chart-neutral: #7a766a;
+  --sidebar: #1d1c18;
+  --sidebar-foreground: #ece9df;
+  --sidebar-primary: #8fb49a;
+  --sidebar-primary-foreground: #141311;
+  --sidebar-accent: #262521;
+  --sidebar-accent-foreground: #d6d2c6;
+  --sidebar-border: #2c2a25;
+  --sidebar-ring: #8fb49a;
+  --sage: #8fb49a;
+  --sage-deep: #a9c7b0;
+  --sage-soft: #1f2820;
+  --clay: #d08b72;
+  --clay-deep: #e0a58e;
+  --clay-soft: #2a1d17;
+  /* Legacy tone aliases → unified system (dark) */
+  --garden: #8fb49a;
+  --garden-deep: #a9c7b0;
+  --garden-soft: #1f2820;
+  --studio: #8fb49a;
+  --studio-deep: #a9c7b0;
+  --studio-soft: #1f2820;
+  --vault: #8fb49a;
+  --vault-deep: #a9c7b0;
+  --vault-soft: #1f2820;
+  --writer: #b5b1a4;
+  --writer-deep: #d6d2c6;
+  --writer-soft: #262521;
+  --gold: #d08b72;
+  --gold-soft: #2a1d17;
+  --cream: #1d1c18;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+    overscroll-behavior-y: none;
+    /* Lock the document: all scrolling happens inside the app shell */
+    height: 100%;
+    overflow: hidden;
+  }
+  select,
+  input,
+  textarea {
+    font-family: inherit;
+  }
+}
+
+/* Viewport height fallback for browsers without dvh support (iOS Safari < 15.4).
+   Unlayered rule wins over Tailwind's layered utility, ensuring the app shell
+   still fills the screen on older mobile browsers. */
+@supports not (height: 100dvh) {
+  .h-dvh {
+    height: 100vh;
+  }
+}
+
+/* ---------- Rutina utilities ---------- */
+
+.font-script {
+  font-family: var(--font-caveat), "Comic Sans MS", cursive;
+}
+
+/* Soft double shadow — quiet elevation */
+.shadow-soft {
+  box-shadow:
+    0 1px 2px rgba(34, 33, 30, 0.04),
+    0 4px 16px rgba(34, 33, 30, 0.05);
+}
+.shadow-lift {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 2px 4px rgba(34, 33, 30, 0.05),
+    0 10px 24px rgba(34, 33, 30, 0.08);
+}
+.dark .shadow-soft {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.dark .shadow-lift {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Press feedback (soft press 200ms ease-out) */
+.press {
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.15s ease-out;
+  cursor: pointer;
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+/* Safe area helpers */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Custom scrollbars for scrollable lists */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(138, 133, 120, 0.35) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(138, 133, 120, 0.3);
+  border-radius: 999px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Hide scrollbar but keep scroll (tab strips) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Number ticker feel for stats */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Stagger-in animation for screen content */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise-in {
+  animation: rise-in 0.35s ease-out both;
+}
+.rise-in-1 {
+  animation-delay: 0.03s;
+}
+.rise-in-2 {
+  animation-delay: 0.06s;
+}
+.rise-in-3 {
+  animation-delay: 0.1s;
+}
+.rise-in-4 {
+  animation-delay: 0.14s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise-in,
+  .press {
+    animation: none !important;
+    transition: none !important;
+  }
+}

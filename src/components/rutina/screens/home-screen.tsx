@@ -1,0 +1,709 @@
+"use client";
+
+import * as React from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import {
+  Flame,
+  Target,
+  Check,
+  Plus,
+  ArchiveRestore,
+  NotebookText,
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  Quote as QuoteIcon,
+  BookmarkPlus,
+  Wallet,
+  Dumbbell,
+  PartyPopper,
+  CircleCheck,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useRutinaStore } from "@/store/rutina";
+import { rutinaApi } from "@/lib/rutina/api";
+import {
+  greeting,
+  formatDateID,
+  dayName,
+  addDays,
+  todayStr,
+  formatRupiah,
+  parseDateStr,
+  weekStart,
+} from "@/lib/rutina/format";
+import { SectionCard, Pill, EmptyState } from "@/components/rutina/primitives";
+import { habitIcon, habitColor } from "@/components/rutina/habit-icons";
+import {
+  CLAY,
+  DeltaBadge,
+  HeatGrid,
+  MetricBar,
+  MiniBars,
+  NEUTRAL,
+  RingStat,
+  SAGE,
+  Sparkline,
+  StackBar,
+} from "@/components/rutina/charts";
+import type { HomePayload, Habit } from "@/types/rutina";
+import { cn } from "@/lib/utils";
+
+const HIGHLIGHT_ICON: Record<string, React.ElementType> = {
+  flame: Flame,
+  wallet: Wallet,
+  "piggy-bank": Wallet,
+  "party-popper": PartyPopper,
+};
+
+// Sumber kebenaran XP ada di server (levelFromXp): 1 level = 500 XP.
+const XP_PER_LEVEL = 500;
+
+export default function HomeScreen() {
+  const qc = useQueryClient();
+  const openQuickAction = useRutinaStore((s) => s.openQuickAction);
+  const setPage = useRutinaStore((s) => s.setPage);
+  const [selectedDate, setSelectedDate] = React.useState(todayStr());
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["home"],
+    queryFn: rutinaApi.home,
+  });
+
+  // Data pendukung visual (cache dibagikan dengan layar Statistik/Keuangan)
+  const statsQuery = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
+  const budgetsQuery = useQuery({ queryKey: ["budgets"], queryFn: rutinaApi.budgets });
+  const goalsQuery = useQuery({ queryKey: ["goals"], queryFn: rutinaApi.goals });
+
+  const checkMutation = useMutation({
+    mutationFn: ({ id, value }: { id: string; value?: number }) =>
+      rutinaApi.checkHabit(id, selectedDate, value),
+    onMutate: async () => {
+      // optimistic update sederhana: tandai refreshing
+      await qc.cancelQueries({ queryKey: ["home"] });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["home"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const saveQuoteMutation = useMutation({
+    mutationFn: (payload: { text: string; author: string }) =>
+      rutinaApi.createJournal({
+        title: "Kutipan hari ini",
+        content: `"${payload.text}" — ${payload.author}`,
+        folder: "Sorotan",
+        mood: null,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["journal"] });
+      toast.success("Kutipan disimpan ke Jurnal");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (isLoading || !data) {
+    return <HomeSkeleton />;
+  }
+
+  const d = data as HomePayload;
+  const profile = d.profile;
+  const agenda = d.agenda.filter(
+    (a) =>
+      a.habit.scheduleType === "daily" ||
+      a.habit.daysOfWeek.split(",").map(Number).includes(parseDateStr(selectedDate).getDay())
+  );
+  const agendaForSelected = selectedDate === d.today ? agenda : agenda;
+  const doneForSelected = agendaForSelected.filter(
+    (a) => a.log?.status === "done" || (a.habit.unitTarget && (a.log?.value ?? 0) >= a.habit.unitTarget)
+  ).length;
+
+  // rolling 7 hari berakhir hari ini
+  const stripDays = Array.from({ length: 7 }, (_, i) => addDays(d.today, i - 6));
+  const isTodaySelected = selectedDate === d.today;
+
+  const grouped: Record<string, typeof agenda> = { morning: [], afternoon: [], evening: [], anytime: [] };
+  agendaForSelected.forEach((a) => grouped[a.habit.timeOfDay]?.push(a));
+  const groupLabels: { key: string; label: string }[] = [
+    { key: "morning", label: "Pagi" },
+    { key: "afternoon", label: "Siang" },
+    { key: "evening", label: "Malam" },
+    { key: "anytime", label: "Kapan saja" },
+  ];
+
+  const HighlightIcon = d.highlight ? HIGHLIGHT_ICON[d.highlight.icon] ?? Flame : Flame;
+
+  // ===== Data visual turunan (read-only, tidak mengubah perilaku) =====
+  const xpToNextLevel = XP_PER_LEVEL - (d.xp % XP_PER_LEVEL);
+  const activityByDate = new Map((statsQuery.data?.activityCalendar ?? []).map((a) => [a.date, a.habitsDone]));
+  const streakSpark = stripDays.map((ds) => activityByDate.get(ds) ?? 0);
+  const monday = weekStart(d.today);
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const weekBars = weekDates.map((ds) => ({
+    label: dayName(ds, true),
+    value: activityByDate.get(ds) ?? 0,
+    alt: activityByDate.get(addDays(ds, -7)) ?? 0,
+  }));
+  const todayBarIdx = weekDates.indexOf(d.today);
+  const weeklyWorkouts = statsQuery.data?.fitness.weeklyWorkouts ?? [];
+  const workoutDelta =
+    weeklyWorkouts.length >= 2
+      ? weeklyWorkouts[weeklyWorkouts.length - 1].sessions - weeklyWorkouts[weeklyWorkouts.length - 2].sessions
+      : null;
+  const topBudget = [...(budgetsQuery.data?.budgets ?? [])]
+    .filter((b) => b.monthlyLimit > 0)
+    .sort((a, b) => (b.spent ?? 0) / b.monthlyLimit - (a.spent ?? 0) / a.monthlyLimit)[0];
+  const topGoals = [...(goalsQuery.data?.goals ?? [])]
+    .filter((g) => g.targetAmount > 0)
+    .sort((a, b) => b.currentAmount / b.targetAmount - a.currentAmount / a.targetAmount)
+    .slice(0, 3);
+
+  return (
+    <div className="flex flex-col">
+      {/* ===== Header ===== */}
+      <div className="bg-gradient-to-b from-gold-soft to-background px-4 pt-6 pb-4">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-muted-foreground">{formatDateID(d.today, true)}</p>
+            <h1 className="text-xl font-bold leading-tight mt-0.5">
+              {greeting()}, {profile.name}
+            </h1>
+            {profile.identityVoice && (
+              <p className="font-script text-lg text-gold leading-snug mt-1 line-clamp-2">
+                “{profile.identityVoice}”
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setPage("journal")}
+              aria-label="Buka Jurnal"
+              className="press h-10 w-10 rounded-full bg-card border border-border shadow-soft flex items-center justify-center text-writer-deep"
+            >
+              <NotebookText className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setPage("profile")}
+              aria-label="Buka Profil"
+              className="press h-10 w-10 rounded-full bg-garden text-white shadow-soft flex items-center justify-center font-bold"
+            >
+              {profile.name.slice(0, 1).toUpperCase()}
+            </button>
+          </div>
+        </div>
+
+        {/* Progress trio */}
+        <div className="mt-4 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setPage("habits")}
+              aria-label="Lihat misi hari ini"
+              className="press bg-card rounded-2xl border border-border/70 shadow-soft p-3 flex flex-col items-center"
+            >
+              <RingStat
+                progress={agendaForSelected.length ? doneForSelected / agendaForSelected.length : 0}
+                value={`${doneForSelected}/${agendaForSelected.length}`}
+                caption="misi hari ini"
+                size={64}
+                stroke={7}
+                color="var(--garden)"
+              />
+            </button>
+            <div className="bg-card rounded-2xl border border-border/70 shadow-soft p-3 flex flex-col justify-between gap-1.5">
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-9 rounded-full bg-gold-soft flex items-center justify-center shrink-0">
+                  <Flame className="h-4.5 w-4.5 text-gold" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">Streak</p>
+                  <p className="text-sm font-bold tabular">{d.streak.current} hari</p>
+                </div>
+              </div>
+              {statsQuery.data && (
+                <div>
+                  <Sparkline data={streakSpark} height={26} strokeWidth={2} />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">misi per hari · 7 hari terakhir</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setPage("stats")}
+            aria-label="Buka statistik level"
+            className="press w-full bg-card rounded-2xl border border-border/70 shadow-soft p-3.5 text-left"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] font-semibold uppercase text-muted-foreground">
+                Level <span className="font-bold text-foreground">{d.level}</span>
+              </p>
+              <p className="text-sm font-bold tabular">{d.xp.toLocaleString("id-ID")} XP</p>
+            </div>
+            <MetricBar value={d.levelProgress * 100} max={100} height={8} className="mt-2" />
+            <p className="text-[10px] text-muted-foreground mt-1.5 tabular">
+              <span className="font-bold text-primary">{xpToNextLevel.toLocaleString("id-ID")} XP</span> ke Level{" "}
+              {d.level + 1}
+            </p>
+          </button>
+        </div>
+      </div>
+
+      {/* ===== Calendar strip ===== */}
+      <div className="px-4 mt-1">
+        <div className="flex items-center justify-between gap-1">
+          <button
+            aria-label="Hari sebelumnya"
+            onClick={() => setSelectedDate(addDays(selectedDate, -1))}
+            className="press h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center shrink-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="flex-1 grid grid-cols-7 gap-1">
+            {stripDays.map((ds) => {
+              const active = ds === selectedDate;
+              const isToday = ds === d.today;
+              return (
+                <button
+                  key={ds}
+                  onClick={() => setSelectedDate(ds)}
+                  className={cn(
+                    "press flex flex-col items-center py-2 rounded-xl min-h-[52px] justify-center border",
+                    active
+                      ? "bg-gold text-white border-gold shadow-soft"
+                      : "bg-card border-border/60 text-foreground"
+                  )}
+                >
+                  <span className={cn("text-[10px] font-semibold", active ? "text-white/80" : "text-muted-foreground")}>
+                    {dayName(ds, true)}
+                  </span>
+                  <span className={cn("text-sm font-bold tabular", isToday && !active && "text-gold")}>
+                    {ds.slice(8)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            aria-label="Hari berikutnya"
+            onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+            className="press h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center shrink-0"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+        {statsQuery.data && (
+          <div className="mt-2">
+            <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+              Intensitas misi · 7 hari terakhir
+            </p>
+            <HeatGrid
+              columns={7}
+              className="gap-1"
+              max={Math.max(1, d.profile.dailyMissionTarget, ...stripDays.map((ds) => activityByDate.get(ds) ?? 0))}
+              cells={stripDays.map((ds) => ({
+                value: activityByDate.get(ds) ?? 0,
+                label: `${formatDateID(ds, true)}: ${activityByDate.get(ds) ?? 0} misi`,
+              }))}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ===== Agenda ===== */}
+      <div className="px-4 mt-4">
+        <SectionCard
+          title={isTodaySelected ? "Agenda Hari Ini" : `Agenda ${formatDateID(selectedDate)}`}
+          tone="garden"
+          icon={<Target className="h-4 w-4 text-garden-deep" />}
+          action={
+            <button
+              onClick={() => openQuickAction("habit")}
+              className="press inline-flex items-center gap-1 text-xs font-bold text-garden-deep bg-garden-soft rounded-full px-3 py-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" /> Tambah
+            </button>
+          }
+        >
+          {agendaForSelected.length === 0 ? (
+            <EmptyState
+              icon={<Target className="h-6 w-6" />}
+              title="Belum ada misi untuk hari ini"
+              description="Tambahkan kebiasaan pertama dan mulai tanam kebiasaan baik."
+              action={
+                <button
+                  onClick={() => openQuickAction("habit")}
+                  className="press bg-garden-deep text-white text-sm font-bold rounded-full px-4 py-2.5"
+                >
+                  Tambah Kebiasaan
+                </button>
+              }
+            />
+          ) : (
+            <div className="space-y-4">
+              {groupLabels.map((g) => {
+                const items = grouped[g.key];
+                if (!items?.length) return null;
+                return (
+                  <div key={g.key}>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                      {g.label}
+                    </p>
+                    <div className="space-y-2">
+                      {items.map((a) => (
+                        <AgendaRow
+                          key={a.habit.id}
+                          habit={a.habit}
+                          log={a.log}
+                          selectedDate={selectedDate}
+                          isToday={isTodaySelected}
+                          onCheck={(value) => checkMutation.mutate({ id: a.habit.id, value })}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              <button
+                onClick={() => setPage("habits")}
+                className="press w-full text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1"
+              >
+                <ArchiveRestore className="h-3.5 w-3.5" />
+                Kelola & pulihkan kebiasaan di Taman
+              </button>
+            </div>
+          )}
+        </SectionCard>
+      </div>
+
+      {/* ===== Sorotan Hari Ini ===== */}
+      {d.highlight && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="px-4 mt-4"
+        >
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gold to-gold/80 text-white p-4 shadow-lift">
+            <div className="absolute -right-6 -top-8 h-32 w-32 rounded-full bg-white/10" />
+            <div className="absolute -right-2 top-10 h-16 w-16 rounded-full bg-white/10" />
+            <div className="flex items-start gap-3 relative">
+              <span className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                <HighlightIcon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/75">Sorotan Hari Ini</p>
+                <p className="font-bold leading-snug mt-0.5">{d.highlight.title}</p>
+                <p className="text-xs text-white/85 mt-1 leading-relaxed">{d.highlight.description}</p>
+              </div>
+            </div>
+            {d.highlight.kind === "budget" && topBudget && (
+              <div className="relative mt-3 rounded-xl bg-card p-3 shadow-soft">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
+                    Anggaran {topBudget.category}
+                  </span>
+                  <span className="text-xs font-bold tabular">
+                    {Math.round(((topBudget.spent ?? 0) / topBudget.monthlyLimit) * 100)}%
+                  </span>
+                </div>
+                <MetricBar value={topBudget.spent ?? 0} max={topBudget.monthlyLimit} height={8} className="mt-2" />
+                <p className="text-[10px] text-muted-foreground mt-1.5 tabular">
+                  {formatRupiah(topBudget.spent ?? 0)} dari {formatRupiah(topBudget.monthlyLimit)} limit bulanan
+                </p>
+              </div>
+            )}
+            {d.highlight.kind === "goal" && topGoals.length > 0 && (
+              <div className="relative mt-3 rounded-xl bg-card p-3 shadow-soft">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Progres tabungan</p>
+                <div className="flex gap-3 mt-2 overflow-x-auto no-scrollbar">
+                  {topGoals.map((g) => (
+                    <RingStat
+                      key={g.id}
+                      size={56}
+                      stroke={6}
+                      progress={g.currentAmount / g.targetAmount}
+                      value={`${Math.round((g.currentAmount / g.targetAmount) * 100)}%`}
+                      caption={g.name}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* ===== Rekap Pekan ===== */}
+      <div className="px-4 mt-4">
+        <SectionCard
+          title="Rekap Pekan"
+          tone="studio"
+          icon={<BarChart3 className="h-4 w-4 text-studio-deep" />}
+          action={<span className="text-[11px] text-muted-foreground font-semibold">Sen–Min</span>}
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-studio-soft p-3">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[11px] font-bold text-studio-deep uppercase">Misi selesai</span>
+                <DeltaBadge delta={d.weekRecap.missionsDone - d.weekRecap.prevDone} />
+              </div>
+              <MetricBar
+                value={d.weekRecap.missionsDone}
+                max={Math.max(1, d.weekRecap.missionsTotal)}
+                height={8}
+                className="mt-2.5"
+              />
+              <p className="mt-2 text-[11px] text-muted-foreground tabular">
+                {d.weekRecap.missionsDone}/{d.weekRecap.missionsTotal} misi · pekan lalu {d.weekRecap.prevDone}/
+                {d.weekRecap.prevTotal}
+              </p>
+            </div>
+            <div className="rounded-xl bg-studio-soft p-3">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[11px] font-bold text-studio-deep uppercase">Latihan</span>
+                {workoutDelta !== null && <DeltaBadge delta={workoutDelta} />}
+              </div>
+              <p className="text-xl font-bold tabular text-studio-deep mt-1">{d.weekRecap.workouts} sesi</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">minggu berjalan</p>
+            </div>
+          </div>
+          {statsQuery.data && (
+            <div className="mt-3">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5">
+                Misi per hari · pekan ini vs pekan lalu
+              </p>
+              <MiniBars
+                data={weekBars}
+                showAlt
+                height={72}
+                highlightIndex={todayBarIdx >= 0 ? todayBarIdx : undefined}
+              />
+              <div className="flex gap-3 mt-1">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
+                  <span className="h-2 w-2 rounded-[3px]" style={{ background: SAGE }} /> Pekan ini
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
+                  <span className="h-2 w-2 rounded-[3px]" style={{ background: NEUTRAL }} /> Pekan lalu
+                </span>
+              </div>
+            </div>
+          )}
+          <div className="mt-3 rounded-xl border border-border/60 p-3">
+            <span className="text-[11px] font-bold uppercase text-muted-foreground">Arus kas pekan ini</span>
+            {d.weekCashflow && d.weekCashflow.some((c) => c.income > 0 || c.expense > 0) ? (
+              <>
+                <MiniBars
+                  className="mt-2"
+                  data={d.weekCashflow.map((c) => ({
+                    label: dayName(c.date, true),
+                    value: c.income,
+                    alt: c.expense,
+                  }))}
+                  showAlt
+                  height={64}
+                  highlightIndex={
+                    d.weekCashflow.findIndex((c) => c.date === d.today) >= 0
+                      ? d.weekCashflow.findIndex((c) => c.date === d.today)
+                      : undefined
+                  }
+                />
+                <div className="flex gap-3 mt-1.5">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
+                    <span className="h-2 w-2 rounded-[3px]" style={{ background: SAGE }} /> Masuk
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
+                    <span className="h-2 w-2 rounded-[3px]" style={{ background: CLAY }} /> Keluar
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-2 text-[11px] tabular">
+                  <span className="font-bold text-garden-deep">
+                    Masuk {formatRupiah(d.weekRecap.income, { compact: true })}
+                  </span>
+                  <span className="font-bold text-clay-deep">
+                    Keluar {formatRupiah(d.weekRecap.spent, { compact: true })}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <StackBar
+                  className="mt-2"
+                  segments={[
+                    { label: "Arus masuk", value: d.weekRecap.income, color: SAGE },
+                    { label: "Arus keluar", value: d.weekRecap.spent, color: CLAY },
+                  ]}
+                />
+                <div className="flex items-center justify-between mt-2 text-[11px] tabular">
+                  <span className="font-bold text-garden-deep">
+                    Masuk {formatRupiah(d.weekRecap.income, { compact: true })}
+                  </span>
+                  <span className="font-bold text-clay-deep">
+                    Keluar {formatRupiah(d.weekRecap.spent, { compact: true })}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </SectionCard>
+      </div>
+
+      {/* ===== Kutipan refleksi ===== */}
+      {d.quote && (
+        <div className="px-4 mt-4">
+          <div className="relative rounded-2xl bg-writer-soft border border-writer/15 p-4 overflow-hidden">
+            <QuoteIcon className="absolute -top-2 -right-2 h-16 w-16 text-writer/10" />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-writer-deep/70 mb-1">
+              Refleksi hari ini
+            </p>
+            <p className="font-script text-xl leading-snug text-writer-deep">
+              “{d.quote.text}”
+            </p>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-xs font-semibold text-writer-deep/70">— {d.quote.author}</span>
+              <button
+                onClick={() => saveQuoteMutation.mutate({ text: d.quote!.text, author: d.quote!.author })}
+                disabled={saveQuoteMutation.isPending}
+                className="press inline-flex items-center gap-1 text-xs font-bold bg-writer-deep text-white rounded-full px-3 py-1.5 disabled:opacity-60"
+              >
+                <BookmarkPlus className="h-3.5 w-3.5" />
+                Simpan ke Jurnal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Aktivitas lintas modul ===== */}
+      <div className="px-4 mt-4 mb-2">
+        <SectionCard title="Lintas Modul" icon={<CircleCheck className="h-4 w-4 text-foreground" />}>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-3 rounded-xl bg-studio-soft p-3">
+              <span className="h-9 w-9 rounded-lg bg-white/60 flex items-center justify-center">
+                <Dumbbell className="h-4.5 w-4.5 text-studio-deep" />
+              </span>
+              <div>
+                <p className="text-[11px] font-bold text-studio-deep uppercase">Latihan pekan ini</p>
+                <p className="text-sm font-bold text-foreground">{d.weekRecap.workouts} sesi</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl bg-vault-soft p-3">
+              <span className="h-9 w-9 rounded-lg bg-white/60 flex items-center justify-center">
+                <Wallet className="h-4.5 w-4.5 text-vault-deep" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-vault-deep uppercase">Arus kas hari ini</p>
+                <p className="text-sm font-bold text-foreground truncate">
+                  {formatRupiah(d.cashflowToday.expense, { compact: true })} keluar
+                </p>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setPage("stats")}
+            className="press mt-3 w-full rounded-xl bg-secondary py-2.5 text-sm font-bold flex items-center justify-center gap-1.5"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Buka Statistik
+          </button>
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
+// ============ Agenda row ============
+
+function AgendaRow({
+  habit,
+  log,
+  selectedDate,
+  isToday,
+  onCheck,
+}: {
+  habit: Habit;
+  log: import("@/types/rutina").HabitLog | null;
+  selectedDate: string;
+  isToday: boolean;
+  onCheck: (value?: number) => void;
+}) {
+  const IconEl = React.createElement(habitIcon(habit.icon), {
+    className: cn("h-4.5 w-4.5", habitColor(habit.color).deep),
+  });
+  const color = habitColor(habit.color);
+  const done =
+    log?.status === "done" || (habit.unitTarget !== null && (log?.value ?? 0) >= (habit.unitTarget ?? Infinity));
+  const isMeasured = habit.unitTarget !== null;
+
+  const incr = () => {
+    const next = (log?.value ?? 0) + habit.unitStep;
+    onCheck(next);
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-xl border p-2.5 transition-colors",
+        done ? "bg-garden-soft border-garden/20" : "bg-card border-border/70"
+      )}
+    >
+      <span className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", color.soft)}>
+        {IconEl}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className={cn("text-sm font-bold leading-tight truncate", done && "text-garden-deep")}>{habit.name}</p>
+        <p className="text-[11px] text-muted-foreground truncate">
+          {isMeasured
+            ? `${log?.value ?? 0}/${habit.unitTarget} ${habit.unitLabel}`
+            : habit.stackAfter
+              ? habit.stackAfter
+              : habit.reminderTime
+                ? `Pengingat ${habit.reminderTime}`
+                : "Kebiasaan harian"}
+        </p>
+        {isMeasured && (
+          <MetricBar value={log?.value ?? 0} max={habit.unitTarget ?? 1} color="var(--primary)" overColor="var(--primary)" height={4} className="mt-1.5" />
+        )}
+      </div>
+      {isMeasured ? (
+        <button
+          onClick={incr}
+          aria-label={`Tambah progres ${habit.name}`}
+          className="press h-10 min-w-10 px-2 rounded-xl bg-garden text-white font-bold text-sm flex items-center justify-center gap-1 disabled:opacity-50"
+          disabled={done}
+        >
+          {done ? <Check className="h-5 w-5" /> : `+${habit.unitStep}`}
+        </button>
+      ) : (
+        <button
+          onClick={() => onCheck()}
+          aria-label={`Tandai ${habit.name} selesai`}
+          className={cn(
+            "press h-10 w-10 rounded-xl flex items-center justify-center border-2 transition-colors",
+            done ? "bg-garden border-garden text-white" : "border-input text-muted-foreground"
+          )}
+        >
+          <Check className="h-5 w-5" strokeWidth={3} />
+        </button>
+      )}
+      {log?.status === "rest" && <Pill tone="gold">Jeda</Pill>}
+    </div>
+  );
+}
+
+// ============ Skeleton ============
+
+function HomeSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 p-4 animate-pulse">
+      <div className="h-10 w-2/3 rounded-xl bg-secondary" />
+      <div className="grid grid-cols-3 gap-2">
+        <div className="h-16 rounded-2xl bg-secondary" />
+        <div className="h-16 rounded-2xl bg-secondary" />
+        <div className="h-16 rounded-2xl bg-secondary" />
+      </div>
+      <div className="h-14 rounded-xl bg-secondary" />
+      <div className="h-64 rounded-2xl bg-secondary" />
+      <div className="h-32 rounded-2xl bg-secondary" />
+    </div>
+  );
+}
