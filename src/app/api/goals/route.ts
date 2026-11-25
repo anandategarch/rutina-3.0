@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { isValidDateStr } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function bad(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
@@ -26,7 +25,13 @@ export async function POST(req: Request) {
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const targetAmount = Number(body.targetAmount);
     const currentAmount = body.currentAmount === undefined ? 0 : Number(body.currentAmount);
-    const deadline = typeof body.deadline === "string" && DATE_RE.test(body.deadline) ? body.deadline : null;
+
+    // Deadline opsional: kosong → null; diisi tapi tidak valid → 400
+    let deadline: string | null = null;
+    if (typeof body.deadline === "string" && body.deadline.trim() !== "") {
+      if (!isValidDateStr(body.deadline)) return bad("Format deadline tidak valid");
+      deadline = body.deadline;
+    }
 
     if (!name) return bad("Nama tujuan wajib diisi");
     if (!Number.isFinite(targetAmount) || targetAmount <= 0)

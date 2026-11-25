@@ -191,6 +191,9 @@ function NumberField({
   placeholder?: string;
   prefix?: boolean;
 }) {
+  // Saat fokus: tampilkan digit mentah agar karet teks tidak melompat ke akhir;
+  // saat blur: tampilkan nilai berformat.
+  const [focused, setFocused] = React.useState(false);
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
@@ -201,7 +204,9 @@ function NumberField({
         <Input
           id={id}
           inputMode="numeric"
-          value={value ? formatNumber(Number(value)) : ""}
+          value={focused ? value : value ? formatNumber(Number(value)) : ""}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           onChange={(e) => onChange(digitsOnly(e.target.value))}
           placeholder={placeholder}
           className={cn("min-h-[44px] tabular", prefix && "pl-10")}
@@ -354,6 +359,16 @@ export default function FinanceScreen() {
       setGName("");
       setGTarget("");
       setGDeadline("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteBudget = useMutation({
+    mutationFn: (id: string) => api.delete<{ ok: boolean }>(`/api/budgets/${id}`),
+    onSuccess: () => {
+      toast.success("Anggaran dihapus");
+      qc.invalidateQueries({ queryKey: ["budgets"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -713,9 +728,11 @@ export default function FinanceScreen() {
           <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10" aria-hidden />
           <div className="pointer-events-none absolute -left-14 -bottom-16 h-40 w-40 rounded-full bg-white/10" aria-hidden />
           <div className="relative flex items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-white/75">Total Saldo</p>
-              <p className="mt-1 text-3xl font-bold tabular leading-tight">{formatRupiah(totalBalance)}</p>
+              <p className="mt-1 min-w-0 truncate text-2xl font-bold tabular leading-tight sm:text-3xl">
+                {formatRupiah(totalBalance)}
+              </p>
               <p className="mt-1 text-[11px] text-white/70">{wallets.length} dompet aktif</p>
             </div>
             <button
@@ -916,7 +933,12 @@ export default function FinanceScreen() {
                       title={`${dayName(date, true)}, ${formatDayMonth(date)} — ${amount > 0 ? formatRupiah(amount) : "tidak ada pengeluaran"}`}
                       className={cn("h-3.5 w-full rounded-[4px]", level === 0 && "bg-secondary")}
                       style={level > 0 ? { backgroundColor: "var(--primary)", opacity } : undefined}
-                      aria-label={date}
+                      role="img"
+                      aria-label={
+                        amount > 0
+                          ? `${formatDayMonth(date)}, ${formatRupiah(amount)}`
+                          : `${formatDayMonth(date)}, tidak ada pengeluaran`
+                      }
                     />
                   );
                 })}
@@ -953,7 +975,7 @@ export default function FinanceScreen() {
               description="Buat anggaran per kategori untuk menjaga pengeluaran."
             />
           ) : (
-            <div className="max-h-[420px] space-y-3.5 overflow-y-auto scroll-thin">
+            <div className="max-h-[420px] space-y-3.5 overflow-y-auto overscroll-contain scroll-thin">
               {budgetRows.map((b) => {
                 const Icon = CATEGORY_ICON[b.category] ?? CircleDollarSign;
                 const sisa = b.monthlyLimit - (b.spent ?? 0);
@@ -976,6 +998,34 @@ export default function FinanceScreen() {
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button
+                            className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-clay-soft hover:text-clay"
+                            aria-label={`Hapus anggaran ${b.category}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus anggaran ini?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Anggaran {catLabel(b.category)} dengan limit {formatRupiah(b.monthlyLimit)} akan dihapus
+                              permanen.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="min-h-[44px] rounded-xl">Batal</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteBudget.mutate(b.id)}
+                              className="min-h-[44px] rounded-xl bg-destructive text-white hover:bg-destructive/90"
+                            >
+                              Hapus
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                     <div className="pl-9">
                       <div className="mb-1 flex items-baseline justify-between gap-2 text-[11px] tabular text-muted-foreground">
@@ -1026,7 +1076,7 @@ export default function FinanceScreen() {
               }
             />
           ) : (
-            <div className="max-h-[480px] space-y-3 overflow-y-auto scroll-thin">
+            <div className="max-h-[480px] space-y-3 overflow-y-auto overscroll-contain scroll-thin">
               {goalRows.map((g) => {
                 const Icon = GOAL_ICON[g.icon] ?? CircleDollarSign;
                 const colorVar = GOAL_COLOR_VAR[g.color] ?? "var(--vault)";
@@ -1096,7 +1146,7 @@ export default function FinanceScreen() {
                 <span className="font-bold tabular text-clay">{formatRupiah(subscriptionMonthlyTotal)}</span>
               </div>
               <HBarList items={subscriptionBars} color={CLAY} height={8} />
-              <div className="max-h-[280px] space-y-2 overflow-y-auto scroll-thin">
+              <div className="max-h-[280px] space-y-2 overflow-y-auto overscroll-contain scroll-thin">
                 {subscriptions.map((s) => (
                   <div
                     key={s.id}
@@ -1194,7 +1244,7 @@ export default function FinanceScreen() {
               description="Coba ubah bulan, filter, atau kata kunci pencarian."
             />
           ) : (
-            <div className="max-h-[520px] overflow-y-auto scroll-thin rounded-xl">
+            <div className="max-h-[520px] overflow-y-auto overscroll-contain scroll-thin rounded-xl">
               {groups.map((g) => (
                 <div key={g.date}>
                   <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-card/95 px-1 py-2 backdrop-blur-sm">
@@ -1233,13 +1283,15 @@ export default function FinanceScreen() {
                             </div>
                             <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
                               {!isTransfer && (
-                                <Pill tone={CATEGORY_TONE[t.category] ?? "stone"} className="px-1.5 py-0.5 text-[9px]">
+                                <Pill tone={CATEGORY_TONE[t.category] ?? "stone"} className="px-1.5 py-0.5 text-[10px]">
                                   {catLabel(t.category)}
                                 </Pill>
                               )}
-                              {isTransfer
-                                ? `${t.wallet?.name ?? "?"} → ${t.toWallet?.name ?? "?"}`
-                                : t.wallet?.name}
+                              <span className="min-w-0 truncate">
+                                {isTransfer
+                                  ? `${t.wallet?.name ?? "?"} → ${t.toWallet?.name ?? "?"}`
+                                  : t.wallet?.name}
+                              </span>
                             </div>
                           </div>
                           <span

@@ -36,7 +36,7 @@ function computeBalance(
 export async function GET() {
   try {
     const [wallets, txs] = await Promise.all([
-      // Skema Wallet tidak punya createdAt — id (cuid) mempertahankan urutan pembuatan.
+      // Urutan tetap by id: cuid mempertahankan urutan pembuatan (perilaku lama dipertahankan).
       db.wallet.findMany({ orderBy: { id: "asc" } }),
       db.transaction.findMany({
         select: { type: true, amount: true, walletId: true, toWalletId: true },

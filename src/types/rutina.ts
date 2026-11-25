@@ -111,6 +111,7 @@ export interface Wallet {
   color: string;
   icon: string;
   archived: boolean;
+  createdAt?: string; // ISO — ditambahkan di skema (opsional agar objek lama tetap valid)
   balance?: number; // computed server-side
 }
 

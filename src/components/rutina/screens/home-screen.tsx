@@ -19,6 +19,7 @@ import {
   Dumbbell,
   PartyPopper,
   CircleCheck,
+  WifiOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRutinaStore } from "@/store/rutina";
@@ -62,11 +63,11 @@ const XP_PER_LEVEL = 500;
 
 export default function HomeScreen() {
   const qc = useQueryClient();
-  const openQuickAction = useRutinaStore((s) => s.openQuickAction);
+  const setQuickAction = useRutinaStore((s) => s.setQuickAction);
   const setPage = useRutinaStore((s) => s.setPage);
   const [selectedDate, setSelectedDate] = React.useState(todayStr());
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["home"],
     queryFn: rutinaApi.home,
   });
@@ -79,14 +80,67 @@ export default function HomeScreen() {
   const checkMutation = useMutation({
     mutationFn: ({ id, value }: { id: string; value?: number }) =>
       rutinaApi.checkHabit(id, selectedDate, value),
-    onMutate: async () => {
-      // optimistic update sederhana: tandai refreshing
+    onMutate: async ({ id, value }) => {
       await qc.cancelQueries({ queryKey: ["home"] });
+      const prev = qc.getQueryData<HomePayload>(["home"]);
+      // Optimistic: toggle log pada tanggal yang dipilih di payload home
+      qc.setQueryData<HomePayload>(["home"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          agenda: old.agenda.map((a) => {
+            if (a.habit.id !== id) return a;
+            const logs = [...(a.habit.logs ?? [])];
+            const idx = logs.findIndex((l) => l.date === selectedDate);
+            if (idx >= 0) {
+              const existing = logs[idx];
+              if (
+                a.habit.unitTarget !== null &&
+                typeof value === "number" &&
+                value > 0 &&
+                (existing.value ?? 0) < value
+              ) {
+                logs[idx] = { ...existing, value, status: "done", note: null };
+              } else {
+                logs.splice(idx, 1);
+              }
+            } else {
+              const nextValue =
+                a.habit.unitTarget !== null
+                  ? typeof value === "number" && value > 0
+                    ? value
+                    : a.habit.unitTarget
+                  : null;
+              logs.push({
+                id: `optimistic-${a.habit.id}`,
+                habitId: a.habit.id,
+                date: selectedDate,
+                status: "done",
+                value: nextValue,
+                note: null,
+              });
+            }
+            const dayLog = logs.find((l) => l.date === selectedDate) ?? null;
+            return {
+              ...a,
+              habit: { ...a.habit, logs },
+              // field `log` bawaan payload hanya berlaku untuk hari ini
+              log: selectedDate === old.today ? dayLog : a.log,
+            };
+          }),
+        };
+      });
+      return { prev };
     },
-    onSuccess: () => {
+    onError: (e: Error, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["home"], ctx.prev);
+      toast.error(e.message);
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["home"] });
+      qc.invalidateQueries({ queryKey: ["habits"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
     },
-    onError: (e: Error) => toast.error(e.message),
   });
 
   const saveQuoteMutation = useMutation({
@@ -104,6 +158,26 @@ export default function HomeScreen() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  if (isError && !data) {
+    return (
+      <div className="px-4 pt-16">
+        <EmptyState
+          icon={<WifiOff className="h-6 w-6" />}
+          title="Ada kendala memuat data"
+          description="Periksa koneksi internetmu lalu coba lagi."
+          action={
+            <button
+              onClick={() => refetch()}
+              className="press min-h-[44px] rounded-full bg-garden-deep px-4 py-2.5 text-sm font-bold text-white"
+            >
+              Coba Lagi
+            </button>
+          }
+        />
+      </div>
+    );
+  }
+
   if (isLoading || !data) {
     return <HomeSkeleton />;
   }
@@ -115,10 +189,14 @@ export default function HomeScreen() {
       a.habit.scheduleType === "daily" ||
       a.habit.daysOfWeek.split(",").map(Number).includes(parseDateStr(selectedDate).getDay())
   );
-  const agendaForSelected = selectedDate === d.today ? agenda : agenda;
-  const doneForSelected = agendaForSelected.filter(
-    (a) => a.log?.status === "done" || (a.habit.unitTarget && (a.log?.value ?? 0) >= a.habit.unitTarget)
-  ).length;
+  const agendaForSelected = agenda;
+  // Log milik tanggal terpilih (payload server hanya menyertakan `log` untuk hari ini)
+  const dayLogOf = (a: (typeof agenda)[number]) =>
+    a.habit.logs?.find((l) => l.date === selectedDate) ?? null;
+  const doneForSelected = agendaForSelected.filter((a) => {
+    const dayLog = dayLogOf(a);
+    return dayLog?.status === "done" || (a.habit.unitTarget && (dayLog?.value ?? 0) >= a.habit.unitTarget);
+  }).length;
 
   // rolling 7 hari berakhir hari ini
   const stripDays = Array.from({ length: 7 }, (_, i) => addDays(d.today, i - 6));
@@ -180,14 +258,14 @@ export default function HomeScreen() {
             <button
               onClick={() => setPage("journal")}
               aria-label="Buka Jurnal"
-              className="press h-10 w-10 rounded-full bg-card border border-border shadow-soft flex items-center justify-center text-writer-deep"
+              className="press h-11 w-11 rounded-full bg-card border border-border shadow-soft flex items-center justify-center text-writer-deep"
             >
               <NotebookText className="h-5 w-5" />
             </button>
             <button
               onClick={() => setPage("profile")}
               aria-label="Buka Profil"
-              className="press h-10 w-10 rounded-full bg-garden text-white shadow-soft flex items-center justify-center font-bold"
+              className="press h-11 w-11 rounded-full bg-garden text-white shadow-soft flex items-center justify-center font-bold"
             >
               {profile.name.slice(0, 1).toUpperCase()}
             </button>
@@ -227,6 +305,14 @@ export default function HomeScreen() {
                   <p className="text-[9px] text-muted-foreground mt-0.5">misi per hari · 7 hari terakhir</p>
                 </div>
               )}
+              {statsQuery.isError && (
+                <button
+                  onClick={() => statsQuery.refetch()}
+                  className="press mt-1 text-left text-[10px] font-semibold text-muted-foreground underline underline-offset-2"
+                >
+                  Grafik streak gagal dimuat — ketuk untuk coba lagi
+                </button>
+              )}
             </div>
           </div>
           <button
@@ -255,7 +341,7 @@ export default function HomeScreen() {
           <button
             aria-label="Hari sebelumnya"
             onClick={() => setSelectedDate(addDays(selectedDate, -1))}
-            className="press h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center shrink-0"
+            className="press h-11 w-11 rounded-full bg-card border border-border flex items-center justify-center shrink-0"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -287,7 +373,7 @@ export default function HomeScreen() {
           <button
             aria-label="Hari berikutnya"
             onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-            className="press h-9 w-9 rounded-full bg-card border border-border flex items-center justify-center shrink-0"
+            className="press h-11 w-11 rounded-full bg-card border border-border flex items-center justify-center shrink-0"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -318,8 +404,8 @@ export default function HomeScreen() {
           icon={<Target className="h-4 w-4 text-garden-deep" />}
           action={
             <button
-              onClick={() => openQuickAction("habit")}
-              className="press inline-flex items-center gap-1 text-xs font-bold text-garden-deep bg-garden-soft rounded-full px-3 py-1.5"
+              onClick={() => setQuickAction("habit")}
+              className="press inline-flex min-h-[44px] items-center gap-1 text-xs font-bold text-garden-deep bg-garden-soft rounded-full px-3 py-1.5"
             >
               <Plus className="h-3.5 w-3.5" /> Tambah
             </button>
@@ -332,7 +418,7 @@ export default function HomeScreen() {
               description="Tambahkan kebiasaan pertama dan mulai tanam kebiasaan baik."
               action={
                 <button
-                  onClick={() => openQuickAction("habit")}
+                  onClick={() => setQuickAction("habit")}
                   className="press bg-garden-deep text-white text-sm font-bold rounded-full px-4 py-2.5"
                 >
                   Tambah Kebiasaan
@@ -350,23 +436,25 @@ export default function HomeScreen() {
                       {g.label}
                     </p>
                     <div className="space-y-2">
-                      {items.map((a) => (
-                        <AgendaRow
-                          key={a.habit.id}
-                          habit={a.habit}
-                          log={a.log}
-                          selectedDate={selectedDate}
-                          isToday={isTodaySelected}
-                          onCheck={(value) => checkMutation.mutate({ id: a.habit.id, value })}
-                        />
-                      ))}
+                      {items.map((a) => {
+                        const dayLog = dayLogOf(a);
+                        return (
+                          <AgendaRow
+                            key={a.habit.id}
+                            habit={a.habit}
+                            log={dayLog}
+                            isToday={isTodaySelected}
+                            onCheck={(value) => checkMutation.mutate({ id: a.habit.id, value })}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 );
               })}
               <button
                 onClick={() => setPage("habits")}
-                className="press w-full text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1"
+                className="press w-full min-h-[44px] text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1"
               >
                 <ArchiveRestore className="h-3.5 w-3.5" />
                 Kelola & pulihkan kebiasaan di Taman
@@ -563,7 +651,7 @@ export default function HomeScreen() {
               <button
                 onClick={() => saveQuoteMutation.mutate({ text: d.quote!.text, author: d.quote!.author })}
                 disabled={saveQuoteMutation.isPending}
-                className="press inline-flex items-center gap-1 text-xs font-bold bg-writer-deep text-white rounded-full px-3 py-1.5 disabled:opacity-60"
+                className="press inline-flex min-h-[44px] items-center gap-1 text-xs font-bold bg-writer-deep text-white rounded-full px-3 py-1.5 disabled:opacity-60"
               >
                 <BookmarkPlus className="h-3.5 w-3.5" />
                 Simpan ke Jurnal
@@ -616,13 +704,11 @@ export default function HomeScreen() {
 function AgendaRow({
   habit,
   log,
-  selectedDate,
   isToday,
   onCheck,
 }: {
   habit: Habit;
   log: import("@/types/rutina").HabitLog | null;
-  selectedDate: string;
   isToday: boolean;
   onCheck: (value?: number) => void;
 }) {
@@ -633,6 +719,8 @@ function AgendaRow({
   const done =
     log?.status === "done" || (habit.unitTarget !== null && (log?.value ?? 0) >= (habit.unitTarget ?? Infinity));
   const isMeasured = habit.unitTarget !== null;
+  // Baris tanggal lampau hanya dibaca: pencatatan hanya diizinkan untuk hari ini
+  const locked = !isToday;
 
   const incr = () => {
     const next = (log?.value ?? 0) + habit.unitStep;
@@ -668,8 +756,11 @@ function AgendaRow({
         <button
           onClick={incr}
           aria-label={`Tambah progres ${habit.name}`}
-          className="press h-10 min-w-10 px-2 rounded-xl bg-garden text-white font-bold text-sm flex items-center justify-center gap-1 disabled:opacity-50"
-          disabled={done}
+          className={cn(
+            "press h-11 min-w-11 px-2 rounded-xl bg-garden text-white font-bold text-sm flex items-center justify-center gap-1 disabled:opacity-50",
+            locked && !done && "opacity-60"
+          )}
+          disabled={done || locked}
         >
           {done ? <Check className="h-5 w-5" /> : `+${habit.unitStep}`}
         </button>
@@ -678,14 +769,17 @@ function AgendaRow({
           onClick={() => onCheck()}
           aria-label={`Tandai ${habit.name} selesai`}
           className={cn(
-            "press h-10 w-10 rounded-xl flex items-center justify-center border-2 transition-colors",
-            done ? "bg-garden border-garden text-white" : "border-input text-muted-foreground"
+            "press h-11 w-11 rounded-xl flex items-center justify-center border-2 transition-colors",
+            done ? "bg-garden border-garden text-white" : "border-input text-muted-foreground",
+            locked && !done && "opacity-60"
           )}
+          disabled={locked}
         >
           <Check className="h-5 w-5" strokeWidth={3} />
         </button>
       )}
       {log?.status === "rest" && <Pill tone="gold">Jeda</Pill>}
+      {locked && !done && <Pill tone="stone">Hanya hari ini</Pill>}
     </div>
   );
 }
@@ -696,8 +790,7 @@ function HomeSkeleton() {
   return (
     <div className="flex flex-col gap-4 p-4 animate-pulse">
       <div className="h-10 w-2/3 rounded-xl bg-secondary" />
-      <div className="grid grid-cols-3 gap-2">
-        <div className="h-16 rounded-2xl bg-secondary" />
+      <div className="grid grid-cols-2 gap-2">
         <div className="h-16 rounded-2xl bg-secondary" />
         <div className="h-16 rounded-2xl bg-secondary" />
       </div>

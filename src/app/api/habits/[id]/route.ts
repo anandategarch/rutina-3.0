@@ -5,16 +5,13 @@ export const dynamic = "force-dynamic";
 
 const TIME_OF_DAY = ["morning", "afternoon", "evening", "anytime"];
 
-function normalizeDaysOfWeek(input: unknown): string | undefined {
-  if (Array.isArray(input) && input.length > 0) {
-    const valid = input
-      .map((n: unknown) => Number(n))
-      .filter((n: number) => Number.isInteger(n) && n >= 0 && n <= 6);
-    if (valid.length > 0) return Array.from(new Set(valid)).sort().map(String).join(",");
-    return undefined;
-  }
-  if (typeof input === "string" && input.trim() !== "") return input.trim();
-  return undefined;
+/** daysOfWeek → csv ter-normalisasi berisi angka 0-6 saja (tanpa duplikat, terurut). */
+function normalizeDaysOfWeek(input: unknown): string[] | null {
+  const days = String(input)
+    .split(",")
+    .map((x) => x.trim())
+    .filter((x) => /^[0-6]$/.test(x));
+  return days.length > 0 ? Array.from(new Set(days)).sort() : null;
 }
 
 /**
@@ -25,7 +22,10 @@ function normalizeDaysOfWeek(input: unknown): string | undefined {
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Body JSON tidak valid" }, { status: 400 });
+    }
 
     const existing = await db.habit.findUnique({ where: { id } });
     if (!existing) {
@@ -53,9 +53,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.scheduleType !== undefined) {
       data.scheduleType = body.scheduleType === "custom" ? "custom" : "daily";
     }
-    if (body.daysOfWeek !== undefined) {
-      const csv = normalizeDaysOfWeek(body.daysOfWeek);
-      if (csv) data.daysOfWeek = csv;
+    if (body.daysOfWeek !== undefined && body.daysOfWeek !== null) {
+      const days = normalizeDaysOfWeek(body.daysOfWeek);
+      if (!days) {
+        return NextResponse.json({ error: "Pilihan hari tidak valid" }, { status: 400 });
+      }
+      data.daysOfWeek = days.join(",");
     }
     if (body.timeOfDay !== undefined && TIME_OF_DAY.includes(body.timeOfDay)) {
       data.timeOfDay = body.timeOfDay;
@@ -75,10 +78,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         body.unitStep !== null && Number(body.unitStep) > 0 ? Number(body.unitStep) : 1;
     }
     if (body.reminderTime !== undefined) {
-      data.reminderTime =
-        typeof body.reminderTime === "string" && body.reminderTime.trim() !== ""
-          ? body.reminderTime.trim()
-          : null;
+      if (typeof body.reminderTime === "string" && body.reminderTime.trim() !== "") {
+        const reminderTime = body.reminderTime.trim();
+        if (!/^\d{2}:\d{2}$/.test(reminderTime)) {
+          return NextResponse.json({ error: "Format waktu pengingat tidak valid" }, { status: 400 });
+        }
+        data.reminderTime = reminderTime;
+      } else {
+        data.reminderTime = null;
+      }
     }
     if (body.stackAfter !== undefined) {
       data.stackAfter =
@@ -87,7 +95,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           : null;
     }
     if (body.archived !== undefined) {
-      data.archived = Boolean(body.archived);
+      data.archived = body.archived === true;
     }
 
     if (Object.keys(data).length === 0) {

@@ -9,7 +9,6 @@ import {
   HeartPulse,
   Download,
   FileUp,
-  CloudDownload,
   ShieldAlert,
   HelpCircle,
   Pencil,
@@ -28,7 +27,6 @@ import { rutinaApi } from "@/lib/rutina/api";
 import { ScreenHeader, SectionCard, Pill } from "@/components/rutina/primitives";
 import { MetricBar } from "@/components/rutina/charts";
 import { formatNumber } from "@/lib/rutina/format";
-import LogCheckInSheet from "@/components/rutina/sheets/log-checkin-sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -46,6 +44,7 @@ import { cn } from "@/lib/utils";
 
 export default function ProfileScreen() {
   const setPage = useRutinaStore((s) => s.setPage);
+  const openQuickAction = useRutinaStore((s) => s.setQuickAction);
   const qc = useQueryClient();
 
   const { data: profileData } = useQuery({ queryKey: ["profile"], queryFn: rutinaApi.profile });
@@ -106,12 +105,10 @@ export default function ProfileScreen() {
     );
   };
 
-  // ===== Check-in =====
-  const [checkinOpen, setCheckinOpen] = React.useState(false);
-
   // ===== Ekspor / impor data =====
   const [busyExport, setBusyExport] = React.useState<"json" | "csv" | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
+  const [pendingImport, setPendingImport] = React.useState<File | null>(null);
   const [resetOpen, setResetOpen] = React.useState(false);
   const [resetStep, setResetStep] = React.useState<1 | 2>(1);
   const [faqOpen, setFaqOpen] = React.useState(false);
@@ -165,6 +162,14 @@ export default function ProfileScreen() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Konfirmasi dulu sebelum benar-benar menimpa data dengan berkas pilihan
+  const confirmImport = () => {
+    if (!pendingImport || importMutation.isPending) return;
+    importMutation.mutate(pendingImport, {
+      onSettled: () => setPendingImport(null),
+    });
+  };
+
   const resetMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/danger/reset", { method: "POST" });
@@ -207,7 +212,7 @@ export default function ProfileScreen() {
                   <p className="text-base font-bold truncate">{profile.name}</p>
                   {level != null && <Pill tone="garden">Lv{level}</Pill>}
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Penghuni Rutina 2.0</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Penghuni Rutina 3.0</p>
                 <div className="mt-3 rounded-xl bg-sage-soft border border-sage/20 px-3.5 py-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-sage-deep mb-1">Suara Identitas</p>
                   <p className="font-script text-lg leading-snug text-foreground">
@@ -323,7 +328,7 @@ export default function ProfileScreen() {
               <p className="text-xs text-muted-foreground">Mood, energi, tidur — 30 detik selesai.</p>
             </div>
             <button
-              onClick={() => setCheckinOpen(true)}
+              onClick={() => openQuickAction("checkin")}
               className="press rounded-full bg-sage text-white text-xs font-bold px-4 min-h-[44px] shrink-0"
             >
               Isi
@@ -355,12 +360,6 @@ export default function ProfileScreen() {
               busy={importMutation.isPending}
               onClick={() => fileRef.current?.click()}
             />
-            <ActionRow
-              icon={CloudDownload}
-              label="Tarik ulang snapshot cloud"
-              desc="Sinkronkan salinan tersimpan di cloud"
-              onClick={() => toast.success("Snapshot cloud tersinkron (simulasi)")}
-            />
           </div>
           <input
             ref={fileRef}
@@ -370,8 +369,8 @@ export default function ProfileScreen() {
             aria-label="Pilih berkas cadangan JSON"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) importMutation.mutate(f);
               e.target.value = "";
+              if (f) setPendingImport(f);
             }}
           />
         </SectionCard>
@@ -413,7 +412,7 @@ export default function ProfileScreen() {
           </button>
         </section>
 
-        <p className="text-center text-[11px] text-muted-foreground pb-2">Rutina 2.0 — dibuat dengan disiplin hangat</p>
+        <p className="text-center text-[11px] text-muted-foreground pb-2">Rutina 3.0 — dibuat dengan disiplin hangat</p>
       </div>
 
       {/* ===== Dialog edit identitas ===== */}
@@ -533,8 +532,38 @@ export default function ProfileScreen() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ===== Sheet check-in (modul lain) ===== */}
-      <LogCheckInSheet open={checkinOpen} onClose={() => setCheckinOpen(false)} />
+      {/* ===== AlertDialog konfirmasi pulihkan data ===== */}
+      <AlertDialog
+        open={pendingImport !== null}
+        onOpenChange={(o) => {
+          if (!o && !importMutation.isPending) setPendingImport(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pulihkan Data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Berkas &ldquo;{pendingImport?.name ?? "cadangan"}&rdquo; akan menimpa SELURUH data saat ini — kebiasaan, log,
+              latihan, transaksi, jurnal, check-in, dan tabungan diganti dengan isi cadangan. Tindakan ini tidak dapat
+              dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setPendingImport(null)} disabled={importMutation.isPending}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmImport}
+              disabled={importMutation.isPending}
+              className="flex items-center gap-1.5"
+            >
+              {importMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Ya, Pulihkan
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

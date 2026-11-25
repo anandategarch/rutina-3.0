@@ -82,7 +82,8 @@ export default function AddJournalSheet({
 
   const canSubmit = content.trim().length > 0 && !createMutation.isPending;
 
-  const handleSubmit = () => {
+  const handleSubmit = (ev: React.FormEvent) => {
+    ev.preventDefault();
     if (!content.trim()) {
       toast.error("Isi catatan belum ditulis");
       return;
@@ -100,98 +101,103 @@ export default function AddJournalSheet({
           </p>
         </DrawerHeader>
 
-        <div className="px-4 pb-6 overflow-y-auto scroll-thin space-y-4">
-          <div className="space-y-1.5">
-            <label htmlFor="journal-title" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-              Judul
-            </label>
-            <Input
-              id="journal-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Tanpa judul juga boleh"
-              maxLength={200}
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+          <div className="px-4 pb-4 overflow-y-auto scroll-thin space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="journal-title" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                Judul
+              </label>
+              <Input
+                id="journal-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Tanpa judul juga boleh"
+                maxLength={200}
+                enterKeyHint="next"
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="journal-content" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-              Isi catatan <span className="text-writer-deep">*</span>
-            </label>
-            <Textarea
-              id="journal-content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Hari ini aku ..."
-              className="min-h-40 resize-none"
-            />
-            <p className="text-[11px] text-muted-foreground tabular text-right">
-              {content.trim() ? content.trim().split(/\s+/).length : 0} kata
-            </p>
-          </div>
+            <div className="space-y-1.5">
+              <label htmlFor="journal-content" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                Isi catatan <span className="text-writer-deep">*</span>
+              </label>
+              <Textarea
+                id="journal-content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Hari ini aku ..."
+                className="min-h-40 resize-none"
+              />
+              <p className="text-[11px] text-muted-foreground tabular text-right">
+                {content.trim() ? content.trim().split(/\s+/).length : 0} kata
+              </p>
+            </div>
 
-          <div className="space-y-1.5">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Folder</p>
-            <Select value={folder} onValueChange={setFolder}>
-              <SelectTrigger className="w-full" aria-label="Pilih folder catatan">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {FOLDERS.map((f) => (
-                  <SelectItem key={f} value={f}>
-                    {f}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Folder</p>
+              <Select value={folder} onValueChange={setFolder}>
+                <SelectTrigger className="w-full" aria-label="Pilih folder catatan">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FOLDERS.map((f) => (
+                    <SelectItem key={f} value={f}>
+                      {f}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-1.5">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Mood</p>
-            <div className="grid grid-cols-5 gap-2">
-              {JOURNAL_MOODS.map((m) => {
-                const Icon = m.icon;
-                const active = mood === m.key;
-                return (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setMood(active ? null : m.key)}
-                    aria-pressed={active}
-                    aria-label={`Mood ${m.label}`}
-                    className={cn(
-                      "press flex flex-col items-center justify-center gap-1 rounded-xl border py-3 min-h-[64px]",
-                      active
-                        ? "bg-writer-soft border-writer/40 text-writer-deep"
-                        : "bg-secondary border-border/60 text-muted-foreground"
-                    )}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="text-[10px] font-semibold leading-none">{m.label}</span>
-                  </button>
-                );
-              })}
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Mood</p>
+              <div className="grid grid-cols-5 gap-2">
+                {JOURNAL_MOODS.map((m) => {
+                  const Icon = m.icon;
+                  const active = mood === m.key;
+                  return (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => setMood(active ? null : m.key)}
+                      aria-pressed={active}
+                      aria-label={`Mood ${m.label}`}
+                      className={cn(
+                        "press flex flex-col items-center justify-center gap-1 rounded-xl border py-3 min-h-[64px]",
+                        active
+                          ? "bg-writer-soft border-writer/40 text-writer-deep"
+                          : "bg-secondary border-border/60 text-muted-foreground"
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span className="text-[10px] font-semibold leading-none">{m.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl bg-secondary px-3.5 py-3">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Pin className="h-4 w-4 text-writer-deep" />
+                Sematkan di atas
+              </div>
+              <Switch checked={pinned} onCheckedChange={setPinned} aria-label="Sematkan catatan" />
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl bg-secondary px-3.5 py-3">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Pin className="h-4 w-4 text-writer-deep" />
-              Sematkan di atas
-            </div>
-            <Switch checked={pinned} onCheckedChange={setPinned} aria-label="Sematkan catatan" />
+          {/* ===== Submit (footer sticky di luar area scroll) ===== */}
+          <div className="border-t border-border/60 bg-background p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="press w-full min-h-[48px] rounded-2xl bg-writer-deep text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Simpan Catatan
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            className="press w-full min-h-[48px] rounded-2xl bg-writer-deep text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Simpan Catatan
-          </button>
-        </div>
+        </form>
       </DrawerContent>
     </Drawer>
   );

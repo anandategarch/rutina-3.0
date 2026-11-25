@@ -1,6 +1,5 @@
-import { PrismaClient } from "@prisma/client";
-
-const db = new PrismaClient();
+import { db } from "@/lib/db";
+import { addDays, jakartaToday, parseDateStr, toDateStr } from "@/lib/rutina/format";
 
 /**
  * Aturan XP Rutina (satu sumber kebenaran untuk semua endpoint):
@@ -39,24 +38,22 @@ export async function getXpData() {
 
 /** Streak: hari berturut-turut (berakhir hari ini/kemarin) dengan >=1 habit done. */
 export async function computeStreaks() {
-  const logs = await db.habitLog.findMany({
-    where: { status: "done" },
-    select: { date: true },
-    orderBy: { date: "desc" },
+  // GroupBy per tanggal: cukup daftar tanggal unik, tanpa memuat seluruh baris log.
+  // Log milik habit yang diarsipkan tidak dihitung.
+  const rows = await db.habitLog.groupBy({
+    by: ["date"],
+    where: { status: "done", habit: { archived: false } },
   });
-  const dates = Array.from(new Set(logs.map((l) => l.date))).sort();
+  const dates = rows.map((r) => r.date).sort();
   const dateSet = new Set(dates);
 
-  // current streak
-  const today = new Date();
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  let cursor = new Date(today);
-  if (!dateSet.has(fmt(cursor))) {
+  // current streak — "hari ini" mengikuti zona waktu pengguna (Asia/Jakarta)
+  const cursor = parseDateStr(jakartaToday());
+  if (!dateSet.has(toDateStr(cursor))) {
     cursor.setDate(cursor.getDate() - 1);
   }
   let current = 0;
-  while (dateSet.has(fmt(cursor))) {
+  while (dateSet.has(toDateStr(cursor))) {
     current++;
     cursor.setDate(cursor.getDate() - 1);
   }
@@ -65,12 +62,6 @@ export async function computeStreaks() {
   let best = 0;
   let run = 0;
   let prev: string | null = null;
-  const addDays = (s: string, n: number) => {
-    const [y, m, d] = s.split("-").map(Number);
-    const dt = new Date(y, m - 1, d);
-    dt.setDate(dt.getDate() + n);
-    return fmt(dt);
-  };
   for (const d of dates) {
     if (prev && addDays(prev, 1) === d) run++;
     else run = 1;

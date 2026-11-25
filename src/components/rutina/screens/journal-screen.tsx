@@ -10,6 +10,7 @@ import {
   NotebookText,
   CalendarDays,
   AlignLeft,
+  AlertTriangle,
   Trash2,
   FolderOpen,
   type LucideIcon,
@@ -74,9 +75,9 @@ function relativeDate(s: string): string {
 
 export default function JournalScreen() {
   const setPage = useRutinaStore((s) => s.setPage);
-  const openQuickAction = useRutinaStore((s) => s.openQuickAction);
+  const openQuickAction = useRutinaStore((s) => s.setQuickAction);
 
-  const { data, isLoading } = useQuery({ queryKey: ["journal"], queryFn: rutinaApi.journal });
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["journal"], queryFn: rutinaApi.journal });
   const entries: JournalEntry[] = React.useMemo(() => data?.entries ?? [], [data]);
 
   // ===== Filter & pencarian (debounce) =====
@@ -203,7 +204,7 @@ export default function JournalScreen() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cari judul atau isi catatan"
               aria-label="Cari catatan"
-              className="pl-10 bg-card"
+              className="pl-10 bg-card h-11"
             />
           </div>
 
@@ -236,7 +237,7 @@ export default function JournalScreen() {
                   aria-pressed={active}
                   aria-label={`Filter mood ${m.label}`}
                   className={cn(
-                    "press h-9 w-9 rounded-full flex items-center justify-center border transition-colors",
+                    "press h-11 w-11 rounded-full flex items-center justify-center border transition-colors",
                     active
                       ? "bg-writer-soft border-writer/40 text-writer-deep"
                       : "bg-card border-border/60 text-muted-foreground"
@@ -250,7 +251,7 @@ export default function JournalScreen() {
               onClick={() => setPinnedOnly(!pinnedOnly)}
               aria-pressed={pinnedOnly}
               className={cn(
-                "press inline-flex items-center gap-1.5 rounded-full px-3.5 min-h-[36px] text-xs font-bold border transition-colors ml-auto",
+                "press inline-flex items-center gap-1.5 rounded-full px-3.5 min-h-[44px] text-xs font-bold border transition-colors ml-auto",
                 pinnedOnly
                   ? "bg-gold-soft border-gold/40 text-gold"
                   : "bg-card text-muted-foreground border-border/70"
@@ -435,7 +436,21 @@ export default function JournalScreen() {
           tone="writer"
           icon={<NotebookText className="h-4 w-4 text-writer-deep" />}
         >
-          {isLoading ? (
+          {isError ? (
+            <EmptyState
+              icon={<AlertTriangle className="h-6 w-6" />}
+              title="Gagal memuat catatan"
+              description="Writing Room tidak bisa dijangkau saat ini. Periksa koneksi internetmu, lalu coba muat ulang."
+              action={
+                <button
+                  onClick={() => refetch()}
+                  className="press bg-writer-deep text-white text-sm font-bold rounded-full px-4 min-h-[44px]"
+                >
+                  Coba Lagi
+                </button>
+              }
+            />
+          ) : isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="rounded-xl bg-secondary/70 h-24 animate-pulse" />
@@ -460,7 +475,7 @@ export default function JournalScreen() {
               }
             />
           ) : (
-            <div className="space-y-2.5 max-h-[28rem] overflow-y-auto scroll-thin pr-0.5">
+            <div className="space-y-2.5">
               {filtered.map((e) => {
                 const moodMeta = e.mood ? JOURNAL_MOODS.find((m) => m.key === e.mood) : null;
                 const MoodIcon = moodMeta?.icon as LucideIcon | undefined;
@@ -486,7 +501,7 @@ export default function JournalScreen() {
                         </span>
                       )}
                       <span className="ml-auto text-[11px] text-muted-foreground tabular">
-                        {relativeDate(dayOf(e.createdAt))} · {e.wordCount} kata
+                        {relativeDate(dayOf(e.updatedAt))} · {e.wordCount} kata
                       </span>
                     </div>
                   </button>
@@ -588,7 +603,13 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
               <label htmlFor="edit-title" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                 Judul
               </label>
-              <Input id="edit-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
+              <Input
+                id="edit-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={200}
+                className="h-11"
+              />
             </div>
 
             <div className="space-y-1.5">

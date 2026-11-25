@@ -27,7 +27,7 @@ export function ScreenHeader({
     writer: "text-writer-deep",
   };
   return (
-    <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-md pt-3 pb-2 px-4 border-b border-border/60">
+    <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-md pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 px-4 border-b border-border/60">
       <div className="flex items-center gap-3">
         {onBack && (
           <button
@@ -257,7 +257,7 @@ export const MOOD_META: Record<string, { label: string; emoji: string }> = {
   good: { label: "Baik", emoji: "🙂" },
   neutral: { label: "Biasa", emoji: "😐" },
   tough: { label: "Berat", emoji: "😔" },
-  low: { label: "Low", emoji: "😢" },
+  low: { label: "Buruk", emoji: "😢" },
 };
 
 // avoid unused import warnings in some bundlers

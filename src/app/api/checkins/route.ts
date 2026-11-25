@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/rutina/server";
+import { jakartaToday, isValidDateStr } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,9 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    const date = typeof body.date === "string" && body.date.trim() ? body.date.trim() : new Date().toISOString().slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const date =
+      typeof body.date === "string" && body.date.trim() ? body.date.trim() : jakartaToday();
+    if (!isValidDateStr(date)) {
       return NextResponse.json({ error: "Format tanggal tidak valid" }, { status: 400 });
     }
 
@@ -68,6 +70,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Durasi tidur tidak valid" }, { status: 400 });
     }
 
+    // 201 hanya untuk pembuatan baru; pembaruan check-in yang sudah ada → 200
+    const existing = await db.checkIn.findUnique({ where: { date } });
     const checkin = await db.checkIn.upsert({
       where: { date },
       create: {
@@ -89,7 +93,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ checkin }, { status: 201 });
+    return NextResponse.json({ checkin }, { status: existing ? 200 : 201 });
   } catch (e) {
     console.error("checkins POST error", e);
     return NextResponse.json({ error: "Gagal menyimpan check-in" }, { status: 500 });

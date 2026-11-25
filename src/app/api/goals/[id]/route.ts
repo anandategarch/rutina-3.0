@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { isValidDateStr } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** PATCH: dipakai untuk kontribusi dana (kirim currentAmount baru), ubah nama/target/deadline. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -38,7 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     if (body.deadline !== undefined) {
       if (body.deadline === null) data.deadline = null;
-      else if (typeof body.deadline === "string" && DATE_RE.test(body.deadline))
+      else if (typeof body.deadline === "string" && isValidDateStr(body.deadline))
         data.deadline = body.deadline;
       else return NextResponse.json({ error: "Format deadline tidak valid" }, { status: 400 });
     }

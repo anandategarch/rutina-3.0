@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/rutina/server";
+import { jakartaToday, isValidDateStr } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +46,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Durasi wajib diisi (lebih dari 0 menit)" }, { status: 400 });
     }
 
-    const date = str(body.date) ?? new Date().toISOString().slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const date = str(body.date) ?? jakartaToday();
+    if (!isValidDateStr(date)) {
       return NextResponse.json({ error: "Format tanggal tidak valid" }, { status: 400 });
+    }
+
+    // startTime wajib berformat "HH:MM" bila diisi
+    const startTime = str(body.startTime);
+    if (startTime && !/^\d{2}:\d{2}$/.test(startTime)) {
+      return NextResponse.json({ error: "Format jam mulai tidak valid" }, { status: 400 });
     }
 
     const distanceKm = num(body.distanceKm);
@@ -67,7 +74,7 @@ export async function POST(req: Request) {
           reps: Math.max(1, Math.round(num(s.reps) ?? 0)),
           sets: Math.max(1, Math.round(num(s.sets) ?? 1)),
         }))
-        .filter((s) => s.exercise.length > 0 && s.weight >= 0);
+        .filter((s: { exercise: string; weight: number }) => s.exercise.length > 0 && s.weight >= 0);
       if (items.length > 0) strengthJson = JSON.stringify(items);
     }
 
@@ -76,7 +83,7 @@ export async function POST(req: Request) {
         type,
         title: str(body.title),
         date,
-        startTime: str(body.startTime),
+        startTime,
         durationMin,
         distanceKm,
         calories: num(body.calories),

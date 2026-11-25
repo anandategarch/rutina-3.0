@@ -29,7 +29,6 @@ import {
   Scale,
   Trophy,
   Target,
-  CalendarCheck,
   AlertTriangle,
   CheckCircle2,
   Shuffle,
@@ -78,6 +77,7 @@ import {
   formatDuration,
   formatPace,
   formatDayMonth,
+  parseDateStr,
   rangeDays,
   weekStart,
 } from "@/lib/rutina/format";
@@ -132,42 +132,47 @@ export default function FitnessScreen() {
   const workouts = workoutsQuery.data?.workouts ?? [];
   const checkins = checkinsQuery.data?.checkins ?? [];
 
+  // Sasaran kebugaran: satu sumber state untuk tab Latihan & Tubuh (sinkron dengan localStorage)
+  const [goals, setGoals] = React.useState<FitnessGoals>(readGoals);
+
   return (
     <div className="flex flex-col min-h-full">
-      <ScreenHeader title="Bugar" subtitle="Performance Studio" tone="studio" />
-
       <Tabs defaultValue="latihan" className="flex flex-col">
-        <div className="px-4 pt-3 sticky top-[64px] z-20 bg-background/95 backdrop-blur-md pb-2 border-b border-border/40">
-          <TabsList className="w-full grid grid-cols-3 h-11 rounded-2xl bg-secondary p-1">
-            <TabsTrigger
-              value="latihan"
-              className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[38px]"
-            >
-              <Dumbbell className="h-4 w-4" /> Latihan
-            </TabsTrigger>
-            <TabsTrigger
-              value="asupan"
-              className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[38px]"
-            >
-              <UtensilsCrossed className="h-4 w-4" /> Asupan
-            </TabsTrigger>
-            <TabsTrigger
-              value="tubuh"
-              className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[38px]"
-            >
-              <HeartPulse className="h-4 w-4" /> Tubuh
-            </TabsTrigger>
-          </TabsList>
+        {/* Header + strip tab dalam satu wrapper sticky: offset tidak bergantung tinggi header */}
+        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md">
+          <ScreenHeader title="Bugar" subtitle="Performance Studio" tone="studio" />
+          <div className="px-4 pt-3 pb-2 border-b border-border/40">
+            <TabsList className="w-full grid grid-cols-3 h-11 rounded-2xl bg-secondary p-1">
+              <TabsTrigger
+                value="latihan"
+                className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[38px]"
+              >
+                <Dumbbell className="h-4 w-4" /> Latihan
+              </TabsTrigger>
+              <TabsTrigger
+                value="asupan"
+                className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[38px]"
+              >
+                <UtensilsCrossed className="h-4 w-4" /> Asupan
+              </TabsTrigger>
+              <TabsTrigger
+                value="tubuh"
+                className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[38px]"
+              >
+                <HeartPulse className="h-4 w-4" /> Tubuh
+              </TabsTrigger>
+            </TabsList>
+          </div>
         </div>
 
         <TabsContent value="latihan" className="px-4 pt-4 pb-6 space-y-4">
-          <WorkoutTab workouts={workouts} loading={workoutsQuery.isLoading} checkins={checkins} />
+          <WorkoutTab workouts={workouts} loading={workoutsQuery.isLoading} checkins={checkins} goals={goals} />
         </TabsContent>
         <TabsContent value="asupan" className="px-4 pt-4 pb-6 space-y-4">
           <NutritionTab workouts={workouts} />
         </TabsContent>
         <TabsContent value="tubuh" className="px-4 pt-4 pb-6 space-y-4">
-          <BodyTab workouts={workouts} checkins={checkins} />
+          <BodyTab workouts={workouts} checkins={checkins} goals={goals} onGoalsChange={setGoals} />
         </TabsContent>
       </Tabs>
     </div>
@@ -294,17 +299,18 @@ function WorkoutTab({
   workouts,
   loading,
   checkins,
+  goals,
 }: {
   workouts: Workout[];
   loading: boolean;
   checkins: CheckIn[];
+  goals: FitnessGoals;
 }) {
-  const openQuickAction = useRutinaStore((s) => s.openQuickAction);
+  const openQuickAction = useRutinaStore((s) => s.setQuickAction);
   const today = todayStr();
   const wStart = weekStart(today);
 
   const weekWorkouts = workouts.filter((w) => w.date >= wStart && w.date <= today);
-  const [goals] = React.useState<FitnessGoals>(() => readGoals());
 
   const summary = React.useMemo(() => {
     let cardioKm = 0;
@@ -726,7 +732,7 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
             onClick={() => setTypeFilter(f.key)}
             aria-pressed={typeFilter === f.key}
             className={cn(
-              "press shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold min-h-[36px]",
+              "press shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold min-h-[44px]",
               typeFilter === f.key
                 ? "bg-studio text-white shadow-soft"
                 : "bg-secondary text-muted-foreground"
@@ -743,7 +749,7 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
             onClick={() => setRange(r)}
             aria-pressed={range === r}
             className={cn(
-              "press flex-1 rounded-full px-3 py-2 text-xs font-semibold min-h-[36px]",
+              "press flex-1 rounded-full px-3 py-2 text-xs font-semibold min-h-[44px]",
               range === r ? "bg-studio-soft text-studio-deep border border-studio/40" : "bg-secondary text-muted-foreground"
             )}
           >
@@ -759,7 +765,7 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
           description={`Tidak ada latihan ${typeFilter !== "all" ? "pada filter ini " : ""}${range} hari terakhir.`}
         />
       ) : (
-        <div className="max-h-[440px] overflow-y-auto scroll-thin space-y-2 pr-0.5">
+        <div className="max-h-[440px] overflow-y-auto overscroll-contain scroll-thin space-y-2 pr-0.5">
           {filtered.map((w) => (
             <WorkoutHistoryCard key={w.id} workout={w} />
           ))}
@@ -822,7 +828,7 @@ function WorkoutHistoryCard({ workout: w }: { workout: Workout }) {
           <AlertDialogTrigger asChild>
             <button
               aria-label={`Hapus sesi ${w.title ?? meta.label}`}
-              className="press flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-writer-soft text-writer-deep"
+              className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-writer-soft text-writer-deep"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -896,7 +902,7 @@ function TrendSection({ workouts }: { workouts: Workout[] }) {
         }
       }
       weeks.push({
-        label: formatDayMonth(start),
+        label: String(parseDateStr(start).getDate()),
         Sesi: inWeek.length,
         Menit: Math.round(inWeek.reduce((a, w) => a + w.durationMin, 0)),
         Tonase: Math.round(tonnage),
@@ -978,7 +984,7 @@ function TrendSparkRow({
 
 function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
   const queryClient = useQueryClient();
-  const openQuickAction = useRutinaStore((s) => s.openQuickAction);
+  const openQuickAction = useRutinaStore((s) => s.setQuickAction);
   const foodsQuery = useQuery({ queryKey: ["foods"], queryFn: rutinaApi.foods });
 
   const [calTarget, setCalTarget] = React.useState(() => readCalorieTarget());
@@ -1246,7 +1252,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
                             onClick={() => deleteMutation.mutate(e.id)}
                             disabled={deleteMutation.isPending}
                             aria-label={`Hapus ${e.name}`}
-                            className="press flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-writer-soft text-writer-deep"
+                            className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-writer-soft text-writer-deep"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -1350,9 +1356,19 @@ function GoalProgressRow({ label, value, max, display }: { label: string; value:
   );
 }
 
-function BodyTab({ workouts, checkins }: { workouts: Workout[]; checkins: CheckIn[] }) {
+function BodyTab({
+  workouts,
+  checkins,
+  goals,
+  onGoalsChange,
+}: {
+  workouts: Workout[];
+  checkins: CheckIn[];
+  goals: FitnessGoals;
+  onGoalsChange: (next: FitnessGoals) => void;
+}) {
   const queryClient = useQueryClient();
-  const openQuickAction = useRutinaStore((s) => s.openQuickAction);
+  const openQuickAction = useRutinaStore((s) => s.setQuickAction);
   const metricsQuery = useQuery({ queryKey: ["body-metrics"], queryFn: rutinaApi.bodyMetrics });
   const metrics = metricsQuery.data?.metrics ?? [];
 
@@ -1416,7 +1432,6 @@ function BodyTab({ workouts, checkins }: { workouts: Workout[]; checkins: CheckI
   const last14 = rangeDays(addDays(today, -13), today);
 
   // ===== Sasaran =====
-  const [goals, setGoals] = React.useState<FitnessGoals>(readGoals);
   const [editingGoals, setEditingGoals] = React.useState(false);
   const [goalDraft, setGoalDraft] = React.useState<Record<keyof FitnessGoals, string>>(() => ({
     weeklySessions: String(goals.weeklySessions),
@@ -1456,7 +1471,7 @@ function BodyTab({ workouts, checkins }: { workouts: Workout[]; checkins: CheckI
     }
     const next: FitnessGoals = { weeklySessions: s, weeklyMinutes: m, dailyHydration: h, weightGoalKg: w };
     if (typeof window !== "undefined") window.localStorage.setItem("rutina-fitness-goals", JSON.stringify(next));
-    setGoals(next);
+    onGoalsChange(next);
     setEditingGoals(false);
     toast.success("Sasaran kebugaran diperbarui");
   };
@@ -1544,7 +1559,7 @@ function BodyTab({ workouts, checkins }: { workouts: Workout[]; checkins: CheckI
               onClick={() => setWeightRange(r)}
               aria-pressed={weightRange === r}
               className={cn(
-                "press flex-1 rounded-full px-3 py-2 text-xs font-semibold min-h-[36px]",
+                "press flex-1 rounded-full px-3 py-2 text-xs font-semibold min-h-[44px]",
                 weightRange === r
                   ? "bg-studio-soft text-studio-deep border border-studio/40"
                   : "bg-secondary text-muted-foreground"
@@ -1618,6 +1633,7 @@ function BodyTab({ workouts, checkins }: { workouts: Workout[]; checkins: CheckI
           {glasses} dari {goals.dailyHydration} gelas target harian
         </p>
         <div
+          role="img"
           className="mt-3 flex flex-wrap items-center gap-1.5"
           aria-label={`Hidrasi ${glasses} dari ${goals.dailyHydration} gelas`}
         >
@@ -1716,7 +1732,13 @@ function BodyTab({ workouts, checkins }: { workouts: Workout[]; checkins: CheckI
               return (
                 <div key={d} className="flex shrink-0 flex-col items-center gap-1">
                   <span
-                    title={`${formatDateID(d)}${c ? ` · mood ${mood}/5` : ""}`}
+                    role="img"
+                    title={`${formatDateID(d)}${mood !== null ? ` · mood ${mood}/5` : ""}`}
+                    aria-label={
+                      mood !== null
+                        ? `${formatDateID(d)}, mood ${mood}/5`
+                        : `${formatDateID(d)}, mood tidak dicatat`
+                    }
                     className={cn("h-7 w-7 rounded-full", bg)}
                   />
                   <span className="text-[9px] font-semibold text-muted-foreground">{dayName(d, true)}</span>
@@ -1738,7 +1760,7 @@ function BodyTab({ workouts, checkins }: { workouts: Workout[]; checkins: CheckI
         action={
           <button
             onClick={() => (editingGoals ? setEditingGoals(false) : startEditGoals())}
-            className="press min-h-[36px] rounded-full px-3 text-xs font-bold text-studio-deep"
+            className="press min-h-[44px] rounded-full px-3 text-xs font-bold text-studio-deep"
           >
             {editingGoals ? "Batal" : "Ubah"}
           </button>

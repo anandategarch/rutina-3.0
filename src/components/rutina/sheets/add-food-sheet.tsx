@@ -92,6 +92,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["foods"] });
       queryClient.invalidateQueries({ queryKey: ["home"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
       toast.success("Asupan tersimpan");
       onClose();
     },
@@ -132,7 +133,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
 
         {selected === null ? (
           /* ===== Step 1: Pencarian ===== */
-          <div className="px-4 pb-6 space-y-3">
+          <div className="px-4 space-y-3 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -301,7 +302,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
               </div>
             </div>
 
-            <div className="border-t border-border/60 p-4 pb-6 bg-background">
+            <div className="border-t border-border/60 bg-background p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
               <Button
                 type="submit"
                 disabled={!canSubmit}

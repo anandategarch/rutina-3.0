@@ -53,3 +53,15 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# local runtime data & artifacts (never commit)
+db/*.db
+*.sqlite
+*.sqlite3
+*.tar
+dev.pid
+upload/
+download/
+tool-results/
+.zscripts/
+agent-ctx/

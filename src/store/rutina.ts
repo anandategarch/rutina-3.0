@@ -20,7 +20,6 @@ interface RutinaState {
   setPage: (p: RutinaPage) => void;
   setHubOpen: (open: boolean) => void;
   setQuickAction: (a: QuickAction) => void;
-  openQuickAction: (a: Exclude<QuickAction, null>) => void;
 }
 
 export const useRutinaStore = create<RutinaState>((set) => ({
@@ -30,5 +29,4 @@ export const useRutinaStore = create<RutinaState>((set) => ({
   setPage: (p) => set({ page: p, hubOpen: false }),
   setHubOpen: (open) => set({ hubOpen: open }),
   setQuickAction: (a) => set({ quickAction: a, hubOpen: false }),
-  openQuickAction: (a) => set({ quickAction: a, hubOpen: false }),
 }));

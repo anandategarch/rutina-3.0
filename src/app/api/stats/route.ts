@@ -9,6 +9,7 @@ import {
   formatDuration,
   formatRupiah,
   toDateStr,
+  jakartaToday,
 } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
@@ -41,8 +42,7 @@ function daysInMonth(dateStr: string): number {
  */
 export async function GET() {
   try {
-    const now = new Date();
-    const today = toDateStr(now);
+    const today = jakartaToday();
 
     const [xpData, streak, habits, allLogs, workouts, bodyMetrics, checkinRows, wallets, transactions, journalEntries, achievements] =
       await Promise.all([
@@ -54,8 +54,13 @@ export async function GET() {
         db.bodyMetric.findMany({ orderBy: { date: "asc" } }),
         db.checkIn.findMany({ where: { date: { gte: addDays(today, -13) } } }),
         db.wallet.findMany(),
-        db.transaction.findMany(),
-        db.journalEntry.findMany({ orderBy: { updatedAt: "desc" } }),
+        // Hanya kolom yang dipakai agregasi (type/amount/date) — netBalance butuh seluruh riwayat
+        db.transaction.findMany({ select: { type: true, amount: true, date: true, category: true } }),
+        // Jurnal: cukup createdAt + wordCount + mood untuk statistik (tanpa konten berat)
+        db.journalEntry.findMany({
+          orderBy: { updatedAt: "desc" },
+          select: { createdAt: true, wordCount: true, mood: true },
+        }),
         db.achievement.findMany(),
       ]);
 
@@ -183,7 +188,7 @@ export async function GET() {
       .sort((a, b) => b.amount - a.amount);
 
     // ===== Jurnal =====
-    const recentEntries = journalEntries.filter((e) => toDateStr(new Date(e.createdAt)) >= d30);
+    const recentEntries = journalEntries.filter((e) => toDateStr(e.createdAt) >= d30);
     const entries30d = recentEntries.length;
     const words30d = recentEntries.reduce((a, e) => a + e.wordCount, 0);
     const moodMap = new Map<string, number>();
@@ -196,7 +201,7 @@ export async function GET() {
     }));
 
     // ===== Kalender aktivitas 90 hari =====
-    const journalDates = new Set(journalEntries.map((e) => toDateStr(new Date(e.createdAt))));
+    const journalDates = new Set(journalEntries.map((e) => toDateStr(e.createdAt)));
     const txDates = new Set(transactions.map((t) => t.date));
     const workoutDates = new Set(workouts.map((w) => w.date));
     const activityCalendar = rangeDays(addDays(today, -89), today).map((date) => ({

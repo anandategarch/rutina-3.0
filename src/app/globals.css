@@ -57,6 +57,7 @@
   --color-writer-deep: var(--writer-deep);
   --color-writer-soft: var(--writer-soft);
   --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
   --color-gold-soft: var(--gold-soft);
   --color-cream: var(--cream);
   --color-sage: var(--sage);
@@ -87,7 +88,8 @@
   --secondary: #f3eddd;
   --secondary-foreground: #4a4433;
   --muted: #f3eddd;
-  --muted-foreground: #8f8672;
+  /* Darkened from #8f8672 for WCAG AA contrast on the cream background */
+  --muted-foreground: #6f6753;
   --accent: #e6f4ea;
   --accent-foreground: #1f7a43;
   --destructive: #b8401f;

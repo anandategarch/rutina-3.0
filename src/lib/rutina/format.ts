@@ -17,6 +17,19 @@ export function parseDateStr(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/** "Hari ini" menurut zona waktu aplikasi (pengguna berada di Asia/Jakarta). */
+export function jakartaToday(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date()); // YYYY-MM-DD
+}
+
+/** Validasi string tanggal YYYY-MM-DD, termasuk cek tanggal benar-benar ada (bukan 2024-02-31). */
+export function isValidDateStr(s: unknown): s is string {
+  if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const [y, m, d] = s.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+}
+
 export function addDays(s: string, delta: number): string {
   const d = parseDateStr(s);
   d.setDate(d.getDate() + delta);

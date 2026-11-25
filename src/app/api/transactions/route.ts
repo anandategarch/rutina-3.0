@@ -1,21 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { jakartaToday, isValidDateStr } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
 const TX_TYPES = ["income", "expense", "transfer"];
 const RECURRING = ["none", "weekly", "monthly"];
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function bad(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
-}
-
-function serverToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
 }
 
 export async function GET() {
@@ -62,7 +55,9 @@ export async function POST(req: Request) {
         : "lainnya";
     if (type === "transfer") category = "lainnya";
 
-    const date = typeof body.date === "string" && DATE_RE.test(body.date) ? body.date : serverToday();
+    // Tanggal tidak dikirim → hari ini (WIB); dikirim tapi tidak valid → tolak
+    const date = typeof body.date === "string" && body.date.trim() ? body.date.trim() : jakartaToday();
+    if (!isValidDateStr(date)) return bad("Format tanggal tidak valid");
 
     const recurring = RECURRING.includes(body.recurring) ? body.recurring : "none";
 

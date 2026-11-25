@@ -133,7 +133,7 @@ function QuickActionHub() {
   return (
     <Drawer open={hubOpen} onOpenChange={setHubOpen}>
       <DrawerContent className="max-h-[85dvh]">
-        <div className="px-5 pt-1 pb-6 overflow-y-auto scroll-thin">
+        <div className="px-5 pt-1 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] overflow-y-auto scroll-thin">
           <div className="flex items-center justify-between mb-1">
             <DrawerTitle className="text-base font-bold">Tindakan Cepat</DrawerTitle>
           </div>
@@ -214,7 +214,7 @@ function OverlayPages() {
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="absolute inset-0 z-[45] bg-background overflow-y-auto overscroll-contain"
+          className="absolute inset-0 z-[45] bg-background overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom,0px)]"
         >
           {page === "journal" && <JournalScreen />}
           {page === "stats" && <StatsScreen />}
@@ -228,7 +228,7 @@ function OverlayPages() {
 function MainContent() {
   const page = useRutinaStore((s) => s.page);
   return (
-    <div className="flex-1 flex flex-col pb-[calc(72px+env(safe-area-inset-bottom,0px))]">
+    <div className="flex-1 flex flex-col pb-[calc(84px+env(safe-area-inset-bottom,0px))]">
       {page === "home" && <HomeScreen />}
       {page === "fitness" && <FitnessScreen />}
       {page === "finance" && <FinanceScreen />}

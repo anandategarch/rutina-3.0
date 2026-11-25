@@ -83,29 +83,40 @@ export function Sparkline({
   const line = buildSmoothPath(pts);
   const last = pts[pts.length - 1];
   return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      preserveAspectRatio="none"
-      className={cn("w-full overflow-visible", className)}
-      style={{ height }}
-      aria-hidden="true"
-    >
-      {area && (
-        <>
-          <defs>
-            <linearGradient id={`spark-${id}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.22} />
-              <stop offset="100%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <path d={`${line} L ${w} ${h} L 0 ${h} Z`} fill={`url(#spark-${id})`} stroke="none" />
-        </>
-      )}
-      <path d={line} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    <div className={cn("relative w-full", className)} style={{ height }}>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        preserveAspectRatio="none"
+        className="w-full overflow-visible"
+        style={{ height }}
+        aria-hidden="true"
+      >
+        {area && (
+          <>
+            <defs>
+              <linearGradient id={`spark-${id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+                <stop offset="100%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <path d={`${line} L ${w} ${h} L 0 ${h} Z`} fill={`url(#spark-${id})`} stroke="none" />
+          </>
+        )}
+        <path d={line} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      </svg>
       {showDot && last && (
-        <circle cx={last.x} cy={last.y} r={2.6} fill={color} vectorEffect="non-scaling-stroke" />
+        // Titik akhir digambar sebagai elemen HTML agar tidak melar kena preserveAspectRatio="none"
+        <span
+          aria-hidden="true"
+          className="absolute h-1.5 w-1.5 rounded-full -translate-x-1/2 -translate-y-1/2"
+          style={{
+            left: `${(last.x / w) * 100}%`,
+            top: `${(last.y / h) * 100}%`,
+            background: color,
+          }}
+        />
       )}
-    </svg>
+    </div>
   );
 }
 
@@ -143,8 +154,9 @@ export function MiniBars({
               <div
                 className="rounded-t-[4px] w-full max-w-[14px] transition-all duration-300"
                 style={{
-                  height: `${Math.max(3, (d.value / max) * 100)}%`,
-                  background: hl ? color : color,
+                  // Nilai nol = "tidak tercatat": slot dasar 2px samar, bukan stub penuh
+                  height: d.value === 0 ? 2 : `${Math.max(3, (d.value / max) * 100)}%`,
+                  background: color,
                   opacity: hl ? 1 : d.value === 0 ? 0.18 : 0.75,
                 }}
                 title={d.label}
@@ -153,7 +165,7 @@ export function MiniBars({
                 <div
                   className="rounded-t-[4px] w-full max-w-[14px] transition-all duration-300"
                   style={{
-                    height: `${Math.max(3, ((d.alt ?? 0) / max) * 100)}%`,
+                    height: (d.alt ?? 0) === 0 ? 2 : `${Math.max(3, ((d.alt ?? 0) / max) * 100)}%`,
                     background: altColor,
                     opacity: hl ? 1 : (d.alt ?? 0) === 0 ? 0.18 : 0.75,
                   }}
@@ -337,24 +349,37 @@ export function TrendLine({
   const last = valid[valid.length - 1];
   return (
     <div className={cn("w-full", className)}>
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ height }} className="w-full overflow-visible" aria-hidden="true">
-        {target != null && (
-          <line x1={0} x2={w} y1={y(target)} y2={y(target)} stroke={NEUTRAL} strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+      <div className="relative w-full" style={{ height }}>
+        <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ height }} className="w-full overflow-visible" aria-hidden="true">
+          {target != null && (
+            <line x1={0} x2={w} y1={y(target)} y2={y(target)} stroke={NEUTRAL} strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+          )}
+          {valid.length > 1 && (
+            <>
+              <defs>
+                <linearGradient id={`trend-${id}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.18} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <path d={`${line} L ${valid[valid.length - 1].x} ${h - padB} L ${valid[0].x} ${h - padB} Z`} fill={`url(#trend-${id})`} />
+              <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            </>
+          )}
+        </svg>
+        {last && (
+          // Titik akhir digambar sebagai elemen HTML agar tidak melar kena preserveAspectRatio="none"
+          <span
+            aria-hidden="true"
+            className="absolute h-1.5 w-1.5 rounded-full -translate-x-1/2 -translate-y-1/2"
+            style={{
+              left: `${(last.x / w) * 100}%`,
+              top: `${(last.y / h) * 100}%`,
+              background: color,
+            }}
+          />
         )}
-        {valid.length > 1 && (
-          <>
-            <defs>
-              <linearGradient id={`trend-${id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity={0.18} />
-                <stop offset="100%" stopColor={color} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <path d={`${line} L ${valid[valid.length - 1].x} ${h - padB} L ${valid[0].x} ${h - padB} Z`} fill={`url(#trend-${id})`} />
-            <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-          </>
-        )}
-        {last && <circle cx={last.x} cy={last.y} r={3} fill={color} vectorEffect="non-scaling-stroke" />}
-      </svg>
+      </div>
       <div className="flex justify-between mt-1">
         {data.map((d, i) => (
           <span key={i} className="text-[9px] text-muted-foreground tabular">
@@ -603,7 +628,8 @@ export function RadarChart({
 }) {
   const cx = size / 2;
   const cy = size / 2 + 4;
-  const rMax = size / 2 - 34;
+  // Radius dipangkas agar label pada 1.18*r tetap muat dengan margin ~24px
+  const rMax = Math.max(48, (size / 2 - 24) / 1.18);
   const n = axes.length || 1;
   const angle = (i: number) => (Math.PI * 2 * i) / n - Math.PI / 2;
   const pt = (i: number, frac: number) => ({
@@ -614,7 +640,7 @@ export function RadarChart({
   const id = React.useId();
   return (
     <div className={cn("w-full flex flex-col items-center", className)}>
-      <svg width={size} height={size} role="img" aria-label="Radar keseimbangan">
+      <svg width={size} height={size} role="img" aria-label="Radar keseimbangan" className="overflow-visible">
         {/* web grid */}
         {Array.from({ length: levels }, (_, l) => {
           const frac = (l + 1) / levels;

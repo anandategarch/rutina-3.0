@@ -24,3 +24,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Gagal memperbarui anggaran" }, { status: 500 });
   }
 }
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+
+    await db.budget.delete({ where: { id } });
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
+      return NextResponse.json({ error: "Anggaran tidak ditemukan" }, { status: 404 });
+    }
+    console.error("DELETE /api/budgets/[id] error", e);
+    return NextResponse.json({ error: "Gagal menghapus anggaran" }, { status: 500 });
+  }
+}

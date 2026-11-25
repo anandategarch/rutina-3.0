@@ -35,7 +35,10 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Body JSON tidak valid" }, { status: 400 });
+    }
 
     const content = typeof body.content === "string" ? body.content.trim() : "";
     if (!content) {
@@ -45,7 +48,7 @@ export async function POST(req: Request) {
     const title = typeof body.title === "string" ? body.title.trim().slice(0, 200) : "";
     const folder = typeof body.folder === "string" && FOLDERS.includes(body.folder) ? body.folder : "Umum";
     const mood = typeof body.mood === "string" && MOODS.includes(body.mood) ? body.mood : null;
-    const pinned = Boolean(body.pinned);
+    const pinned = body.pinned === true;
 
     const entry = await db.journalEntry.create({
       data: {

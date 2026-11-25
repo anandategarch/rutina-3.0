@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server";
 import { getXpData, computeStreaks, db } from "@/lib/rutina/server";
+import {
+  addDays,
+  dayOfWeek,
+  daysBetween,
+  jakartaToday,
+  parseDateStr,
+  rangeDays,
+  startOfMonth,
+  weekStart,
+} from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
-function dstr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+// Hari acuan untuk indeks kutipan harian (berganti tiap tengah malam WIB)
+const QUOTE_EPOCH = "2024-01-01";
 
 export async function GET() {
   try {
-    const today = new Date();
-    const todayStr = dstr(today);
-    const dow = today.getDay();
+    const todayStr = jakartaToday();
+    const dow = dayOfWeek(todayStr);
 
     const profile = await db.profile.findFirst();
     const xpData = await getXpData();
@@ -23,7 +28,7 @@ export async function GET() {
     const habits = await db.habit.findMany({
       where: { archived: false },
       include: {
-        logs: { where: { date: { gte: dstr(new Date(today.getTime() - 40 * 86400000)) } } },
+        logs: { where: { date: { gte: addDays(todayStr, -40) } } },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -47,20 +52,10 @@ export async function GET() {
     const streak = await computeStreaks();
 
     // ============ Rekap pekan (Senin-Minggu) ============
-    const monday = new Date(today);
-    const dayIdx = dow === 0 ? 6 : dow - 1;
-    monday.setDate(today.getDate() - dayIdx);
-    const weekDates: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      weekDates.push(dstr(d));
-    }
-    const prevWeekDates = weekDates.map((s) => {
-      const d = new Date(s + "T00:00:00");
-      d.setDate(d.getDate() - 7);
-      return dstr(d);
-    });
+    const monday = weekStart(todayStr);
+    const weekDates = rangeDays(monday, addDays(monday, 6));
+    const prevMonday = addDays(monday, -7);
+    const prevWeekDates = rangeDays(prevMonday, addDays(prevMonday, 6));
     const weekLogs = await db.habitLog.findMany({
       where: { status: "done", date: { in: [...weekDates, ...prevWeekDates] } },
     });
@@ -68,8 +63,13 @@ export async function GET() {
     weekLogs.forEach((l) => doneByDate.set(l.date, (doneByDate.get(l.date) ?? 0) + 1));
 
     const habitsByDow = (ds: string) => {
-      const d = new Date(ds + "T00:00:00").getDay();
-      return habits.filter((h) => h.scheduleType === "daily" || h.daysOfWeek.split(",").map(Number).includes(d)).length;
+      const d = dayOfWeek(ds);
+      // Tanggal lampau: habit yang dibuat setelah tanggal tsb belum dijadwalkan saat itu
+      const createdBefore = ds < todayStr ? parseDateStr(ds) : null;
+      return habits.filter((h) => {
+        if (createdBefore && h.createdAt > createdBefore) return false;
+        return h.scheduleType === "daily" || h.daysOfWeek.split(",").map(Number).includes(d);
+      }).length;
     };
     const missionsDone = weekDates.reduce((acc, s) => acc + (doneByDate.get(s) ?? 0), 0);
     const missionsTotal = weekDates.reduce((acc, s) => acc + habitsByDow(s), 0);
@@ -79,7 +79,13 @@ export async function GET() {
     const weekWorkouts = await db.workout.count({ where: { date: { in: weekDates } } });
 
     // ============ Arus kas ============
-    const transactions = await db.transaction.findMany({ where: { type: { in: ["income", "expense"] } } });
+    // Muat hanya transaksi sejak awal bulan (atau awal pekan, mana yang lebih dulu)
+    // — semua agregasi di bawah hanya menyentuh rentang tersebut.
+    const monthStart = startOfMonth(todayStr);
+    const txSince = monthStart <= monday ? monthStart : monday;
+    const transactions = await db.transaction.findMany({
+      where: { type: { in: ["income", "expense"] }, date: { gte: txSince } },
+    });
     const cashToday = transactions
       .filter((t) => t.date === todayStr)
       .reduce(
@@ -108,7 +114,6 @@ export async function GET() {
         icon: "flame",
       };
     } else {
-      const monthStart = todayStr.slice(0, 8) + "01";
       const budgets = await db.budget.findMany();
       const monthSpend = new Map<string, number>();
       transactions
@@ -140,8 +145,13 @@ export async function GET() {
 
     // ============ Quote ============
     const quotes = await db.quote.findMany();
-    const daysSinceEpoch = Math.floor(today.getTime() / 86400000);
-    const quote = quotes.length ? quotes[daysSinceEpoch % quotes.length] : null;
+    let quote: (typeof quotes)[number] | null = null;
+    if (quotes.length > 0) {
+      // Indeks hari stabil mengikuti tanggal WIB, bukan timestamp UTC mentah
+      const dayIndex =
+        ((daysBetween(QUOTE_EPOCH, todayStr) % quotes.length) + quotes.length) % quotes.length;
+      quote = quotes[dayIndex];
+    }
 
     // ============ Draft jurnal terakhir ============
     const journalDraftHint =

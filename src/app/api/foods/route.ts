@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/rutina/server";
+import { jakartaToday, isValidDateStr } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +51,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Waktu makan tidak valid" }, { status: 400 });
     }
 
-    const date = str(body.date) ?? new Date().toISOString().slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const date = str(body.date) ?? jakartaToday();
+    if (!isValidDateStr(date)) {
       return NextResponse.json({ error: "Format tanggal tidak valid" }, { status: 400 });
     }
 

@@ -49,6 +49,7 @@ model HabitLog {
   note    String?
 
   @@unique([habitId, date])
+  @@index([date])
 }
 
 // ============ FITNESS (Performance Studio) ============
@@ -66,6 +67,8 @@ model Workout {
   notes       String?
   strength    String? // JSON [{exercise, muscleGroup, weight, reps, sets}]
   createdAt   DateTime @default(now())
+
+  @@index([date])
 }
 
 model Exercise {
@@ -96,6 +99,8 @@ model FoodEntry {
   meal      String   @default("lunch") // breakfast | lunch | dinner | snack
   date      String // YYYY-MM-DD
   createdAt DateTime @default(now())
+
+  @@index([date])
 }
 
 model CheckIn {
@@ -127,6 +132,7 @@ model Wallet {
   color          String        @default("teal")
   icon           String        @default("wallet")
   archived       Boolean       @default(false)
+  createdAt      DateTime      @default(now())
   outTransactions Transaction[] @relation("WalletSource")
   inTransactions  Transaction[] @relation("WalletTarget")
 }
@@ -144,6 +150,10 @@ model Transaction {
   note       String?
   recurring  String   @default("none") // none | weekly | monthly
   createdAt  DateTime @default(now())
+
+  @@index([date])
+  @@index([walletId])
+  @@index([toWalletId])
 }
 
 model Budget {

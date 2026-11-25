@@ -122,6 +122,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["checkins"] });
       queryClient.invalidateQueries({ queryKey: ["home"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
       toast.success("Check-in tersimpan");
       onClose();
     },
@@ -325,7 +326,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
             </div>
           </div>
 
-          <div className="border-t border-border/60 p-4 pb-6 bg-background">
+          <div className="border-t border-border/60 bg-background p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
             <Button
               type="submit"
               disabled={!canSubmit}

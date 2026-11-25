@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Nunito, DM_Sans, Caveat } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 
 // Skill pairing #71 "Claymorphism Mobile": Nunito ExtraBold/Black for ALL
 // headings (rounded terminals, playful) + DM Sans for body (clean, geometric).
@@ -24,9 +24,10 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "Rutina 2.0 — Rutinitas & Perkembangan Hidup",
+  title: "Rutina 3.0 — Rutinitas & Perkembangan Hidup",
   description:
     "Aplikasi personal untuk mengelola rutinitas dan perkembangan hidup sehari-hari: kebiasaan, kebugaran, keuangan, jurnal, dan statistik dalam satu tempat.",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -40,9 +41,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#FAF6EA",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FAF6EA" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c0b0a" },
+  ],
 };
 
 export default function RootLayout({
@@ -56,7 +59,7 @@ export default function RootLayout({
         className={`${nunito.variable} ${dmSans.variable} ${caveat.variable} antialiased bg-background text-foreground`}
       >
         {children}
-        <Toaster />
+        <Toaster position="top-center" />
       </body>
     </html>
   );

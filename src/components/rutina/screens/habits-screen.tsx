@@ -506,7 +506,7 @@ interface CheckActionCtx {
 
 export default function HabitsScreen() {
   const qc = useQueryClient();
-  const openQuickAction = useRutinaStore((s) => s.openQuickAction);
+  const setQuickAction = useRutinaStore((s) => s.setQuickAction);
   const today = todayStr();
 
   const [search, setSearch] = React.useState("");
@@ -754,8 +754,8 @@ export default function HabitsScreen() {
         tone="garden"
         actions={
           <button
-            onClick={() => openQuickAction("habit")}
-            className="press h-10 min-w-[44px] px-3 rounded-full bg-garden text-white flex items-center gap-1.5 text-xs font-bold shadow-soft"
+            onClick={() => setQuickAction("habit")}
+            className="press h-11 min-w-[44px] px-3 rounded-full bg-garden text-white flex items-center gap-1.5 text-xs font-bold shadow-soft"
           >
             <Plus className="h-4 w-4" />
             Tambah
@@ -986,6 +986,8 @@ export default function HabitsScreen() {
                     return (
                       <span
                         key={wi}
+                        role="img"
+                        aria-label={`${formatDayMonth(c.date)}, ${MATRIX_STATE_LABEL[c.state]}`}
                         title={`${c.date} · ${MATRIX_STATE_LABEL[c.state]}`}
                         className={cn(
                           "h-4 flex-1 rounded-[3px]",
@@ -1038,7 +1040,7 @@ export default function HabitsScreen() {
                   onClick={() => setFilter(f.key)}
                   aria-pressed={active}
                   className={cn(
-                    "press shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold border transition-colors",
+                    "press shrink-0 inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold border transition-colors",
                     active
                       ? "bg-garden text-white border-garden"
                       : "bg-card text-muted-foreground border-border"
@@ -1064,7 +1066,7 @@ export default function HabitsScreen() {
                 onClick={() => setTab(t.key)}
                 aria-pressed={tab === t.key}
                 className={cn(
-                  "press min-h-[40px] rounded-lg text-sm font-bold transition-colors",
+                  "press min-h-[44px] rounded-lg text-sm font-bold transition-colors",
                   tab === t.key ? "bg-card shadow-soft text-foreground" : "text-muted-foreground"
                 )}
               >
@@ -1074,7 +1076,7 @@ export default function HabitsScreen() {
           </div>
 
           {/* Daftar habit */}
-          <div className="mt-3 max-h-[480px] overflow-y-auto scroll-thin space-y-2 pr-0.5">
+          <div className="mt-3 max-h-[480px] overflow-y-auto overscroll-contain scroll-thin space-y-2 pr-0.5">
             {visibleHabits.length === 0 ? (
               <EmptyState
                 icon={<Sprout className="h-6 w-6" />}
@@ -1087,7 +1089,7 @@ export default function HabitsScreen() {
                 action={
                   tab === "active" ? (
                     <button
-                      onClick={() => openQuickAction("habit")}
+                      onClick={() => setQuickAction("habit")}
                       className="press h-11 px-4 rounded-xl bg-garden-deep text-white text-sm font-bold"
                     >
                       Tanam Kebiasaan Baru
@@ -1244,7 +1246,7 @@ function HabitCard({
               disabled={checking}
               aria-label={`Tambah progres ${habit.name}`}
               className={cn(
-                "press h-10 min-w-[44px] shrink-0 rounded-xl font-bold text-sm flex items-center justify-center disabled:opacity-60",
+                "press h-11 min-w-[44px] shrink-0 rounded-xl font-bold text-sm flex items-center justify-center disabled:opacity-60",
                 done ? "bg-garden text-white" : "bg-garden-soft text-garden-deep"
               )}
             >
@@ -1262,7 +1264,7 @@ function HabitCard({
               disabled={checking || done}
               aria-label={done ? `${habit.name} sudah selesai` : `Tandai ${habit.name} selesai`}
               className={cn(
-                "press h-10 w-10 shrink-0 rounded-xl border-2 flex items-center justify-center transition-colors disabled:opacity-60",
+                "press h-11 w-11 shrink-0 rounded-xl border-2 flex items-center justify-center transition-colors disabled:opacity-60",
                 done ? "bg-garden border-garden text-white" : "border-input text-muted-foreground"
               )}
             >
@@ -1420,7 +1422,7 @@ function HabitDetailDrawer({
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="overflow-y-auto scroll-thin px-5 pb-6 space-y-4">
+        <div className="overflow-y-auto scroll-thin px-5 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] space-y-4">
           {/* Info jadwal */}
           <div className="rounded-xl border border-border/70 divide-y divide-border/60">
             <InfoRow icon={<CalendarDays className="h-4 w-4" />} label="Jadwal" value={scheduleText} />

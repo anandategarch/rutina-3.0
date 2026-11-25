@@ -16,6 +16,8 @@ import {
   Route,
   Medal,
   CalendarDays,
+  AlertTriangle,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -49,6 +51,7 @@ import {
   todayStr,
 } from "@/lib/rutina/format";
 import { ScreenHeader, SectionCard, StatTile, ProgressRing, Pill, HABIT_CATEGORY_META } from "@/components/rutina/primitives";
+import { Button } from "@/components/ui/button";
 import { JOURNAL_MOODS } from "@/components/rutina/sheets/add-journal-sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import type { StatsPayload, AchievementItem } from "@/types/rutina";
@@ -77,7 +80,33 @@ function cellIntensityBg(habitsDone: number): string {
 
 export default function StatsScreen() {
   const setPage = useRutinaStore((s) => s.setPage);
-  const { data, isLoading } = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
+
+  if (isError) {
+    return (
+      <div className="flex flex-col min-h-full">
+        <ScreenHeader title="Statistik" subtitle="The Observatory" onBack={() => setPage("home")} />
+        <div className="p-4">
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 flex flex-col items-center text-center gap-2.5">
+            <span className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+              <AlertTriangle className="h-6 w-6" />
+            </span>
+            <p className="text-sm font-bold">Gagal memuat statistik</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Data Observatorium tidak dapat diambil saat ini. Periksa koneksi internetmu, lalu coba lagi.
+            </p>
+            <Button
+              onClick={() => refetch()}
+              className="mt-1.5 min-h-[44px] rounded-full px-5 font-bold flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Coba Lagi
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !data) {
     return <StatsSkeleton />;
@@ -311,7 +340,7 @@ export default function StatsScreen() {
 
         {/* ===== Keuangan ===== */}
         <SectionCard title="Keuangan 30 Hari" tone="gold" icon={<Wallet className="h-4 w-4 text-vault-deep" />}>
-          <div className="flex items-center justify-between rounded-xl bg-vault-soft px-3.5 py-3 mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-vault-soft px-3.5 py-3 mb-3">
             <span className="text-xs font-bold text-vault-deep uppercase tracking-wide">Saldo bersih semua dompet</span>
             <span className="text-lg font-bold tabular text-vault-deep">{formatRupiah(stats.finance.netBalance, { compact: true })}</span>
           </div>
@@ -499,24 +528,36 @@ function CrossModuleCalendar({ stats }: { stats: StatsPayload }) {
       action={<span className="text-[11px] text-muted-foreground font-semibold">ketuk sel untuk detail</span>}
     >
       <div className="space-y-3">
+        {/* Header hari — pola grid 7 kolom (Sen–Min) seperti Kalender Misi Bulan Ini */}
+        <div className="grid grid-cols-7 gap-1 text-center">
+          {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d) => (
+            <span key={d} className="text-[10px] font-bold text-muted-foreground">
+              {d}
+            </span>
+          ))}
+        </div>
         {Array.from(byMonth.entries()).map(([key, days]) => {
           const m = Number(key.slice(5, 7)) - 1;
+          // Selisih ke Senin agar baris pertama sejajar dengan header hari
+          const leadingBlanks = days.length > 0 ? (parseDateStr(days[0].date).getDay() + 6) % 7 : 0;
           return (
             <div key={key}>
               <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-1">{monthName(m, true)}</p>
-              <div
-                className="grid gap-[3px]"
-                style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}
-              >
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: leadingBlanks }, (_, i) => (
+                  <span key={`blank-${i}`} className="aspect-square" aria-hidden="true" />
+                ))}
                 {days.map((d) => (
                   <button
                     key={d.date}
                     onClick={() => setSelectedDay(d.date)}
-                    aria-label={`Detail ${formatDateID(d.date)}`}
+                    aria-label={`${formatDateID(d.date, true)}: misi ${d.habitsDone}, ${
+                      d.hasTransaction ? "transaksi ada" : "tanpa transaksi"
+                    }, ${d.hasWorkout ? "latihan ada" : "tanpa latihan"}, ${d.journaled ? "jurnal ada" : "tanpa jurnal"}`}
                     className={cn(
-                      "press aspect-square rounded-[4px] p-[2px] grid grid-cols-2 place-items-center transition-transform",
+                      "press aspect-square rounded-[4px] p-1 grid grid-cols-2 gap-1 place-items-center transition-transform",
                       cellIntensityBg(d.habitsDone),
-                      d.date === todayStr() && "ring-1 ring-gold"
+                      d.date === todayStr() && "ring-2 ring-gold"
                     )}
                   >
                     <Dot show={d.habitsDone > 0} className="bg-garden" />
@@ -543,7 +584,7 @@ function CrossModuleCalendar({ stats }: { stats: StatsPayload }) {
 }
 
 function Dot({ show, className }: { show: boolean; className: string }) {
-  return <span className={cn("h-1 w-1 rounded-full", show ? className : "bg-transparent")} />;
+  return <span className={cn("h-1.5 w-1.5 rounded-full", show ? className : "bg-transparent")} />;
 }
 
 function LegendDot({ className, label }: { className: string; label: string }) {
@@ -694,9 +735,10 @@ function AchievementCard({ achievement }: { achievement: AchievementItem }) {
 // ====== Skeleton ======
 
 function StatsSkeleton() {
+  const setPage = useRutinaStore((s) => s.setPage);
   return (
     <div className="flex flex-col min-h-full">
-      <ScreenHeader title="Statistik" subtitle="The Observatory" onBack={() => {}} />
+      <ScreenHeader title="Statistik" subtitle="The Observatory" onBack={() => setPage("home")} />
       <div className="p-4 space-y-4">
         <div className="h-36 rounded-2xl bg-secondary animate-pulse" />
         <div className="h-48 rounded-2xl bg-secondary animate-pulse" />

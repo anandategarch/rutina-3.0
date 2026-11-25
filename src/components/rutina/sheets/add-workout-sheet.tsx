@@ -131,6 +131,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
       queryClient.invalidateQueries({ queryKey: ["home"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
       toast.success("Latihan tersimpan");
       onClose();
     },
@@ -464,7 +465,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
           </div>
 
           {/* Aksi */}
-          <div className="border-t border-border/60 p-4 pb-6 bg-background">
+          <div className="border-t border-border/60 bg-background p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
             <Button
               type="submit"
               disabled={!canSubmit}

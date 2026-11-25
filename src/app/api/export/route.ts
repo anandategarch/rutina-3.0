@@ -4,10 +4,13 @@ import { db } from "@/lib/rutina/server";
 export const dynamic = "force-dynamic";
 
 function csvEscape(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // Cegah CSV/formula injection: sel berawalan = + - @ diawali kutip tunggal
+  const first = value.charAt(0);
+  const guarded = first === "=" || first === "+" || first === "-" || first === "@" ? `'${value}` : value;
+  if (/[",\n\r]/.test(guarded)) {
+    return `"${guarded.replace(/"/g, '""')}"`;
   }
-  return value;
+  return guarded;
 }
 
 /**
@@ -28,18 +31,23 @@ export async function GET(req: Request) {
       const walletName = new Map(wallets.map((w) => [w.id, w.name]));
 
       const header = "tanggal,type,kategori,dompet,jumlah,catatan";
-      const rows = transactions.map((t) =>
-        [
+      const rows = transactions.map((t) => {
+        // Untuk transfer, tujuan ditampilkan di kolom dompet (bila datanya tersedia)
+        const dompet =
+          t.type === "transfer" && t.toWalletId
+            ? `${walletName.get(t.walletId) ?? t.walletId} → ${walletName.get(t.toWalletId) ?? t.toWalletId}`
+            : (walletName.get(t.walletId) ?? t.walletId);
+        return [
           t.date,
           t.type,
           t.category,
-          walletName.get(t.walletId) ?? t.walletId,
+          dompet,
           String(t.amount),
           t.note ?? "",
         ]
           .map(csvEscape)
-          .join(",")
-      );
+          .join(",");
+      });
       const csv = "\uFEFF" + [header, ...rows].join("\n");
 
       return new NextResponse(csv, {
