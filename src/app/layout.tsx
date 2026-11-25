@@ -1,12 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Caveat } from "next/font/google";
+import { Nunito, DM_Sans, Caveat } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+// Skill pairing #71 "Claymorphism Mobile": Nunito ExtraBold/Black for ALL
+// headings (rounded terminals, playful) + DM Sans for body (clean, geometric).
+const nunito = Nunito({
+  variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["600", "700", "800", "900"],
+});
+
+const dmSans = DM_Sans({
+  variable: "--font-body",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
 });
 
 const caveat = Caveat({
@@ -34,7 +42,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#FAF9F6",
+  themeColor: "#FAF6EA",
 };
 
 export default function RootLayout({
@@ -45,7 +53,7 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <body
-        className={`${jakarta.variable} ${caveat.variable} antialiased bg-background text-foreground`}
+        className={`${nunito.variable} ${dmSans.variable} ${caveat.variable} antialiased bg-background text-foreground`}
       >
         {children}
         <Toaster />

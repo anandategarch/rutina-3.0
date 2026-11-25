@@ -167,7 +167,7 @@ export default function HomeScreen() {
         <div className="flex items-start justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-muted-foreground">{formatDateID(d.today, true)}</p>
-            <h1 className="text-xl font-bold leading-tight mt-0.5">
+            <h1 className="text-2xl font-extrabold leading-tight mt-0.5">
               {greeting()}, {profile.name}
             </h1>
             {profile.identityVoice && (
@@ -214,11 +214,11 @@ export default function HomeScreen() {
             <div className="bg-card rounded-2xl border border-border/70 shadow-soft p-3 flex flex-col justify-between gap-1.5">
               <div className="flex items-center gap-2">
                 <div className="h-9 w-9 rounded-full bg-gold-soft flex items-center justify-center shrink-0">
-                  <Flame className="h-4.5 w-4.5 text-gold" />
+                  <Flame className="h-4.5 w-4.5 text-gold flicker" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase text-muted-foreground">Streak</p>
-                  <p className="text-sm font-bold tabular">{d.streak.current} hari</p>
+                  <p className="text-sm font-extrabold tabular">{d.streak.current} hari</p>
                 </div>
               </div>
               {statsQuery.data && (

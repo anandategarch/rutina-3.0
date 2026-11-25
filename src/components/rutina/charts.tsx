@@ -429,10 +429,14 @@ export function MetricBar({
   return (
     <div className={cn("w-full rounded-full overflow-hidden bg-secondary", className)} style={{ height }}>
       <div
-        className="h-full rounded-full transition-all duration-500"
+        className="h-full rounded-full"
         style={{
           width: `${Math.min(100, Math.max(0, frac * 100))}%`,
-          background: over ? overColor : color,
+          background: over
+            ? overColor
+            : `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 72%, white) 130%)`,
+          boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 25%, transparent) inset`,
+          transition: "width 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
       />
     </div>
@@ -515,7 +519,10 @@ export function RingStat({
             strokeLinecap="round"
             strokeDasharray={c}
             strokeDashoffset={c * (1 - clamped)}
-            style={{ transition: "stroke-dashoffset 0.6s ease-out" }}
+            style={{
+              transition: "stroke-dashoffset 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)",
+              filter: `drop-shadow(0 1px 2px ${color}40)`,
+            }}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">

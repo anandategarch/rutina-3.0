@@ -74,12 +74,12 @@ export function SectionCard({
     gold: "text-gold",
   };
   return (
-    <section className={cn("bg-card rounded-2xl border border-border/70 shadow-soft p-4", className)}>
+    <section className={cn("bg-card rounded-3xl border border-border/70 shadow-clay p-4", className)}>
       {(title || action) && (
         <div className="flex items-center gap-2 mb-3">
           {icon}
           {title && (
-            <h2 className={cn("text-sm font-bold tracking-wide uppercase", tone ? toneText[tone] : "text-foreground")}>
+            <h2 className={cn("text-sm font-extrabold tracking-wide uppercase", tone ? toneText[tone] : "text-foreground")}>
               {title}
             </h2>
           )}
@@ -122,12 +122,12 @@ export function StatTile({
 }) {
   const t = toneMap[tone];
   return (
-    <div className={cn("rounded-2xl p-3.5 min-w-0", t.bg, className)}>
+    <div className={cn("rounded-2xl p-3.5 min-w-0 shadow-soft", t.bg, className)}>
       <div className="flex items-center gap-1.5 mb-1">
         {icon && <span className={t.fg}>{icon}</span>}
         <span className={cn("text-[11px] font-semibold uppercase tracking-wide leading-tight", t.fg)}>{label}</span>
       </div>
-      <div className={cn("text-xl font-bold tabular leading-tight truncate", t.fg)}>{value}</div>
+      <div className={cn("text-xl font-extrabold tabular leading-tight truncate", t.fg)}>{value}</div>
       {sub && <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
       {chart && <div className="mt-2 -mx-0.5">{chart}</div>}
     </div>
@@ -149,7 +149,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center text-center py-8 px-4">
-      <div className="h-14 w-14 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground mb-3">
+      <div className="h-14 w-14 rounded-3xl bg-secondary flex items-center justify-center text-muted-foreground mb-3 shadow-soft">
         {icon}
       </div>
       <p className="font-semibold text-foreground text-sm">{title}</p>
@@ -193,7 +193,10 @@ export function ProgressRing({
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - clamped)}
-          style={{ transition: "stroke-dashoffset 0.5s ease-out" }}
+          style={{
+            transition: "stroke-dashoffset 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            filter: `drop-shadow(0 1px 2px ${color}40)`,
+          }}
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">{children}</div>

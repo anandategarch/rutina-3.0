@@ -62,9 +62,9 @@ function BottomNav() {
           <button
             onClick={() => setHubOpen(true)}
             aria-label="Buka Tindakan Cepat"
-            className="press -mt-5 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lift flex items-center justify-center ring-4 ring-background"
+            className="press-squish -mt-5 h-14 w-14 rounded-full text-white shadow-lift flex items-center justify-center ring-4 ring-background bg-gradient-to-b from-[#2FA960] to-[#1F7A43]"
           >
-            <Plus className="h-6 w-6" strokeWidth={2.5} />
+            <Plus className="h-6 w-6" strokeWidth={2.75} />
           </button>
         </div>
         {TABS.slice(2).map((t) => (
@@ -92,15 +92,17 @@ function TabButton({
       className="press flex flex-col items-center gap-0.5 py-2 min-h-[56px] justify-center"
       aria-current={active ? "page" : undefined}
     >
-      <span
+      <motion.span
         className={cn(
           "flex items-center justify-center h-8 w-14 rounded-full transition-colors",
-          active ? "bg-sage-soft text-sage-deep" : "text-muted-foreground"
+          active ? "bg-garden-soft text-garden-deep" : "text-muted-foreground"
         )}
+        animate={{ scale: active ? 1.08 : 1 }}
+        transition={{ type: "spring", stiffness: 500, damping: 18 }}
       >
         <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
-      </span>
-      <span className={cn("text-[10px] font-semibold", active ? "text-sage-deep" : "text-muted-foreground")}>
+      </motion.span>
+      <span className={cn("text-[10px] font-semibold", active ? "text-garden-deep" : "text-muted-foreground")}>
         {tab.label}
       </span>
     </button>
@@ -145,9 +147,9 @@ function QuickActionHub() {
                 <button
                   key={a.key}
                   onClick={() => setQuickAction(a.key)}
-                  className="press flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3 text-left shadow-soft min-h-[64px]"
+                  className="press flex items-center gap-3 rounded-3xl border border-border/70 bg-card p-3 text-left shadow-clay min-h-[64px]"
                 >
-                  <span className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", a.tone)}>
+                  <span className={cn("h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 shadow-soft", a.tone)}>
                     <Icon className="h-5 w-5" />
                   </span>
                   <span className="min-w-0">
@@ -247,7 +249,7 @@ export function RutinaApp() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
         {/* Outer backdrop for desktop preview — locked to viewport so the app shell stays fullscreen */}
-        <div className="h-dvh w-full bg-[#eae7e0] dark:bg-[#0c0b0a] flex justify-center overflow-hidden">
+        <div className="h-dvh w-full bg-[#ece4cd] dark:bg-[#0c0b0a] flex justify-center overflow-hidden">
           <div className="relative w-full max-w-[430px] h-dvh bg-background flex flex-col shadow-soft sm:border-x sm:border-border overflow-hidden">
             <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain">
               <MainContent />

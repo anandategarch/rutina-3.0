@@ -6,8 +6,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jakarta), ui-monospace, monospace;
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-body), ui-monospace, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -68,128 +68,131 @@
 }
 
 :root {
-  --radius: 1rem;
+  --radius: 1.25rem;
   /* ============================================================
-     RUTINA "SAGE & CLAY" PALETTE — restrained, professional
-     1 signature hue (sage green) + 1 semantic hue (clay) + warm
-     neutrals. Tone aliases map every legacy module color onto
-     this single system so the UI stays calm and unified.
+     RUTINA "SUNNY MEADOW" PALETTE — ui-ux-pro-max skill v2.15
+     Habit Tracker direction: streak warm (amber) + progress green
+     + motivational accents. Claymorphism (Mobile): warm cream
+     canvas, vivid module hues, soft depth. Solid fills keep >=4.5:1
+     contrast with white; "bright" variants are for decorative fills.
      ============================================================ */
-  --background: #faf9f6;
-  --foreground: #22211e;
+  --background: #faf6ea;
+  --foreground: #29241c;
   --card: #ffffff;
-  --card-foreground: #22211e;
+  --card-foreground: #29241c;
   --popover: #ffffff;
-  --popover-foreground: #22211e;
-  --primary: #3e6b4e;
-  --primary-foreground: #faf9f6;
-  --secondary: #f1efe8;
-  --secondary-foreground: #44423c;
-  --muted: #f1efe8;
-  --muted-foreground: #8a8578;
-  --accent: #eef2ec;
-  --accent-foreground: #2a5137;
-  --destructive: #b0503c;
-  --border: #e9e6dd;
-  --input: #e3e0d6;
-  --ring: #3e6b4e;
-  /* Chart ramp — monochrome sage steps + neutral */
-  --chart-1: #2a5137;
-  --chart-2: #3e6b4e;
-  --chart-3: #5f8a6d;
-  --chart-4: #8fb29a;
-  --chart-5: #c3d6c7;
-  --chart-out: #b0503c;
-  --chart-neutral: #aaa69a;
-  --sidebar: #faf9f6;
-  --sidebar-foreground: #22211e;
-  --sidebar-primary: #3e6b4e;
-  --sidebar-primary-foreground: #faf9f6;
-  --sidebar-accent: #f1efe8;
-  --sidebar-accent-foreground: #44423c;
-  --sidebar-border: #e9e6dd;
-  --sidebar-ring: #3e6b4e;
+  --popover-foreground: #29241c;
+  --primary: #1f7a43;
+  --primary-foreground: #ffffff;
+  --secondary: #f3eddd;
+  --secondary-foreground: #4a4433;
+  --muted: #f3eddd;
+  --muted-foreground: #8f8672;
+  --accent: #e6f4ea;
+  --accent-foreground: #1f7a43;
+  --destructive: #b8401f;
+  --border: #efe7d2;
+  --input: #e7dfc8;
+  --ring: #1f7a43;
+  /* Chart ramp — vivid green steps + warm neutral */
+  --chart-1: #1f7a43;
+  --chart-2: #2fa960;
+  --chart-3: #6bc289;
+  --chart-4: #a6ddb7;
+  --chart-5: #d3eedc;
+  --chart-out: #b8401f;
+  --chart-neutral: #b3a98f;
+  --sidebar: #faf6ea;
+  --sidebar-foreground: #29241c;
+  --sidebar-primary: #1f7a43;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f3eddd;
+  --sidebar-accent-foreground: #4a4433;
+  --sidebar-border: #efe7d2;
+  --sidebar-ring: #1f7a43;
   /* Signature hues */
-  --sage: #3e6b4e;
-  --sage-deep: #2a5137;
-  --sage-soft: #ecf1ea;
-  --clay: #b0503c;
-  --clay-deep: #93402f;
-  --clay-soft: #f5ebe6;
-  /* Legacy tone aliases → unified system */
-  --garden: #3e6b4e;
-  --garden-deep: #2a5137;
-  --garden-soft: #ecf1ea;
-  --studio: #4e7d5f;
-  --studio-deep: #33573f;
-  --studio-soft: #ecf1ea;
-  --vault: #35573f;
-  --vault-deep: #24402c;
-  --vault-soft: #ecf1ea;
-  --writer: #57544b;
-  --writer-deep: #33312b;
-  --writer-soft: #f0eee7;
-  --gold: #b0503c;
-  --gold-soft: #f5ebe6;
-  --cream: #f7f4ea;
+  --sage: #1f7a43;
+  --sage-deep: #175c33;
+  --sage-soft: #e3f4e7;
+  --clay: #b8401f;
+  --clay-deep: #8f3115;
+  --clay-soft: #fbe9e2;
+  /* Module tone families: solid (white-text safe) / deep (text on soft) / soft (tint bg) */
+  --garden: #1f7a43;
+  --garden-deep: #175c33;
+  --garden-soft: #e3f4e7;
+  --studio: #c2561d;
+  --studio-deep: #9a4514;
+  --studio-soft: #fdebdd;
+  --vault: #0b756d;
+  --vault-deep: #075e56;
+  --vault-soft: #e0f3f0;
+  --writer: #7443b8;
+  --writer-deep: #5a2f94;
+  --writer-soft: #f1e9fa;
+  --gold: #b45309;
+  --gold-deep: #8f3d06;
+  --gold-soft: #fef3c7;
+  --cream: #f7f1de;
 }
 
 .dark {
-  --background: #141311;
-  --foreground: #ece9df;
-  --card: #1d1c18;
-  --card-foreground: #ece9df;
-  --popover: #1d1c18;
-  --popover-foreground: #ece9df;
-  --primary: #8fb49a;
-  --primary-foreground: #141311;
-  --secondary: #262521;
-  --secondary-foreground: #d6d2c6;
-  --muted: #262521;
-  --muted-foreground: #9c978a;
-  --accent: #1f2820;
-  --accent-foreground: #a9c7b0;
-  --destructive: #d08b72;
-  --border: #2c2a25;
-  --input: #35322c;
-  --ring: #8fb49a;
-  --chart-1: #a9c7b0;
-  --chart-2: #8fb49a;
-  --chart-3: #6f947c;
-  --chart-4: #526f5c;
-  --chart-5: #3a4f41;
-  --chart-out: #d08b72;
-  --chart-neutral: #7a766a;
-  --sidebar: #1d1c18;
-  --sidebar-foreground: #ece9df;
-  --sidebar-primary: #8fb49a;
-  --sidebar-primary-foreground: #141311;
-  --sidebar-accent: #262521;
-  --sidebar-accent-foreground: #d6d2c6;
-  --sidebar-border: #2c2a25;
-  --sidebar-ring: #8fb49a;
-  --sage: #8fb49a;
-  --sage-deep: #a9c7b0;
-  --sage-soft: #1f2820;
-  --clay: #d08b72;
-  --clay-deep: #e0a58e;
-  --clay-soft: #2a1d17;
-  /* Legacy tone aliases → unified system (dark) */
-  --garden: #8fb49a;
-  --garden-deep: #a9c7b0;
-  --garden-soft: #1f2820;
-  --studio: #8fb49a;
-  --studio-deep: #a9c7b0;
-  --studio-soft: #1f2820;
-  --vault: #8fb49a;
-  --vault-deep: #a9c7b0;
-  --vault-soft: #1f2820;
-  --writer: #b5b1a4;
-  --writer-deep: #d6d2c6;
-  --writer-soft: #262521;
-  --gold: #d08b72;
-  --gold-soft: #2a1d17;
-  --cream: #1d1c18;
+  --background: #16130c;
+  --foreground: #efe9d9;
+  --card: #201c12;
+  --card-foreground: #efe9d9;
+  --popover: #201c12;
+  --popover-foreground: #efe9d9;
+  --primary: #7ed9a0;
+  --primary-foreground: #16130c;
+  --secondary: #262115;
+  --secondary-foreground: #d9d2bd;
+  --muted: #262115;
+  --muted-foreground: #a39a82;
+  --accent: #17301f;
+  --accent-foreground: #8fe0b0;
+  --destructive: #e8845f;
+  --border: #332d1c;
+  --input: #3e3722;
+  --ring: #7ed9a0;
+  --chart-1: #8fe0b0;
+  --chart-2: #6fcf9a;
+  --chart-3: #4bb377;
+  --chart-4: #348c56;
+  --chart-5: #22633a;
+  --chart-out: #e8845f;
+  --chart-neutral: #7d7458;
+  --sidebar: #201c12;
+  --sidebar-foreground: #efe9d9;
+  --sidebar-primary: #7ed9a0;
+  --sidebar-primary-foreground: #16130c;
+  --sidebar-accent: #262115;
+  --sidebar-accent-foreground: #d9d2bd;
+  --sidebar-border: #332d1c;
+  --sidebar-ring: #7ed9a0;
+  --sage: #6fcf9a;
+  --sage-deep: #8fe0b0;
+  --sage-soft: #17301f;
+  --clay: #e8845f;
+  --clay-deep: #f0a184;
+  --clay-soft: #33180d;
+  /* Module tone families (dark) */
+  --garden: #6fcf9a;
+  --garden-deep: #8fe0b0;
+  --garden-soft: #17301f;
+  --studio: #f2915c;
+  --studio-deep: #f6a87c;
+  --studio-soft: #331d0f;
+  --vault: #4fc3b5;
+  --vault-deep: #77d3c8;
+  --vault-soft: #0e2b27;
+  --writer: #b78be6;
+  --writer-deep: #cda8ef;
+  --writer-soft: #241634;
+  --gold: #f5a623;
+  --gold-deep: #ffc164;
+  --gold-soft: #32200b;
+  --cream: #201c12;
 }
 
 @layer base {
@@ -201,11 +204,21 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
     overscroll-behavior-y: none;
     /* Lock the document: all scrolling happens inside the app shell */
     height: 100%;
     overflow: hidden;
+  }
+  /* Skill typography rule: rounded Nunito for ALL headings (700+ only),
+     DM Sans stays for body — never Nunito at small body sizes. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), ui-rounded, system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
   select,
   input,
@@ -225,41 +238,103 @@
 
 /* ---------- Rutina utilities ---------- */
 
+.font-display {
+  font-family: var(--font-display), ui-rounded, system-ui, sans-serif;
+}
+
 .font-script {
   font-family: var(--font-caveat), "Comic Sans MS", cursive;
 }
 
-/* Soft double shadow — quiet elevation */
+/* Soft double shadow — quiet elevation (warm-tinted) */
 .shadow-soft {
   box-shadow:
-    0 1px 2px rgba(34, 33, 30, 0.04),
-    0 4px 16px rgba(34, 33, 30, 0.05);
+    0 1px 2px rgba(41, 36, 28, 0.05),
+    0 4px 14px rgba(41, 36, 28, 0.06);
 }
 .shadow-lift {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 2px 4px rgba(34, 33, 30, 0.05),
-    0 10px 24px rgba(34, 33, 30, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 2px 4px rgba(41, 36, 28, 0.06),
+    0 12px 26px rgba(41, 36, 28, 0.1);
+}
+/* Claymorphism double shadow — soft "pressed dough" depth for hero cards */
+.shadow-clay {
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -3px 6px rgba(41, 36, 28, 0.05),
+    0 3px 6px rgba(41, 36, 28, 0.05),
+    0 12px 28px rgba(41, 36, 28, 0.1);
 }
 .dark .shadow-soft {
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.3),
-    0 4px 16px rgba(0, 0, 0, 0.25);
+    0 4px 14px rgba(0, 0, 0, 0.25);
 }
 .dark .shadow-lift {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 2px 4px rgba(0, 0, 0, 0.3),
-    0 10px 24px rgba(0, 0, 0, 0.35);
+    0 12px 26px rgba(0, 0, 0, 0.35);
+}
+.dark .shadow-clay {
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.25),
+    0 3px 6px rgba(0, 0, 0, 0.3),
+    0 12px 28px rgba(0, 0, 0, 0.4);
 }
 
-/* Press feedback (soft press 200ms ease-out) */
+/* Spring press feedback — skill: "Spring bounce + Soft press 200ms"
+   (ease-spring cubic-bezier(0.34, 1.56, 0.64, 1) on release) */
 .press {
-  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.15s ease-out;
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease-out,
+    background-color 0.15s ease-out;
   cursor: pointer;
 }
 .press:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
+}
+/* Deeper squish for the FAB (claymorphism scale 0.92 on press) */
+.press-squish {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease-out;
+  cursor: pointer;
+}
+.press-squish:active {
+  transform: scale(0.92);
+}
+
+/* Pop celebration for completed check-ins */
+@keyframes pop-in {
+  0% {
+    transform: scale(0.6);
+  }
+  55% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.pop-in {
+  animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Gentle flame flicker for streak accents */
+@keyframes flicker {
+  0%,
+  100% {
+    transform: scale(1) rotate(-2deg);
+  }
+  50% {
+    transform: scale(1.12) rotate(3deg);
+  }
+}
+.flicker {
+  animation: flicker 1.8s ease-in-out infinite;
+  transform-origin: 50% 90%;
 }
 
 /* Safe area helpers */
@@ -273,14 +348,14 @@
 /* Custom scrollbars for scrollable lists */
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: rgba(138, 133, 120, 0.35) transparent;
+  scrollbar-color: rgba(143, 134, 114, 0.35) transparent;
 }
 .scroll-thin::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: rgba(138, 133, 120, 0.3);
+  background: rgba(143, 134, 114, 0.3);
   border-radius: 999px;
 }
 .scroll-thin::-webkit-scrollbar-track {
@@ -330,7 +405,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .rise-in,
-  .press {
+  .press,
+  .press-squish,
+  .pop-in,
+  .flicker {
     animation: none !important;
     transition: none !important;
   }
