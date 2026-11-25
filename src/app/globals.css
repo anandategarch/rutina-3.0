@@ -308,6 +308,14 @@
   transform: scale(0.92);
 }
 
+/* Keyboard focus indicator untuk tombol kustom ber-class .press (WCAG 2.4.7 /
+   standar ui-ux-pro-max ux #102). Tombol shadcn (data-slot="button") sudah punya
+   ring sendiri sehingga dikecualikan agar tidak dobel. */
+.press:focus-visible:not([data-slot="button"]) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 /* Pop celebration for completed check-ins */
 @keyframes pop-in {
   0% {

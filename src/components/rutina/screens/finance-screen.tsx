@@ -1367,7 +1367,7 @@ export default function FinanceScreen() {
                     <Icon
                       className={cn("mt-0.5 h-4 w-4 shrink-0", ins.tone === "sage" ? "text-sage-deep" : "text-clay")}
                     />
-                    <p className="text-xs leading-relaxed text-foreground/90">{ins.text}</p>
+                    <p className="text-sm leading-relaxed text-foreground/90">{ins.text}</p>
                   </div>
                 );
               })}

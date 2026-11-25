@@ -380,7 +380,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                             type="button"
                             onClick={() => removeItem(idx)}
                             aria-label={`Hapus ${it.exercise}`}
-                            className="press h-8 w-8 rounded-full bg-writer-soft text-writer-deep flex items-center justify-center shrink-0"
+                            className="press h-11 w-11 rounded-full bg-writer-soft text-writer-deep flex items-center justify-center shrink-0"
                           >
                             <X className="h-4 w-4" />
                           </button>

@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import {
   Home,
   Dumbbell,
@@ -19,23 +20,48 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
-import { useRutinaStore, type MainTab } from "@/store/rutina";
+import { useRutinaStore, type MainTab, type RutinaPage } from "@/store/rutina";
 import { cn } from "@/lib/utils";
 
+// Layar tab utama: statis (dibutuhkan segera saat app dibuka)
 import HomeScreen from "@/components/rutina/screens/home-screen";
 import HabitsScreen from "@/components/rutina/screens/habits-screen";
 import FitnessScreen from "@/components/rutina/screens/fitness-screen";
 import FinanceScreen from "@/components/rutina/screens/finance-screen";
-import JournalScreen from "@/components/rutina/screens/journal-screen";
-import StatsScreen from "@/components/rutina/screens/stats-screen";
-import ProfileScreen from "@/components/rutina/screens/profile-screen";
 
-import AddHabitSheet from "@/components/rutina/sheets/add-habit-sheet";
-import AddJournalSheet from "@/components/rutina/sheets/add-journal-sheet";
-import AddTransactionSheet from "@/components/rutina/sheets/add-transaction-sheet";
-import AddWorkoutSheet from "@/components/rutina/sheets/add-workout-sheet";
-import AddFoodSheet from "@/components/rutina/sheets/add-food-sheet";
-import LogCheckInSheet from "@/components/rutina/sheets/log-checkin-sheet";
+// Layar overlay & sheet: lazy (chunk dimuat saat pertama kali dipakai) —
+// memecah bundle awal ±50% tanpa mengubah perilaku (react-perf: dynamic imports).
+const JournalScreen = dynamic(() => import("@/components/rutina/screens/journal-screen"), { ssr: false, loading: () => null });
+const StatsScreen = dynamic(() => import("@/components/rutina/screens/stats-screen"), { ssr: false, loading: () => null });
+const ProfileScreen = dynamic(() => import("@/components/rutina/screens/profile-screen"), { ssr: false, loading: () => null });
+
+const AddHabitSheet = dynamic(() => import("@/components/rutina/sheets/add-habit-sheet"), { ssr: false, loading: () => null });
+const AddJournalSheet = dynamic(() => import("@/components/rutina/sheets/add-journal-sheet"), { ssr: false, loading: () => null });
+const AddTransactionSheet = dynamic(() => import("@/components/rutina/sheets/add-transaction-sheet"), { ssr: false, loading: () => null });
+const AddWorkoutSheet = dynamic(() => import("@/components/rutina/sheets/add-workout-sheet"), { ssr: false, loading: () => null });
+const AddFoodSheet = dynamic(() => import("@/components/rutina/sheets/add-food-sheet"), { ssr: false, loading: () => null });
+const LogCheckInSheet = dynamic(() => import("@/components/rutina/sheets/log-checkin-sheet"), { ssr: false, loading: () => null });
+
+// ===== Deep link & tombol back (ux-guidelines #4/#5) =====
+// Halaman disinkronkan ke location.hash sehingga back/forward browser menutup
+// overlay (Jurnal/Statistik/Profil) alih-alih keluar dari aplikasi.
+const PAGE_HASH: Record<RutinaPage, string> = {
+  home: "",
+  fitness: "#bugar",
+  finance: "#vault",
+  habits: "#kebiasaan",
+  journal: "#jurnal",
+  stats: "#statistik",
+  profile: "#profil",
+};
+const HASH_PAGE: Record<string, RutinaPage> = {
+  "#bugar": "fitness",
+  "#vault": "finance",
+  "#kebiasaan": "habits",
+  "#jurnal": "journal",
+  "#statistik": "stats",
+  "#profil": "profile",
+};
 
 const TABS: { key: MainTab; label: string; icon: React.ElementType }[] = [
   { key: "home", label: "Beranda", icon: Home },
@@ -189,15 +215,21 @@ function QuickActionSheets() {
   const quickAction = useRutinaStore((s) => s.quickAction);
   const setQuickAction = useRutinaStore((s) => s.setQuickAction);
   const close = () => setQuickAction(null);
+  // Sheet dimuat (chunk di-fetch) hanya pada penggunaan pertama; setelah itu
+  // tetap ter-mount agar animasi buka/tutup vaul tetap berjalan.
+  const [used, setUsed] = React.useState<Set<string>>(() => new Set());
+  React.useEffect(() => {
+    if (quickAction) setUsed((prev) => (prev.has(quickAction) ? prev : new Set(prev).add(quickAction)));
+  }, [quickAction]);
 
   return (
     <>
-      <AddHabitSheet open={quickAction === "habit"} onClose={close} />
-      <AddJournalSheet open={quickAction === "journal"} onClose={close} />
-      <AddTransactionSheet open={quickAction === "transaction"} onClose={close} />
-      <AddWorkoutSheet open={quickAction === "workout"} onClose={close} />
-      <AddFoodSheet open={quickAction === "food"} onClose={close} />
-      <LogCheckInSheet open={quickAction === "checkin"} onClose={close} />
+      {used.has("habit") && <AddHabitSheet open={quickAction === "habit"} onClose={close} />}
+      {used.has("journal") && <AddJournalSheet open={quickAction === "journal"} onClose={close} />}
+      {used.has("transaction") && <AddTransactionSheet open={quickAction === "transaction"} onClose={close} />}
+      {used.has("workout") && <AddWorkoutSheet open={quickAction === "workout"} onClose={close} />}
+      {used.has("food") && <AddFoodSheet open={quickAction === "food"} onClose={close} />}
+      {used.has("checkin") && <LogCheckInSheet open={quickAction === "checkin"} onClose={close} />}
     </>
   );
 }
@@ -247,9 +279,43 @@ export function RutinaApp() {
       })
   );
 
+  // ===== Sinkronisasi halaman ↔ history (back/forward & deep link #jurnal dll.) =====
+  const page = useRutinaStore((s) => s.page);
+  const setPage = useRutinaStore((s) => s.setPage);
+  const hydrated = React.useRef(false);
+
+  // Mount: adopsi hash jika valid, kalau tidak — selaraskan URL tanpa menambah entri.
+  React.useEffect(() => {
+    const fromHash = HASH_PAGE[window.location.hash];
+    if (fromHash && fromHash !== page) setPage(fromHash);
+    else if (window.location.hash !== PAGE_HASH[page]) {
+      history.replaceState(null, "", PAGE_HASH[page] || window.location.pathname);
+    }
+    hydrated.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Perubahan halaman via UI → entri history baru sehingga back kembali ke layar sebelumnya.
+  React.useEffect(() => {
+    if (!hydrated.current) return;
+    const target = PAGE_HASH[page];
+    if (window.location.hash !== target) {
+      history.pushState(null, "", target || window.location.pathname);
+    }
+  }, [page]);
+
+  // Back/forward browser → ikuti hash.
+  React.useEffect(() => {
+    const onPop = () => setPage(HASH_PAGE[window.location.hash] ?? "home");
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [setPage]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        {/* Hormati prefers-reduced-motion untuk semua animasi framer-motion (ux #9) */}
+        <MotionConfig reducedMotion="user">
         {/* Full-bleed app shell — fills the viewport edge-to-edge at every screen size.
             Content is centered with a max-width column so wide screens stay readable. */}
         <div className="relative h-dvh w-full bg-background flex flex-col overflow-hidden">
@@ -261,6 +327,7 @@ export function RutinaApp() {
           <QuickActionHub />
           <QuickActionSheets />
         </div>
+        </MotionConfig>
       </ThemeProvider>
     </QueryClientProvider>
   );

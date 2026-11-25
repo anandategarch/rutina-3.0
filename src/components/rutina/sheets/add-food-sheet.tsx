@@ -190,7 +190,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                   type="button"
                   onClick={backToSearch}
                   aria-label="Kembali ke pencarian"
-                  className="press h-9 w-9 rounded-full bg-card flex items-center justify-center text-studio-deep shrink-0"
+                  className="press h-11 w-11 rounded-full bg-card flex items-center justify-center text-studio-deep shrink-0"
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </button>

@@ -152,7 +152,7 @@ export function MiniBars({
           return (
             <div key={i} className="flex-1 flex items-end justify-center gap-[2px] h-full" style={{ height }}>
               <div
-                className="rounded-t-[4px] w-full max-w-[14px] transition-all duration-300"
+                className="rounded-t-[4px] w-full max-w-[14px] transition-[height,opacity] duration-300"
                 style={{
                   // Nilai nol = "tidak tercatat": slot dasar 2px samar, bukan stub penuh
                   height: d.value === 0 ? 2 : `${Math.max(3, (d.value / max) * 100)}%`,
@@ -163,7 +163,7 @@ export function MiniBars({
               />
               {showAlt && (
                 <div
-                  className="rounded-t-[4px] w-full max-w-[14px] transition-all duration-300"
+                  className="rounded-t-[4px] w-full max-w-[14px] transition-[height,opacity] duration-300"
                   style={{
                     height: (d.alt ?? 0) === 0 ? 2 : `${Math.max(3, ((d.alt ?? 0) / max) * 100)}%`,
                     background: altColor,

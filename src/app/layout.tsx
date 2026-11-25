@@ -5,22 +5,21 @@ import { Toaster } from "@/components/ui/sonner";
 
 // Skill pairing #71 "Claymorphism Mobile": Nunito ExtraBold/Black for ALL
 // headings (rounded terminals, playful) + DM Sans for body (clean, geometric).
+// Font variabel (satu file per keluarga, bobot via CSS) — bundel font lebih kecil
+// dan memenuhi standar ui-ux-pro-max: nextjs #24 (use variable fonts).
 const nunito = Nunito({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["600", "700", "800", "900"],
 });
 
 const dmSans = DM_Sans({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
 });
 
 const caveat = Caveat({
   variable: "--font-caveat",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {

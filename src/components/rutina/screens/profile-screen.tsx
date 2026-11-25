@@ -281,7 +281,7 @@ export default function ProfileScreen() {
                     onClick={() => changeTarget(-1)}
                     disabled={updateMutation.isPending || (profile?.dailyMissionTarget ?? 4) <= 1}
                     aria-label="Kurangi target misi"
-                    className="press h-9 w-9 rounded-full bg-secondary flex items-center justify-center disabled:opacity-40"
+                    className="press h-11 w-11 rounded-full bg-secondary flex items-center justify-center disabled:opacity-40"
                   >
                     <Minus className="h-4 w-4" />
                   </button>
@@ -290,7 +290,7 @@ export default function ProfileScreen() {
                     onClick={() => changeTarget(1)}
                     disabled={updateMutation.isPending || (profile?.dailyMissionTarget ?? 4) >= 8}
                     aria-label="Tambah target misi"
-                    className="press h-9 w-9 rounded-full bg-garden text-white flex items-center justify-center disabled:opacity-40"
+                    className="press h-11 w-11 rounded-full bg-garden text-white flex items-center justify-center disabled:opacity-40"
                   >
                     <Plus className="h-4 w-4" />
                   </button>

@@ -1,0 +1,55 @@
+name: Design Review
+
+# Heuristic design audit (adapted from ui-ux-pro-max-skill, MIT) on PRs that touch UI.
+# Catches mechanical defects automatically: horizontal overflow, missing focus styles,
+# tap-target size, contrast risks, unsized media, missing meta, console errors.
+# The full taste/interaction review runs locally via `bun run audit:design` + manual review
+# (see docs/DESIGN.md).
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "public/**"
+      - "package.json"
+      - "scripts/design-audit.mjs"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install deps + Chromium
+        run: |
+          bun install
+          bunx playwright install --with-deps chromium
+
+      - name: Prepare database
+        env:
+          DATABASE_URL: file:./db/ci.db
+        run: bun run db:push
+
+      - name: Start dev server
+        env:
+          DATABASE_URL: file:./db/ci.db
+        run: |
+          bun run dev &
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000 > /dev/null; then echo "ready"; exit 0; fi
+            sleep 2
+          done
+          echo "Dev server did not start in time" && exit 1
+
+      - name: Run design audit (non-blocking)
+        continue-on-error: true
+        run: bun run audit:design
+
+      - name: Upload audit report + screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-audit
+          path: design-audit/

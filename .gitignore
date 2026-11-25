@@ -65,3 +65,5 @@ download/
 tool-results/
 .zscripts/
 agent-ctx/
+# design audit output
+/design-audit/

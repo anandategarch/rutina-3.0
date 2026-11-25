@@ -246,9 +246,9 @@ export default function HomeScreen() {
           <div className="min-w-0">
             <p className="text-xs font-semibold text-muted-foreground">{formatDateID(d.today, true)}</p>
             <h1 className="text-2xl font-extrabold leading-tight mt-0.5">
-              {greeting()}, {profile.name}
+              {greeting()}, {profile?.name ?? "Sahabat"}
             </h1>
-            {profile.identityVoice && (
+            {profile?.identityVoice && (
               <p className="font-script text-lg text-gold leading-snug mt-1 line-clamp-2">
                 “{profile.identityVoice}”
               </p>
@@ -267,7 +267,7 @@ export default function HomeScreen() {
               aria-label="Buka Profil"
               className="press h-11 w-11 rounded-full bg-garden text-white shadow-soft flex items-center justify-center font-bold"
             >
-              {profile.name.slice(0, 1).toUpperCase()}
+              {(profile?.name ?? "S").slice(0, 1).toUpperCase()}
             </button>
           </div>
         </div>
@@ -292,7 +292,7 @@ export default function HomeScreen() {
             <div className="bg-card rounded-2xl border border-border/70 shadow-soft p-3 flex flex-col justify-between gap-1.5">
               <div className="flex items-center gap-2">
                 <div className="h-9 w-9 rounded-full bg-gold-soft flex items-center justify-center shrink-0">
-                  <Flame className="h-4.5 w-4.5 text-gold flicker" />
+                  <Flame className="h-4.5 w-4.5 text-gold" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase text-muted-foreground">Streak</p>
@@ -354,13 +354,13 @@ export default function HomeScreen() {
                   key={ds}
                   onClick={() => setSelectedDate(ds)}
                   className={cn(
-                    "press flex flex-col items-center py-2 rounded-xl min-h-[52px] justify-center border",
+                    "press relative w-full flex flex-col items-center py-2 rounded-xl min-h-[52px] justify-center border after:content-[''] after:absolute after:inset-y-0 after:-left-1 after:-right-1",
                     active
                       ? "bg-gold text-white border-gold shadow-soft"
                       : "bg-card border-border/60 text-foreground"
                   )}
                 >
-                  <span className={cn("text-[10px] font-semibold", active ? "text-white/80" : "text-muted-foreground")}>
+                  <span className={cn("text-[10px] font-semibold", active ? "text-white/95" : "text-muted-foreground")}>
                     {dayName(ds, true)}
                   </span>
                   <span className={cn("text-sm font-bold tabular", isToday && !active && "text-gold")}>
@@ -471,7 +471,7 @@ export default function HomeScreen() {
           animate={{ opacity: 1, y: 0 }}
           className="px-4 mt-4"
         >
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gold to-gold/80 text-white p-4 shadow-lift">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gold-deep to-gold text-white dark:from-gold dark:to-gold/80 dark:text-[#32200b] p-4 shadow-lift">
             <div className="absolute -right-6 -top-8 h-32 w-32 rounded-full bg-white/10" />
             <div className="absolute -right-2 top-10 h-16 w-16 rounded-full bg-white/10" />
             <div className="flex items-start gap-3 relative">
@@ -479,9 +479,9 @@ export default function HomeScreen() {
                 <HighlightIcon className="h-5 w-5" />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/75">Sorotan Hari Ini</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/95 dark:text-[#32200b]/80">Sorotan Hari Ini</p>
                 <p className="font-bold leading-snug mt-0.5">{d.highlight.title}</p>
-                <p className="text-xs text-white/85 mt-1 leading-relaxed">{d.highlight.description}</p>
+                <p className="text-xs text-white/95 dark:text-[#32200b]/90 mt-1 leading-relaxed">{d.highlight.description}</p>
               </div>
             </div>
             {d.highlight.kind === "budget" && topBudget && (
@@ -688,7 +688,7 @@ export default function HomeScreen() {
           </div>
           <button
             onClick={() => setPage("stats")}
-            className="press mt-3 w-full rounded-xl bg-secondary py-2.5 text-sm font-bold flex items-center justify-center gap-1.5"
+            className="press mt-3 w-full rounded-xl bg-secondary py-2.5 text-sm font-bold flex items-center justify-center gap-1.5 min-h-[44px]"
           >
             <BarChart3 className="h-4 w-4" />
             Buka Statistik

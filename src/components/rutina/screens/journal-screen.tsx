@@ -483,7 +483,7 @@ export default function JournalScreen() {
                   <button
                     key={e.id}
                     onClick={() => setActiveEntry(e)}
-                    className="press w-full text-left rounded-xl border border-border/70 bg-card p-3.5 space-y-2 shadow-soft"
+                    className="press w-full text-left rounded-xl border border-border/70 bg-card p-3.5 space-y-2 shadow-soft [content-visibility:auto] [contain-intrinsic-size:auto_112px]"
                   >
                     <div className="flex items-start gap-2">
                       {e.pinned && <Pin className="h-4 w-4 text-writer-deep shrink-0 mt-0.5 fill-writer-soft" />}

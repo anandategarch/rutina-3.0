@@ -83,6 +83,19 @@ prisma/schema.prisma    # Model database
 - `/api/import` berjalan dalam satu transaksi Prisma — gagal di tengah jalan tidak akan merusak data lama.
 - Tanggal disimpan sebagai string `YYYY-MM-DD` dan "hari ini" dihitung di zona waktu **Asia/Jakarta**.
 
+## Audit Desain
+
+Standar UI/UX mengadopsi [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (MIT).
+Design system, peta kepatuhan, dan backlog ada di [`docs/DESIGN.md`](./docs/DESIGN.md).
+
+```bash
+bunx playwright install chromium   # sekali saja
+bun run audit:design               # audit heuristik 6 viewport → design-audit/report.md
+```
+
+Audit heuristik juga berjalan otomatis di setiap PR yang menyentuh UI
+(`.github/workflows/design-review.yml`) dengan laporan + screenshot sebagai artifact.
+
 ## Lisensi
 
 [MIT](./LICENSE)

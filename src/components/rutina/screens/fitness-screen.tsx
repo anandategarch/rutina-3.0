@@ -489,7 +489,7 @@ function WorkoutTab({
           {deloadExercise && (
             <li className="flex items-start gap-2 rounded-xl bg-writer-soft p-2.5">
               <AlertTriangle className="h-4 w-4 text-writer-deep shrink-0 mt-0.5" />
-              <span className="text-xs text-writer-deep leading-snug">
+              <span className="text-sm text-writer-deep leading-snug">
                 <span className="font-bold">{deloadExercise}</span> tidak naik beban dalam 3 sesi terakhir — pertimbangkan
                 sesi deload (turunkan volume sekitar 30%).
               </span>
@@ -498,7 +498,7 @@ function WorkoutTab({
           {varietyWarning && (
             <li className="flex items-start gap-2 rounded-xl bg-gold-soft p-2.5">
               <Shuffle className="h-4 w-4 text-gold shrink-0 mt-0.5" />
-              <span className="text-xs text-foreground leading-snug">
+              <span className="text-sm text-foreground leading-snug">
                 Sudah <span className="font-bold tabular">{cardioWeekCount} sesi kardio</span> pekan ini — beri variasi
                 gerakan atau recovery aktif agar Adaptasi tetap optimal.
               </span>
@@ -507,7 +507,7 @@ function WorkoutTab({
           {!deloadExercise && !varietyWarning && (
             <li className="flex items-start gap-2 rounded-xl bg-garden-soft p-2.5">
               <CheckCircle2 className="h-4 w-4 text-garden-deep shrink-0 mt-0.5" />
-              <span className="text-xs text-garden-deep leading-snug">
+              <span className="text-sm text-garden-deep leading-snug">
                 Pola latihan seimbang — tidak ada tanda overtraining pekan ini.
               </span>
             </li>
@@ -1103,17 +1103,22 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
                 <span>Target {formatNumber(calTarget)} kkal</span>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                inputMode="numeric"
-                min={500}
-                max={10000}
-                aria-label="Target kalori harian"
-                value={targetDraft}
-                onChange={(e) => setTargetDraft(e.target.value)}
-                className="h-11 flex-1 tabular"
-              />
+            <div>
+              <label htmlFor="target-kalori" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
+                Target kalori harian (kkal)
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  id="target-kalori"
+                  type="number"
+                  inputMode="numeric"
+                  min={500}
+                  max={10000}
+                  aria-label="Target kalori harian"
+                  value={targetDraft}
+                  onChange={(e) => setTargetDraft(e.target.value)}
+                  className="h-11 flex-1 tabular"
+                />
               <Button
                 type="button"
                 onClick={saveTarget}
@@ -1122,6 +1127,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
               >
                 Ubah Target
               </Button>
+            </div>
             </div>
             <Button
               type="button"
@@ -1529,27 +1535,33 @@ function BodyTab({
           <p className="mb-3 text-sm text-muted-foreground">Belum ada catatan berat badan.</p>
         )}
 
-        <div className="flex gap-2">
-          <Input
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            min={20}
-            max={300}
-            aria-label="Berat badan hari ini"
-            placeholder="67.5"
-            value={weightInput}
-            onChange={(e) => setWeightInput(e.target.value)}
-            className="h-11 flex-1 tabular"
-          />
-          <Button
-            type="button"
-            onClick={submitWeight}
-            disabled={weightMutation.isPending || weightInput === ""}
-            className="press h-11 rounded-xl bg-studio px-5 text-xs font-bold text-white hover:bg-studio-deep min-h-[44px]"
-          >
-            {weightMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Simpan"}
-          </Button>
+        <div>
+          <label htmlFor="berat-hari-ini" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
+            Catat berat badan hari ini (kg)
+          </label>
+          <div className="flex gap-2">
+            <Input
+              id="berat-hari-ini"
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              min={20}
+              max={300}
+              aria-label="Berat badan hari ini"
+              placeholder="67.5"
+              value={weightInput}
+              onChange={(e) => setWeightInput(e.target.value)}
+              className="h-11 flex-1 tabular"
+            />
+            <Button
+              type="button"
+              onClick={submitWeight}
+              disabled={weightMutation.isPending || weightInput === ""}
+              className="press h-11 rounded-xl bg-studio px-5 text-xs font-bold text-white hover:bg-studio-deep min-h-[44px]"
+            >
+              {weightMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Simpan"}
+            </Button>
+          </div>
         </div>
 
         <div className="mt-4 flex gap-1.5">
