@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Smile, Zap, Activity, Brain, Moon, Loader2, HeartPulse } from "lucide-react";
+import { Smile, Zap, Activity, Brain, Moon, Loader2, HeartPulse, Angry, Frown, Meh, Laugh } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,6 +59,17 @@ function checkinValueTone(highIsGood: boolean, value: number): string {
   if (score === 3) return "bg-secondary text-muted-foreground";
   return "bg-clay-soft text-clay";
 }
+
+/** Skala mood visual: 5 wajah dari berat ke hebat (rekomendasi ui-ux-pro-max: sentiment visual). */
+const MOOD_FACES: { icon: React.ElementType; activeClass: string }[] = [
+  { icon: Angry, activeClass: "bg-clay-soft text-clay border-clay/50" },
+  { icon: Frown, activeClass: "bg-clay-soft/70 text-clay-deep border-clay/30" },
+  { icon: Meh, activeClass: "bg-secondary text-muted-foreground border-border" },
+  { icon: Smile, activeClass: "bg-sage-soft text-sage-deep border-sage/40" },
+  { icon: Laugh, activeClass: "bg-sage text-white border-sage shadow-soft" },
+];
+
+const SLEEP_PRESETS = [5, 6, 7, 8, 9, 10];
 
 type ScaleKey = (typeof SCALES)[number]["key"];
 
@@ -167,7 +178,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold leading-tight">{scale.label}</p>
                         <p className="text-[11px] text-muted-foreground">
-                          {value !== null ? scale.labels[value - 1] : "Ketuk salah satu nilai"}
+                          {value !== null ? scale.labels[value - 1] : "Ketuk salah satu tingkat"}
                         </p>
                       </div>
                       {value !== null && (
@@ -176,28 +187,80 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-5 gap-1.5" role="group" aria-label={scale.label}>
-                      {[1, 2, 3, 4, 5].map((n) => {
-                        const active = value === n;
-                        return (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() => setScales((prev) => ({ ...prev, [scale.key]: n }))}
-                            aria-pressed={active}
-                            aria-label={`${scale.label}: ${scale.labels[n - 1]} (${n})`}
-                            className={cn(
-                              "press rounded-xl border text-sm font-bold tabular transition-colors min-h-[44px] flex items-center justify-center",
-                              active
-                                ? "bg-studio text-white border-studio shadow-soft"
-                                : "bg-background text-muted-foreground border-border/70"
-                            )}
-                          >
-                            {n}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {scale.key === "mood" ? (
+                      /* Wajah mood — lebih ekspresif daripada angka polos */
+                      <div className="grid grid-cols-5 gap-1.5" role="group" aria-label={scale.label}>
+                        {MOOD_FACES.map((face, i) => {
+                          const n = i + 1;
+                          const FaceIcon = face.icon;
+                          const active = value === n;
+                          return (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => setScales((prev) => ({ ...prev, mood: n }))}
+                              aria-pressed={active}
+                              aria-label={`Mood: ${scale.labels[i]} (${n})`}
+                              className={cn(
+                                "press flex flex-col items-center justify-center gap-1 rounded-xl border py-2 min-h-[56px]",
+                                active ? face.activeClass : "bg-background border-border/70 text-muted-foreground/60"
+                              )}
+                            >
+                              <FaceIcon className="h-6 w-6" strokeWidth={active ? 2.2 : 1.8} />
+                              <span className="text-[8.5px] font-bold leading-none">{scale.labels[i]}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : scale.key === "energy" ? (
+                      /* Baterai energi — 5 segmen petir */
+                      <div className="flex items-end gap-1.5" role="group" aria-label={scale.label}>
+                        {[1, 2, 3, 4, 5].map((n) => {
+                          const filled = value !== null && value >= n;
+                          const active = value === n;
+                          return (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => setScales((prev) => ({ ...prev, energy: n }))}
+                              aria-pressed={active}
+                              aria-label={`Energi: ${scale.labels[n - 1]} (${n})`}
+                              className={cn(
+                                "press flex-1 rounded-lg border flex items-center justify-center transition-all",
+                                active ? "border-gold bg-gold text-white shadow-soft" : filled ? "border-gold/50 bg-gold-soft text-gold" : "border-border/70 bg-background text-muted-foreground/50"
+                              )}
+                              style={{ height: 26 + n * 5 }}
+                            >
+                              <Zap className="h-4 w-4" fill={filled || active ? "currentColor" : "none"} strokeWidth={active ? 2.2 : 1.8} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      /* Angka 1–5 dengan warna semantik */
+                      <div className="grid grid-cols-5 gap-1.5" role="group" aria-label={scale.label}>
+                        {[1, 2, 3, 4, 5].map((n) => {
+                          const active = value === n;
+                          return (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => setScales((prev) => ({ ...prev, [scale.key]: n }))}
+                              aria-pressed={active}
+                              aria-label={`${scale.label}: ${scale.labels[n - 1]} (${n})`}
+                              className={cn(
+                                "press rounded-xl border text-sm font-bold tabular transition-colors min-h-[44px] flex items-center justify-center",
+                                active
+                                  ? cn(checkinValueTone(scale.highIsGood, n), "border-current shadow-soft")
+                                  : "bg-background text-muted-foreground border-border/70"
+                              )}
+                            >
+                              {n}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -207,6 +270,32 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
               <label htmlFor="ci-sleep" className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
                 <Moon className="h-3.5 w-3.5" /> Durasi Tidur (jam)
               </label>
+              <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Preset durasi tidur">
+                {SLEEP_PRESETS.map((n) => {
+                  const active = sleepNum === n;
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setSleepHours(String(n))}
+                      aria-pressed={active}
+                      aria-label={`Set tidur ${n} jam`}
+                      className={cn(
+                        "press flex min-h-[36px] flex-1 min-w-[44px] items-center justify-center gap-1 rounded-xl border text-xs font-bold tabular",
+                        n === 8 && !active && "border-dashed border-sage/50 text-sage-deep bg-sage-soft/40",
+                        active
+                          ? "bg-studio text-white border-studio shadow-soft"
+                          : n === 8
+                            ? ""
+                            : "bg-background text-muted-foreground border-border/70"
+                      )}
+                    >
+                      {n === 8 && <Moon className="h-3 w-3" />}
+                      {n}j
+                    </button>
+                  );
+                })}
+              </div>
               <Input
                 id="ci-sleep"
                 type="number"
@@ -214,7 +303,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                 step="0.5"
                 min={0}
                 max={24}
-                placeholder="7.5"
+                placeholder="Lainnya, mis. 7.5"
                 value={sleepHours}
                 onChange={(e) => setSleepHours(e.target.value)}
                 className="h-11 tabular"

@@ -63,6 +63,7 @@ import {
   MiniBars,
   RingStat,
   SAGE,
+  SAGE_DEEP,
   Sparkline,
   StackBar,
   rampColor,
@@ -432,6 +433,13 @@ export default function FinanceScreen() {
 
   // Arus kas bersih 30 hari vs periode 30 hari sebelumnya
   const net30 = React.useMemo(() => cashflow.reduce((a, c) => a + c.income - c.expense, 0), [cashflow]);
+
+  // Mini bar 7 hari terakhir untuk tile bulan berjalan (visual di bawah angka)
+  const last7Cashflow = cashflow.slice(-7);
+  const last7IncomeBars = last7Cashflow.map((c) => ({ label: c.date.slice(8, 10), value: c.income }));
+  const last7ExpenseBars = last7Cashflow.map((c) => ({ label: c.date.slice(8, 10), value: c.expense }));
+  const last7NetBars = last7Cashflow.map((c) => ({ label: c.date.slice(8, 10), value: Math.max(0, c.income - c.expense) }));
+
   const net30Prev = React.useMemo(() => {
     const from = addDays(todayStr(), -59);
     const to = addDays(todayStr(), -30);
@@ -759,7 +767,7 @@ export default function FinanceScreen() {
           )}
         </section>
 
-        {/* ============ StatTile bulan berjalan ============ */}
+        {/* ============ StatTile bulan berjalan + mini bar 7 hari ============ */}
         <div className="grid grid-cols-3 gap-3 rise-in rise-in-1">
           <StatTile
             label="Pemasukan"
@@ -767,6 +775,7 @@ export default function FinanceScreen() {
             sub="Bulan ini"
             icon={<TrendingUp className="h-3.5 w-3.5" />}
             tone="vault"
+            chart={<MiniBars data={last7IncomeBars} height={26} showLabels={false} color={SAGE} highlightIndex={6} />}
           />
           <StatTile
             label="Pengeluaran"
@@ -774,6 +783,7 @@ export default function FinanceScreen() {
             sub="Bulan ini"
             icon={<TrendingDown className="h-3.5 w-3.5" />}
             tone="vault"
+            chart={<MiniBars data={last7ExpenseBars} height={26} showLabels={false} color={CLAY} highlightIndex={6} />}
           />
           <StatTile
             label="Selisih"
@@ -781,8 +791,14 @@ export default function FinanceScreen() {
             sub="Masuk − Keluar"
             icon={<Scale className="h-3.5 w-3.5" />}
             tone="vault"
+            chart={<MiniBars data={last7NetBars} height={26} showLabels={false} color={SAGE_DEEP} highlightIndex={6} />}
           />
         </div>
+        <p className="-mt-2 px-1 text-[10px] text-muted-foreground rise-in rise-in-1">
+          Batang mini: 7 hari terakhir · <span className="text-vault-deep">masuk</span> /{" "}
+          <span className="text-clay">keluar</span> /{" "}
+          <span className="text-foreground">selisih</span>
+        </p>
 
         {/* ============ Arus kas 30 hari ============ */}
         <SectionCard

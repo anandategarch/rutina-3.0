@@ -61,6 +61,7 @@ import {
   MetricBar,
   DeltaBadge,
   RingStat,
+  ActivityRings,
   rampColor,
   SAGE,
   SAGE_DEEP,
@@ -234,6 +235,31 @@ function WeeklyDailyCharts({ workouts }: { workouts: Workout[] }) {
 
 // ---------- Bar komponen kesiapan (Coach) ----------
 
+function RingLegend({
+  color,
+  label,
+  display,
+  pct,
+}: {
+  color: string;
+  label: string;
+  display: string;
+  pct: number;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2 mb-1">
+        <span className="flex items-center gap-1.5 text-[11px] font-bold text-foreground">
+          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: color }} aria-hidden />
+          {label}
+        </span>
+        <span className="text-[11px] font-bold tabular text-foreground">{display}</span>
+      </div>
+      <MetricBar value={Math.min(1.5, Math.max(0, pct)) * 100} max={100} color={color} height={6} />
+    </div>
+  );
+}
+
 function ReadinessBar({
   label,
   value,
@@ -278,6 +304,7 @@ function WorkoutTab({
   const wStart = weekStart(today);
 
   const weekWorkouts = workouts.filter((w) => w.date >= wStart && w.date <= today);
+  const [goals] = React.useState<FitnessGoals>(() => readGoals());
 
   const summary = React.useMemo(() => {
     let cardioKm = 0;
@@ -345,15 +372,44 @@ function WorkoutTab({
 
   return (
     <>
-      {/* Ringkasan mingguan */}
+      {/* Ringkasan mingguan — ring aktivitas vs sasaran */}
       <SectionCard title="Ringkasan Pekan Ini" tone="studio" icon={<Timer className="h-4 w-4 text-studio-deep" />}>
-        <div className="grid grid-cols-2 gap-3">
-          <StatTile label="Sesi" value={summary.sessions} sub="latihan pekan ini" icon={<Dumbbell className="h-3.5 w-3.5" />} tone="studio" />
-          <StatTile label="Kardio km" value={formatNumber(summary.cardioKm, 1)} sub="jarak kardio" icon={<Footprints className="h-3.5 w-3.5" />} tone="studio" />
-          <StatTile label="Durasi" value={formatDuration(summary.totalMin)} sub="total bergerak" icon={<Clock3 className="h-3.5 w-3.5" />} tone="studio" />
-          <StatTile label="Hari aktif" value={summary.activeDays} sub="dari 7 hari" icon={<CalendarCheck className="h-3.5 w-3.5" />} tone="studio" />
-          <StatTile label="Tonase" value={formatNumber(summary.tonnage)} sub="kg angkatan beban" icon={<Scale className="h-3.5 w-3.5" />} tone="studio" />
-          <StatTile label="Kalori" value={formatNumber(summary.calories)} sub="kkal terbakar" icon={<Flame className="h-3.5 w-3.5" />} tone="studio" />
+        <div className="flex items-center gap-4">
+          <ActivityRings
+            size={132}
+            stroke={12}
+            gap={4}
+            rings={[
+              { value: summary.sessions, max: Math.max(1, goals.weeklySessions), color: SAGE_DEEP },
+              { value: summary.totalMin, max: Math.max(1, goals.weeklyMinutes), color: SAGE },
+              { value: summary.activeDays, max: 7, color: "var(--chart-3)" },
+            ]}
+          />
+          <div className="min-w-0 flex-1 space-y-2">
+            <RingLegend
+              color={SAGE_DEEP}
+              label="Sesi"
+              display={`${summary.sessions}/${goals.weeklySessions}`}
+              pct={goals.weeklySessions > 0 ? summary.sessions / goals.weeklySessions : 0}
+            />
+            <RingLegend
+              color={SAGE}
+              label="Durasi"
+              display={`${formatDuration(summary.totalMin)}/${formatDuration(goals.weeklyMinutes)}`}
+              pct={goals.weeklyMinutes > 0 ? summary.totalMin / goals.weeklyMinutes : 0}
+            />
+            <RingLegend
+              color="var(--chart-3)"
+              label="Hari aktif"
+              display={`${summary.activeDays}/7`}
+              pct={summary.activeDays / 7}
+            />
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <StatTile label="Kardio" value={formatNumber(summary.cardioKm, 1)} sub="km" icon={<Footprints className="h-3.5 w-3.5" />} tone="studio" />
+          <StatTile label="Tonase" value={formatNumber(summary.tonnage, 0)} sub="kg beban" icon={<Scale className="h-3.5 w-3.5" />} tone="studio" />
+          <StatTile label="Kalori" value={formatNumber(summary.calories)} sub="kkal" icon={<Flame className="h-3.5 w-3.5" />} tone="studio" />
         </div>
         <WeeklyDailyCharts workouts={workouts} />
       </SectionCard>

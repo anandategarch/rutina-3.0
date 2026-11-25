@@ -118,6 +118,7 @@ export function MiniBars({
   altColor = NEUTRAL,
   showAlt = false,
   labelEvery = 1,
+  showLabels = true,
   highlightIndex,
   className,
 }: {
@@ -127,6 +128,7 @@ export function MiniBars({
   altColor?: string;
   showAlt?: boolean;
   labelEvery?: number;
+  showLabels?: boolean;
   highlightIndex?: number;
   className?: string;
 }) {
@@ -162,17 +164,19 @@ export function MiniBars({
           );
         })}
       </div>
-      <div className="flex mt-1.5">
-        {data.map((d, i) => (
-          <div
-            key={i}
-            className="flex-1 text-center text-[9px] text-muted-foreground tabular"
-            style={{ visibility: i % labelEvery === 0 ? "visible" : "hidden" }}
-          >
-            {d.label}
-          </div>
-        ))}
-      </div>
+      {showLabels && (
+        <div className="flex mt-1.5">
+          {data.map((d, i) => (
+            <div
+              key={i}
+              className="flex-1 text-center text-[9px] text-muted-foreground tabular"
+              style={{ visibility: i % labelEvery === 0 ? "visible" : "hidden" }}
+            >
+              {d.label}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -519,6 +523,148 @@ export function RingStat({
         </div>
       </div>
       {caption && <span className="text-[10px] font-medium text-muted-foreground text-center leading-tight">{caption}</span>}
+    </div>
+  );
+}
+
+/* ============ ActivityRings — 3 konsentris ala Apple Fitness ============
+   Rekomendasi ui-ux-pro-max (chart: gauge/rings untuk KPI vs target).
+   Ring terluar = metrik utama; semua progress di-clamp 0..1. */
+export function ActivityRings({
+  rings,
+  size = 148,
+  stroke = 13,
+  gap = 4,
+  center,
+  className,
+}: {
+  rings: { value: number; max: number; color?: string }[];
+  size?: number;
+  stroke?: number;
+  gap?: number;
+  center?: React.ReactNode;
+  className?: string;
+}) {
+  const n = rings.length || 1;
+  const radiusFor = (i: number) => (size - stroke) / 2 - (n - 1 - i) * (stroke + gap);
+  return (
+    <div className={cn("relative shrink-0", className)} style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90" role="img" aria-label="Ring aktivitas">
+        {rings.map((ring, i) => {
+          const r = radiusFor(i);
+          const c = 2 * Math.PI * r;
+          const clamped = Math.min(1, Math.max(0, ring.max > 0 ? ring.value / ring.max : 0));
+          return (
+            <g key={i}>
+              <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--secondary)" strokeWidth={stroke} />
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                fill="none"
+                stroke={ring.color ?? RAMP[i]}
+                strokeWidth={stroke}
+                strokeLinecap="round"
+                strokeDasharray={c}
+                strokeDashoffset={c * (1 - clamped)}
+                opacity={0.55 + (i / Math.max(1, n - 1)) * 0.45}
+                style={{ transition: "stroke-dashoffset 0.7s ease-out" }}
+              />
+            </g>
+          );
+        })}
+      </svg>
+      {center && <div className="absolute inset-0 flex flex-col items-center justify-center text-center">{center}</div>}
+    </div>
+  );
+}
+
+/* ============ RadarChart — keseimbangan multi-kehidupan ============
+   Rekomendasi ui-ux-pro-max (chart: radar untuk profil multi-variabel). */
+export function RadarChart({
+  axes,
+  size = 240,
+  color = SAGE,
+  levels = 4,
+  className,
+}: {
+  axes: { label: string; value: number; display?: string }[];
+  size?: number;
+  color?: string;
+  levels?: number;
+  className?: string;
+}) {
+  const cx = size / 2;
+  const cy = size / 2 + 4;
+  const rMax = size / 2 - 34;
+  const n = axes.length || 1;
+  const angle = (i: number) => (Math.PI * 2 * i) / n - Math.PI / 2;
+  const pt = (i: number, frac: number) => ({
+    x: cx + Math.cos(angle(i)) * rMax * Math.max(0, Math.min(1, frac)),
+    y: cy + Math.sin(angle(i)) * rMax * Math.max(0, Math.min(1, frac)),
+  });
+  const poly = axes.map((a, i) => pt(i, a.value)).map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const id = React.useId();
+  return (
+    <div className={cn("w-full flex flex-col items-center", className)}>
+      <svg width={size} height={size} role="img" aria-label="Radar keseimbangan">
+        {/* web grid */}
+        {Array.from({ length: levels }, (_, l) => {
+          const frac = (l + 1) / levels;
+          const pts = axes.map((_, i) => pt(i, frac)).map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+          return <polygon key={l} points={pts} fill="none" stroke="var(--border)" strokeWidth={1} opacity={0.9 - l * 0.15} />;
+        })}
+        {/* spokes */}
+        {axes.map((_, i) => {
+          const p = pt(i, 1);
+          return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--border)" strokeWidth={1} opacity={0.8} />;
+        })}
+        {/* value polygon */}
+        <polygon points={poly} fill={`url(#radar-${id})`} stroke={color} strokeWidth={2.5} strokeLinejoin="round" style={{ transition: "all 0.5s ease-out" }} />
+        <defs>
+          <linearGradient id={`radar-${id}`} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={color} stopOpacity={0.12} />
+          </linearGradient>
+        </defs>
+        {/* dots */}
+        {axes.map((a, i) => {
+          const p = pt(i, a.value);
+          return <circle key={i} cx={p.x} cy={p.y} r={4} fill={color} stroke="var(--card)" strokeWidth={2} />;
+        })}
+        {/* axis labels + display value */}
+        {axes.map((a, i) => {
+          const lp = pt(i, 1.18);
+          return (
+            <g key={i}>
+              <text
+                x={lp.x}
+                y={lp.y - 4}
+                textAnchor={Math.abs(lp.x - cx) < 6 ? "middle" : lp.x > cx ? "start" : "end"}
+                dominantBaseline="middle"
+                className="fill-foreground"
+                fontSize={11}
+                fontWeight={700}
+              >
+                {a.label}
+              </text>
+              {a.display && (
+                <text
+                  x={lp.x}
+                  y={lp.y + 10}
+                  textAnchor={Math.abs(lp.x - cx) < 6 ? "middle" : lp.x > cx ? "start" : "end"}
+                  dominantBaseline="middle"
+                  className="fill-[var(--muted-foreground)]"
+                  fontSize={10}
+                  fontWeight={600}
+                >
+                  {a.display}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }

@@ -469,6 +469,16 @@ const MATRIX_STATE_LABEL: Record<string, string> = {
 };
 
 // =====================================================================
+// Milestone runtun untuk kartu api
+// =====================================================================
+
+const MILESTONES = [7, 14, 30, 50, 75, 100, 150, 200];
+
+function nextStreakMilestone(current: number): number | null {
+  return MILESTONES.find((m) => m > current) ?? null;
+}
+
+// =====================================================================
 // Screen utama
 // =====================================================================
 
@@ -595,6 +605,7 @@ export default function HabitsScreen() {
   const stageIdx = STAGES.indexOf(stage);
 
   const streaks = React.useMemo(() => overallStreaks(habits, today), [habits, today]);
+  const nextMilestone = nextStreakMilestone(streaks.current);
 
   const doneThisWeek = React.useMemo(() => {
     const ws = weekStart(today);
@@ -645,26 +656,34 @@ export default function HabitsScreen() {
   const last7Total = last7Done.reduce((a, b) => a + b, 0);
   const weekPct = scheduledThisWeek > 0 ? Math.round((doneThisWeek / scheduledThisWeek) * 100) : 0;
 
-  // ===== Matriks konsistensi 4 pekan =====
-  const matrix = React.useMemo(() => {
+  // ===== Kalender konsistensi 12 pekan (kolom = pekan, baris = hari) =====
+  const calendar = React.useMemo(() => {
     type Cell = { date: string; state: "done" | "missed" | "rest" | "none" | "pending" | "future" };
     const allLogs = habits.flatMap((h) => h.logs ?? []);
-    const rows: { label: string; cells: Cell[] }[] = [];
-    for (let w = 3; w >= 0; w--) {
+    const stateFor = (ds: string): Cell["state"] => {
+      if (ds > today) return "future";
+      const dayLogs = allLogs.filter((l) => l.date === ds);
+      if (dayLogs.some((l) => l.status === "done")) return "done";
+      const sched = activeHabits.filter((h) => isScheduled(h, ds)).length;
+      if (sched === 0) return "none";
+      if (dayLogs.some((l) => l.status === "missed")) return "missed";
+      if (dayLogs.some((l) => l.status === "rest")) return "rest";
+      return ds < today ? "missed" : "pending";
+    };
+    const weeks: { start: string; cells: Cell[] }[] = [];
+    for (let w = 11; w >= 0; w--) {
       const ws = addDays(weekStart(today), -7 * w);
-      const cells: Cell[] = rangeDays(ws, addDays(ws, 6)).map((ds) => {
-        if (ds > today) return { date: ds, state: "future" as const };
-        const dayLogs = allLogs.filter((l) => l.date === ds);
-        if (dayLogs.some((l) => l.status === "done")) return { date: ds, state: "done" as const };
-        const sched = activeHabits.filter((h) => isScheduled(h, ds)).length;
-        if (sched === 0) return { date: ds, state: "none" as const };
-        if (dayLogs.some((l) => l.status === "missed")) return { date: ds, state: "missed" as const };
-        if (dayLogs.some((l) => l.status === "rest")) return { date: ds, state: "rest" as const };
-        return { date: ds, state: ds < today ? ("missed" as const) : ("pending" as const) };
+      weeks.push({
+        start: ws,
+        cells: rangeDays(ws, addDays(ws, 6)).map((ds) => ({ date: ds, state: stateFor(ds) })),
       });
-      rows.push({ label: formatDayMonth(ws), cells });
     }
-    return rows;
+    const monthLabels = weeks.map((wk, i) => {
+      const m = wk.start.slice(5, 7);
+      const prev = i > 0 ? weeks[i - 1].start.slice(5, 7) : null;
+      return prev !== m ? formatDayMonth(wk.start).split(" ")[1] : "";
+    });
+    return { weeks, monthLabels };
   }, [habits, activeHabits, today]);
 
   // ===== Coach: Goldilocks Nudge =====
@@ -807,22 +826,70 @@ export default function HabitsScreen() {
         </SectionCard>
       </div>
 
-      {/* ===== Stat tiles runtun (flame = clay) ===== */}
-      <div className="px-4 mt-4 grid grid-cols-2 gap-2 rise-in rise-in-1">
-        <StatTile
-          label="Runtun saat ini"
-          value={streaks.current}
-          sub="hari beruntun"
-          icon={<Flame className="h-3.5 w-3.5" />}
+      {/* ===== Runtun visual: api + milestone ===== */}
+      <div className="px-4 mt-4 rise-in rise-in-1">
+        <SectionCard
+          title="Runtun Beruntun"
           tone="gold"
-        />
-        <StatTile
-          label="Runtun terbaik"
-          value={streaks.best}
-          sub="hari beruntun"
-          icon={<Trophy className="h-3.5 w-3.5" />}
-          tone="gold"
-        />
+          icon={<Flame className="h-4 w-4 text-gold" />}
+          action={
+            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-1 text-[10px] font-bold text-gold">
+              <Trophy className="h-3 w-3" /> Terbaik {formatNumber(streaks.best)} hari
+            </span>
+          }
+        >
+          <div className="flex items-center gap-4">
+            <div
+              className={cn(
+                "relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl",
+                streaks.current > 0 ? "bg-gold-soft" : "bg-secondary"
+              )}
+              aria-hidden="true"
+            >
+              <Flame
+                className={cn("h-9 w-9 transition-colors", streaks.current > 0 ? "text-gold" : "text-muted-foreground/50")}
+                strokeWidth={1.8}
+                fill={streaks.current > 0 ? "currentColor" : "none"}
+                fillOpacity={0.25}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-2xl font-bold tabular leading-none">
+                {formatNumber(streaks.current)}
+                <span className="ml-1 text-xs font-semibold text-muted-foreground">hari beruntun</span>
+              </p>
+              {nextMilestone ? (
+                <>
+                  <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                    {MILESTONES.map((m) => (
+                      <span
+                        key={m}
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[9px] font-bold tabular",
+                          streaks.current >= m
+                            ? "bg-gold text-white"
+                            : m === nextMilestone
+                              ? "border border-dashed border-gold text-gold"
+                              : "bg-secondary text-muted-foreground"
+                        )}
+                      >
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-2">
+                    <MetricBar value={streaks.current} max={nextMilestone} color="var(--gold)" height={7} />
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      <span className="font-bold text-gold tabular">{nextMilestone - streaks.current} hari</span> lagi ke milestone {nextMilestone}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p className="mt-2 text-[11px] font-semibold text-gold">Semua milestone terlampaui — luar biasa!</p>
+              )}
+            </div>
+          </div>
+        </SectionCard>
       </div>
 
       {/* ===== Ritme kebiasaan: ring pekan + sparkline 7 hari ===== */}
@@ -888,43 +955,50 @@ export default function HabitsScreen() {
         </SectionCard>
       </div>
 
-      {/* ===== Matriks konsistensi ===== */}
+      {/* ===== Kalender konsistensi 12 pekan ===== */}
       <div className="px-4 mt-4 rise-in rise-in-4">
         <SectionCard
-          title="Matriks Konsistensi"
+          title="Kalender Konsistensi"
           tone="garden"
-          icon={<CalendarCheck className="h-4 w-4 text-garden-deep" />}
-          action={<span className="text-[11px] text-muted-foreground font-semibold">4 pekan</span>}
+          icon={<CalendarDays className="h-4 w-4 text-garden-deep" />}
+          action={<span className="text-[11px] text-muted-foreground font-semibold">12 pekan terakhir</span>}
         >
-          <div className="flex items-center gap-1 mb-1.5 pl-[52px]">
-            {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d, i) => (
-              <span key={`${d}-${i}`} className="flex-1 text-center text-[9px] font-bold text-muted-foreground">
-                {d}
-              </span>
+          {/* Label bulan per kolom pekan */}
+          <div className="flex gap-[3px] mb-1.5 pl-[36px]">
+            {calendar.weeks.map((wk, i) => (
+              <div
+                key={wk.start}
+                className="flex-1 min-w-0 text-[9px] font-bold text-muted-foreground truncate"
+                title={formatDayMonth(wk.start)}
+              >
+                {calendar.monthLabels[i]}
+              </div>
             ))}
           </div>
-          <div className="space-y-1.5">
-            {matrix.map((row) => (
-              <div key={row.label} className="flex items-center gap-1">
-                <span className="w-[48px] shrink-0 text-[10px] font-semibold text-muted-foreground tabular">
-                  {row.label}
-                </span>
-                <div className="flex-1 grid grid-cols-7 gap-1">
-                  {row.cells.map((c) => (
-                    <span
-                      key={c.date}
-                      title={`${c.date} · ${MATRIX_STATE_LABEL[c.state]}`}
-                      className={cn(
-                        "h-5 rounded-md",
-                        c.state === "done" && "bg-garden",
-                        c.state === "missed" && "bg-clay/25",
-                        c.state === "rest" && "border border-border bg-card",
-                        c.state === "none" && "bg-secondary/80",
-                        c.state === "pending" && "border border-dashed border-border bg-card",
-                        c.state === "future" && "bg-secondary/40"
-                      )}
-                    />
-                  ))}
+          {/* Grid: baris = hari (Sen–Min), kolom = pekan */}
+          <div className="space-y-[3px]">
+            {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((dayName, r) => (
+              <div key={dayName} className="flex items-center gap-1">
+                <span className="w-[32px] shrink-0 text-[9px] font-bold text-muted-foreground">{dayName}</span>
+                <div className="flex-1 flex gap-[3px]">
+                  {calendar.weeks.map((wk, wi) => {
+                    const c = wk.cells[r];
+                    return (
+                      <span
+                        key={wi}
+                        title={`${c.date} · ${MATRIX_STATE_LABEL[c.state]}`}
+                        className={cn(
+                          "h-4 flex-1 rounded-[3px]",
+                          c.state === "done" && "bg-garden",
+                          c.state === "missed" && "bg-clay/25",
+                          c.state === "rest" && "border border-border bg-card",
+                          c.state === "none" && "bg-secondary/80",
+                          c.state === "pending" && "border border-dashed border-border bg-card",
+                          c.state === "future" && "bg-secondary/40"
+                        )}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}

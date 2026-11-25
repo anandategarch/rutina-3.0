@@ -27,6 +27,7 @@ import {
   MetricBar,
   MiniBars,
   NEUTRAL,
+  RadarChart,
   rampColor,
   SAGE,
   Sparkline,
@@ -144,6 +145,53 @@ export default function StatsScreen() {
             </div>
             <Sparkline data={streakSpark} height={36} />
           </div>
+        </SectionCard>
+
+        {/* ===== Keseimbangan hidup (radar) ===== */}
+        <SectionCard
+          title="Keseimbangan Hidup"
+          tone="gold"
+          icon={<Scale className="h-4 w-4 text-gold" />}
+          action={<span className="text-[11px] text-muted-foreground font-semibold">30 hari terakhir</span>}
+        >
+          {(() => {
+            const habitScore = Math.min(1, Math.max(0, stats.weekly.completionRate));
+            const fitnessScore = Math.min(1, stats.fitness.sessions30d / 12);
+            const savingsRate =
+              stats.finance.income30d > 0
+                ? Math.min(1, Math.max(0, (stats.finance.income30d - stats.finance.expense30d) / stats.finance.income30d))
+                : 0;
+            const journalScore = Math.min(1, stats.journal.entries30d / 8);
+            const checkinFilled = stats.mood14d.filter((m) => m.mood !== null || m.energy !== null).length;
+            const checkinScore = Math.min(1, checkinFilled / 14);
+            const axes = [
+              { label: "Kebiasaan", value: habitScore, display: `${Math.round(habitScore * 100)}%` },
+              { label: "Bugar", value: fitnessScore, display: `${stats.fitness.sessions30d} sesi` },
+              { label: "Vault", value: savingsRate, display: `${Math.round(savingsRate * 100)}%` },
+              { label: "Jurnal", value: journalScore, display: `${stats.journal.entries30d} entri` },
+              { label: "Check-in", value: checkinScore, display: `${checkinFilled}/14` },
+            ];
+            const weakest = [...axes].sort((a, b) => a.value - b.value)[0];
+            return (
+              <>
+                <RadarChart axes={axes} size={252} color={SAGE} />
+                <div className="mt-2 rounded-xl bg-secondary/60 border border-border/50 p-3">
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    <span className="font-bold text-foreground">{weakest.label}</span> adalah area paling santai
+                    periode ini ({weakest.display}). Perhatikan dulu area ini supaya roda kehidupan tetap bulat.
+                  </p>
+                </div>
+                <div className="mt-2 grid grid-cols-5 gap-1">
+                  {axes.map((a) => (
+                    <div key={a.label} className="text-center">
+                      <p className="text-[11px] font-bold tabular">{Math.round(a.value * 100)}%</p>
+                      <p className="text-[9px] text-muted-foreground font-semibold truncate">{a.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
         </SectionCard>
 
         {/* ===== Tren misi selesai ===== */}

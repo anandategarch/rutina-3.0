@@ -109,6 +109,7 @@ export function StatTile({
   icon,
   tone = "stone",
   className,
+  chart,
 }: {
   label: string;
   value: React.ReactNode;
@@ -116,6 +117,8 @@ export function StatTile({
   icon?: React.ReactNode;
   tone?: keyof typeof toneMap;
   className?: string;
+  /** Visual mini (grafik/bars) ditampilkan di bawah nilai. */
+  chart?: React.ReactNode;
 }) {
   const t = toneMap[tone];
   return (
@@ -126,6 +129,7 @@ export function StatTile({
       </div>
       <div className={cn("text-xl font-bold tabular leading-tight truncate", t.fg)}>{value}</div>
       {sub && <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
+      {chart && <div className="mt-2 -mx-0.5">{chart}</div>}
     </div>
   );
 }
