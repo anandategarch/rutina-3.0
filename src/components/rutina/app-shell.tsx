@@ -54,7 +54,7 @@ function BottomNav() {
       aria-label="Navigasi utama"
       className="absolute bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-lg border-t border-border/70"
     >
-      <div className="grid grid-cols-5 items-end px-2 pb-1">
+      <div className="grid grid-cols-5 items-end px-2 pb-1 mx-auto w-full max-w-[512px]">
         {TABS.slice(0, 2).map((t) => (
           <TabButton key={t.key} tab={t} active={page === t.key} onClick={() => setPage(t.key)} />
         ))}
@@ -216,9 +216,11 @@ function OverlayPages() {
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
           className="absolute inset-0 z-[45] bg-background overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom,0px)]"
         >
-          {page === "journal" && <JournalScreen />}
-          {page === "stats" && <StatsScreen />}
-          {page === "profile" && <ProfileScreen />}
+          <div className="mx-auto w-full max-w-[512px]">
+            {page === "journal" && <JournalScreen />}
+            {page === "stats" && <StatsScreen />}
+            {page === "profile" && <ProfileScreen />}
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -248,17 +250,16 @@ export function RutinaApp() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-        {/* Outer backdrop for desktop preview — locked to viewport so the app shell stays fullscreen */}
-        <div className="h-dvh w-full bg-[#ece4cd] dark:bg-[#0c0b0a] flex justify-center overflow-hidden">
-          <div className="relative w-full max-w-[430px] h-dvh bg-background flex flex-col shadow-soft sm:border-x sm:border-border overflow-hidden">
-            <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain">
-              <MainContent />
-            </div>
-            <BottomNav />
-            <OverlayPages />
-            <QuickActionHub />
-            <QuickActionSheets />
+        {/* Full-bleed app shell — fills the viewport edge-to-edge at every screen size.
+            Content is centered with a max-width column so wide screens stay readable. */}
+        <div className="relative h-dvh w-full bg-background flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain mx-auto w-full max-w-[512px]">
+            <MainContent />
           </div>
+          <BottomNav />
+          <OverlayPages />
+          <QuickActionHub />
+          <QuickActionSheets />
         </div>
       </ThemeProvider>
     </QueryClientProvider>
