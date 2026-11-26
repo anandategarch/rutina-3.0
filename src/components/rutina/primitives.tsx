@@ -145,20 +145,25 @@ export function StatTile({
 
 export function EmptyState({
   icon,
+  illustration,
   title,
   description,
   action,
 }: {
   icon: React.ReactNode;
+  /** Ilustrasi SVG opsional (gaya line-art Field Notes) — menggantikan kotak ikon. */
+  illustration?: React.ReactNode;
   title: string;
   description?: string;
   action?: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center text-center py-8 px-4">
-      <div className="h-14 w-14 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground mb-3 shadow-soft">
-        {icon}
-      </div>
+      {illustration ?? (
+        <div className="h-14 w-14 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground mb-3 shadow-soft">
+          {icon}
+        </div>
+      )}
       <p className="font-semibold text-foreground text-sm">{title}</p>
       {description && <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">{description}</p>}
       {action && <div className="mt-3">{action}</div>}

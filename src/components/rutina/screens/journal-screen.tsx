@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Trash2,
   FolderOpen,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -73,9 +74,122 @@ function relativeDate(s: string): string {
   return formatDateID(s);
 }
 
+/* ---------------- Halaman pertama jurnal (state kosong asli) ---------------- */
+
+/**
+ * Prompt refleksi harian — berputar deterministik mengikuti tanggal.
+ * Tone editorial yang tenang, selalu terbuka (tidak menghakimi).
+ */
+const REFLECTION_PROMPTS = [
+  "Apa satu hal kecil hari ini yang membuatmu bersyukur?",
+  "Hari ini aku merasa… karena…",
+  "Apa satu momen hari ini yang ingin kamu ingat setahun dari sekarang?",
+  "Satu kemenangan kecil hari ini adalah…",
+  "Apa yang ingin kamu katakan pada dirimu seminggu yang lalu?",
+  "Hal apa yang paling menguras energi hari ini — dan apa yang bisa kamu lakukan besok?",
+  "Jika hari ini adalah satu bab buku, apa judulnya?",
+  "Apa satu kebiasaan yang terasa paling berat akhir-akhir ini, dan kenapa?",
+];
+
+function promptOfTheDay(): string {
+  const seed = Number(todayStr().replaceAll("-", "")) % REFLECTION_PROMPTS.length;
+  return REFLECTION_PROMPTS[seed];
+}
+
+/** Ilustrasi line-art Field Notes: buku terbuka dengan tunas tumbuh. */
+function JournalDoodle() {
+  return (
+    <svg width="168" height="104" viewBox="0 0 168 104" fill="none" aria-hidden="true">
+      {/* buku terbuka */}
+      <path
+        d="M24 78 C36 70, 60 68, 80 74 L80 26 C60 20, 36 22, 24 30 Z"
+        fill="var(--writer-soft)"
+        stroke="var(--writer)"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M136 78 C124 70, 100 68, 80 74 L80 26 C100 20, 124 22, 136 30 Z"
+        fill="var(--card)"
+        stroke="var(--writer)"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path d="M80 74 L80 26" stroke="var(--writer)" strokeWidth="2" strokeLinecap="round" />
+      {/* garis tulisan halaman kiri */}
+      <path d="M32 40 C42 36, 58 35, 70 38" stroke="var(--writer)" strokeWidth="1.6" strokeLinecap="round" opacity="0.45" />
+      <path d="M32 48 C42 44, 58 43, 70 46" stroke="var(--writer)" strokeWidth="1.6" strokeLinecap="round" opacity="0.45" />
+      <path d="M32 56 C40 53, 50 52, 58 53" stroke="var(--writer)" strokeWidth="1.6" strokeLinecap="round" opacity="0.45" />
+      {/* garis tulisan halaman kanan */}
+      <path d="M90 38 C102 35, 118 36, 128 40" stroke="var(--writer)" strokeWidth="1.6" strokeLinecap="round" opacity="0.45" />
+      <path d="M90 46 C102 43, 118 44, 128 48" stroke="var(--writer)" strokeWidth="1.6" strokeLinecap="round" opacity="0.45" />
+      {/* tunas tumbuh dari buku */}
+      <path
+        d="M80 26 C80 18, 82 12, 86 6"
+        stroke="var(--garden)"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M86 6 C92 4, 98 6, 100 12 C94 16, 88 14, 86 6 Z"
+        fill="var(--garden-soft)"
+        stroke="var(--garden)"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M82 14 C76 12, 70 14, 68 20 C74 24, 80 21, 82 14 Z"
+        fill="var(--garden-soft)"
+        stroke="var(--garden)"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      {/* titik aksen */}
+      <circle cx="150" cy="22" r="2.5" fill="var(--gold)" opacity="0.8" />
+      <circle cx="14" cy="18" r="2" fill="var(--garden)" opacity="0.6" />
+    </svg>
+  );
+}
+
+/**
+ * State kosong asli jurnal: ilustrasi + prompt refleksi harian + dua aksi
+ * (jawab prompt dengan prefill, atau mulai halaman kosong).
+ */
+function JournalFirstPage({ onBlank, onPrompt }: { onBlank: () => void; onPrompt: (prompt: string) => void }) {
+  const prompt = promptOfTheDay();
+  return (
+    <div className="flex flex-col items-center text-center py-8 px-4">
+      <JournalDoodle />
+      <p className="font-semibold text-foreground text-sm mt-3">Halaman pertamamu masih kosong</p>
+      <p className="text-xs text-muted-foreground mt-1 max-w-[250px]">
+        Tak perlu menulis banyak — satu paragraf jujur cukup untuk memulai arsip pribadimu.
+      </p>
+      <div className="mt-4 w-full max-w-[300px] rounded-xl border border-writer/30 bg-writer-soft/50 p-3.5 text-left">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-writer-deep" />
+          <p className="text-[10px] font-bold uppercase tracking-wide text-writer-deep">Prompt refleksi hari ini</p>
+        </div>
+        <p className="text-sm font-semibold leading-snug mt-1.5">{prompt}</p>
+        <button
+          onClick={() => onPrompt(prompt)}
+          className="press mt-2.5 inline-flex min-h-[44px] items-center gap-1.5 bg-writer-deep text-white text-xs font-bold rounded-full px-3.5 py-2"
+        >
+          <PenLine className="h-3.5 w-3.5" /> Jawab prompt ini
+        </button>
+      </div>
+      <button
+        onClick={onBlank}
+        className="press mt-3 text-xs font-bold text-muted-foreground underline underline-offset-4 decoration-border hover:text-foreground min-h-[44px]"
+      >
+        atau mulai dari halaman kosong
+      </button>
+    </div>
+  );
+}
+
 export default function JournalScreen() {
   const setPage = useRutinaStore((s) => s.setPage);
-  const openQuickAction = useRutinaStore((s) => s.setQuickAction);
+  const openJournalSheet = useRutinaStore((s) => s.openJournalSheet);
 
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["journal"], queryFn: rutinaApi.journal });
   const entries: JournalEntry[] = React.useMemo(() => data?.entries ?? [], [data]);
@@ -448,23 +562,18 @@ export default function JournalScreen() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={<NotebookText className="h-6 w-6" />}
-              title={entries.length === 0 ? "Halaman masih kosong" : "Tidak ada catatan yang cocok"}
-              description={
-                entries.length === 0
-                  ? "Tulis catatan pertamamu dan mulailah bangun arsip pribadimu."
-                  : "Coba ubah kata kunci atau filter folder dan mood."
-              }
-              action={
-                <button
-                  onClick={() => openQuickAction("journal")}
-                  className="press bg-writer-deep text-white text-sm font-bold rounded-xl px-4 py-2.5"
-                >
-                  Tulis Catatan
-                </button>
-              }
-            />
+            entries.length === 0 ? (
+              <JournalFirstPage
+                onBlank={() => openJournalSheet()}
+                onPrompt={(prompt) => openJournalSheet({ content: `${prompt}\n\n`, folder: "Refleksi" })}
+              />
+            ) : (
+              <EmptyState
+                icon={<NotebookText className="h-6 w-6" />}
+                title="Tidak ada catatan yang cocok"
+                description="Coba ubah kata kunci atau filter folder dan mood."
+              />
+            )
           ) : (
             <div className="space-y-2.5">
               {filtered.map((e) => {
@@ -505,7 +614,7 @@ export default function JournalScreen() {
         {/* FAB tulis */}
         <div className="sticky bottom-3 flex justify-end z-20">
           <button
-            onClick={() => openQuickAction("journal")}
+            onClick={() => openJournalSheet()}
             aria-label="Tulis catatan baru"
             className="press h-14 w-14 rounded-full bg-writer-deep text-white shadow-lift flex items-center justify-center"
           >

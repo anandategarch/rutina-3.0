@@ -339,9 +339,8 @@ await db.profile.upsert({
 /* ---------------- 4. evaluasi achievement dari data asli ---------------- */
 
 console.log("🏅 Evaluasi achievement dari data asli…");
-const [habitCount, firstHabit, logRows, workoutCount, lastWorkout, checkinRows, journalCount, goalsNow, txLast, logCount] =
+const [firstHabit, logRows, workoutCount, lastWorkout, checkinRows, journalCount, goalsNow, txLast, logCount] =
   await Promise.all([
-    db.habit.count(),
     db.habit.findFirst({ orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
     db.habitLog.findMany({ select: { date: true, status: true }, orderBy: { date: "asc" } }),
     db.workout.count(),

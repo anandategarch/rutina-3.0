@@ -213,8 +213,15 @@ function QuickActionHub() {
 
 function QuickActionSheets() {
   const quickAction = useRutinaStore((s) => s.quickAction);
+  const journalPrefill = useRutinaStore((s) => s.journalPrefill);
   const setQuickAction = useRutinaStore((s) => s.setQuickAction);
   const close = () => setQuickAction(null);
+  // Prefill (mis. prompt refleksi) dibuang saat sheet ditutup agar
+  // pembukaan berikutnya selalu mulai dari form yang benar.
+  const closeJournal = () => {
+    useRutinaStore.setState({ journalPrefill: null });
+    close();
+  };
   // Sheet dimuat (chunk di-fetch) hanya pada penggunaan pertama; setelah itu
   // tetap ter-mount agar animasi buka/tutup vaul tetap berjalan.
   const [used, setUsed] = React.useState<Set<string>>(() => new Set());
@@ -225,7 +232,9 @@ function QuickActionSheets() {
   return (
     <>
       {used.has("habit") && <AddHabitSheet open={quickAction === "habit"} onClose={close} />}
-      {used.has("journal") && <AddJournalSheet open={quickAction === "journal"} onClose={close} />}
+      {used.has("journal") && (
+        <AddJournalSheet open={quickAction === "journal"} onClose={closeJournal} prefill={journalPrefill ?? undefined} />
+      )}
       {used.has("transaction") && <AddTransactionSheet open={quickAction === "transaction"} onClose={close} />}
       {used.has("workout") && <AddWorkoutSheet open={quickAction === "workout"} onClose={close} />}
       {used.has("food") && <AddFoodSheet open={quickAction === "food"} onClose={close} />}

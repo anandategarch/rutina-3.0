@@ -298,6 +298,12 @@ export default function HomeScreen() {
                 <Flame className="h-4 w-4 text-gold" />
               </div>
               <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Streak</p>
+              {/* Rekor historis tetap terlihat saat streak berjalan sedang 0 — motivasi tanpa menggurui */}
+              {d.streak.best > 0 && (
+                <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold text-gold-deep bg-gold-soft rounded-full px-2 py-0.5 tabular shrink-0">
+                  rekor {d.streak.best} hari
+                </span>
+              )}
             </div>
             <div className="min-w-0">
               <p className="text-xl font-extrabold tabular leading-none">

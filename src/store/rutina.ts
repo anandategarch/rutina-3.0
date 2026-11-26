@@ -13,20 +13,37 @@ export type QuickAction =
   | "checkin"
   | null;
 
+/** Prefill opsional untuk sheet jurnal (mis. prompt refleksi harian). */
+export interface JournalPrefillPayload {
+  title?: string;
+  content?: string;
+  folder?: string;
+}
+
 interface RutinaState {
   page: RutinaPage;
   hubOpen: boolean;
   quickAction: QuickAction;
+  /** Prefill jurnal aktif; dihapus otomatis saat sheet ditutup. */
+  journalPrefill: JournalPrefillPayload | null;
   setPage: (p: RutinaPage) => void;
   setHubOpen: (open: boolean) => void;
   setQuickAction: (a: QuickAction) => void;
+  /**
+   * Buka sheet jurnal; tanpa argumen = form bersih (prefill lama dibuang),
+   * dengan prefill = isi form otomatis (dipakai prompt refleksi).
+   */
+  openJournalSheet: (prefill?: JournalPrefillPayload) => void;
 }
 
 export const useRutinaStore = create<RutinaState>((set) => ({
   page: "home",
   hubOpen: false,
   quickAction: null,
+  journalPrefill: null,
   setPage: (p) => set({ page: p, hubOpen: false }),
   setHubOpen: (open) => set({ hubOpen: open }),
   setQuickAction: (a) => set({ quickAction: a, hubOpen: false }),
+  openJournalSheet: (prefill) =>
+    set({ journalPrefill: prefill ?? null, quickAction: "journal", hubOpen: false }),
 }));
