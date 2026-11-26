@@ -26,6 +26,7 @@ import { HABIT_ICONS, habitIcon } from "@/components/rutina/habit-icons";
 import { rutinaApi } from "@/lib/rutina/api";
 import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import { cn } from "@/lib/utils";
+import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 import type { Habit } from "@/types/rutina";
 
 // ============ Konstanta form ============
@@ -98,11 +99,13 @@ export default function AddHabitSheet({
   const [form, setForm] = React.useState<HabitFormState>(DEFAULT_FORM);
 
   // Prefill saat drawer dibuka (kunci pada id agar refetch tidak mengreset form)
+  // Snapshot form awal (default atau hasil prefill edit) sebagai acuan dirty-guard.
   const habitId = habit?.id;
+  const [initialForm, setInitialForm] = React.useState<HabitFormState>(DEFAULT_FORM);
   React.useEffect(() => {
     if (!open) return;
     if (habit) {
-      setForm({
+      const next: HabitFormState = {
         name: habit.name,
         category: habit.category,
         icon: habit.icon,
@@ -116,9 +119,12 @@ export default function AddHabitSheet({
         unitStep: String(habit.unitStep),
         reminderTime: habit.reminderTime ?? "",
         stackAfter: habit.stackAfter ?? "",
-      });
+      };
+      setForm(next);
+      setInitialForm(next);
     } else {
       setForm(DEFAULT_FORM);
+      setInitialForm(DEFAULT_FORM);
     }
     // Deps sengaja hanya [open, habitId]: refetch latar bisa mengganti referensi objek
     // `habit` dan menimpa editan yang sedang berjalan (lihat komentar prefill di atas).
@@ -145,6 +151,32 @@ export default function AddHabitSheet({
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // ===== Dirty-guard: jangan buang input yang sudah diketik diam-diam =====
+  const dirty =
+    form.name !== initialForm.name ||
+    form.category !== initialForm.category ||
+    form.icon !== initialForm.icon ||
+    form.color !== initialForm.color ||
+    form.scheduleType !== initialForm.scheduleType ||
+    form.timeOfDay !== initialForm.timeOfDay ||
+    form.measured !== initialForm.measured ||
+    form.unitLabel !== initialForm.unitLabel ||
+    form.unitTarget !== initialForm.unitTarget ||
+    form.unitStep !== initialForm.unitStep ||
+    form.reminderTime !== initialForm.reminderTime ||
+    form.stackAfter !== initialForm.stackAfter ||
+    [...form.days].sort().join(",") !== [...initialForm.days].sort().join(",");
+  const [confirmDiscard, setConfirmDiscard] = React.useState(false);
+  const handleOpenChange = (o: boolean) => {
+    if (!o) {
+      if (dirty && !mutation.isPending) {
+        setConfirmDiscard(true);
+        return;
+      }
+      onClose();
+    }
+  };
 
   const toggleDay = (d: number) => {
     setForm((f) => ({
@@ -184,7 +216,7 @@ export default function AddHabitSheet({
   const iconPreview = React.createElement(habitIcon(form.icon), { className: "h-4 w-4 text-white" });
 
   return (
-    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent className="max-h-[85dvh]">
         <DrawerHeader className="px-4 text-left">
           <DrawerTitle className="text-base font-bold">
@@ -219,7 +251,7 @@ export default function AddHabitSheet({
             <div>
               <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Kategori</label>
               <Select value={form.category} onValueChange={(v) => set("category", v)}>
-                <SelectTrigger className="h-11 rounded-xl w-full">
+                <SelectTrigger className="h-11 rounded-xl w-full" aria-label="Kategori">
                   <SelectValue placeholder="Pilih kategori" />
                 </SelectTrigger>
                 <SelectContent>
@@ -276,7 +308,7 @@ export default function AddHabitSheet({
                       aria-label={`Warna ${c.label}`}
                       aria-pressed={active}
                       className={cn(
-                        "press h-10 w-10 rounded-full flex items-center justify-center ring-offset-2 ring-offset-background transition-shadow",
+                        "press h-11 w-11 rounded-full flex items-center justify-center ring-offset-2 ring-offset-background transition-shadow",
                         c.bg,
                         active ? "ring-2 ring-foreground/50" : "ring-0"
                       )}
@@ -349,7 +381,7 @@ export default function AddHabitSheet({
             <div>
               <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Waktu pelaksanaan</label>
               <Select value={form.timeOfDay} onValueChange={(v) => set("timeOfDay", v)}>
-                <SelectTrigger className="h-11 rounded-xl w-full">
+                <SelectTrigger className="h-11 rounded-xl w-full" aria-label="Waktu pelaksanaan">
                   <SelectValue placeholder="Pilih waktu" />
                 </SelectTrigger>
                 <SelectContent>
@@ -456,6 +488,7 @@ export default function AddHabitSheet({
                 placeholder="Setelah menyiram wajah…"
                 rows={2}
                 className="rounded-xl resize-none"
+                maxLength={200}
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Tuliskan pemicu: kebiasaan yang sudah ada sebelum kebiasaan ini.
@@ -475,6 +508,9 @@ export default function AddHabitSheet({
             </button>
           </div>
         </form>
+
+        {/* Konfirmasi buang perubahan yang belum disimpan */}
+        <ConfirmDiscard open={confirmDiscard} onOpenChange={setConfirmDiscard} onConfirm={onClose} />
       </DrawerContent>
     </Drawer>
   );

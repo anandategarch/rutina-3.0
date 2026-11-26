@@ -71,13 +71,18 @@ export default function ProfileScreen() {
   const [editOpen, setEditOpen] = React.useState(false);
   const [editName, setEditName] = React.useState("");
   const [editVoice, setEditVoice] = React.useState("");
+  const [confirmDiscard, setConfirmDiscard] = React.useState(false);
 
   React.useEffect(() => {
     if (editOpen && profile) {
       setEditName(profile.name);
       setEditVoice(profile.identityVoice);
+      setConfirmDiscard(false);
     }
   }, [editOpen, profile]);
+
+  // Ada perubahan nama/suara yang belum disimpan? Bandingkan dengan profil terakhir.
+  const editDirty = !!profile && (editName !== profile.name || editVoice !== profile.identityVoice);
 
   const updateMutation = useMutation({
     mutationFn: (body: { name?: string; identityVoice?: string; dailyMissionTarget?: number }) =>
@@ -468,7 +473,19 @@ export default function ProfileScreen() {
       </div>
 
       {/* ===== Drawer edit identitas (bottom sheet — aman dari keyboard iOS) ===== */}
-      <Drawer open={editOpen} onOpenChange={setEditOpen}>
+      <Drawer
+        open={editOpen}
+        onOpenChange={(o) => {
+          if (!o) {
+            // Jangan buang edit yang belum disimpan begitu saja — konfirmasi dulu.
+            if (editDirty && !updateMutation.isPending) {
+              setConfirmDiscard(true);
+              return;
+            }
+            setEditOpen(false);
+          }
+        }}
+      >
         <DrawerContent className="flex flex-col h-auto max-h-[85dvh] rounded-t-2xl">
           <DrawerHeader className="px-4 text-left">
             <DrawerTitle>Edit Profil</DrawerTitle>
@@ -511,6 +528,30 @@ export default function ProfileScreen() {
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* ===== AlertDialog buang perubahan profil ===== */}
+      <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Buang perubahan?</AlertDialogTitle>
+            <AlertDialogDescription>Perubahan yang belum disimpan akan hilang.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setConfirmDiscard(false);
+                setEditOpen(false);
+              }}
+            >
+              Buang
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ===== Dialog FAQ ===== */}
       <Dialog open={faqOpen} onOpenChange={setFaqOpen}>

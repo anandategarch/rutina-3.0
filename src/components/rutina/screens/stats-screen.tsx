@@ -17,6 +17,7 @@ import {
   Medal,
   CalendarDays,
   AlertTriangle,
+  Loader2,
   RefreshCw,
   type LucideIcon,
 } from "lucide-react";
@@ -80,7 +81,7 @@ function cellIntensityBg(habitsDone: number): string {
 
 export default function StatsScreen() {
   const setPage = useRutinaStore((s) => s.setPage);
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
 
   if (isError) {
     return (
@@ -97,9 +98,10 @@ export default function StatsScreen() {
             </p>
             <Button
               onClick={() => refetch()}
+              disabled={isFetching}
               className="mt-1.5 min-h-[44px] rounded-xl px-5 font-bold flex items-center gap-2"
             >
-              <RefreshCw className="h-4 w-4" />
+              {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Coba Lagi
             </Button>
           </div>
@@ -260,7 +262,7 @@ export default function StatsScreen() {
                     <p className="text-lg font-extrabold tabular leading-none">
                       {stats.habitCategoryComposition.reduce((a, c) => a + c.count, 0)}
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">kebiasaan</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">kebiasaan</p>
                   </>
                 }
               />
@@ -334,7 +336,7 @@ export default function StatsScreen() {
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: NEUTRAL }} /> Energi
             </span>
-            <span className="ml-auto text-[11px] text-muted-foreground">skala 0–5 · kosong = tidak tercatat</span>
+            <span className="ml-auto text-xs text-muted-foreground">skala 0–5 · kosong = tidak tercatat</span>
           </div>
         </SectionCard>
 
@@ -404,8 +406,8 @@ export default function StatsScreen() {
         {/* ===== Insight list ===== */}
         <SectionCard title="Wawasan Statistik" tone="garden" icon={<Lightbulb className="h-4 w-4 text-garden-deep" />}>
           <ul className="space-y-2.5">
-            {stats.insights.map((ins, i) => (
-              <li key={i} className="flex items-start gap-2.5 rounded-xl bg-secondary/60 p-3">
+            {stats.insights.map((ins) => (
+              <li key={ins.slice(0, 40)} className="flex items-start gap-2.5 rounded-xl bg-secondary/60 p-3">
                 <Lightbulb className="h-4 w-4 text-garden-deep shrink-0 mt-0.5" />
                 <p className="text-xs leading-relaxed text-foreground">{ins}</p>
               </li>
@@ -479,7 +481,7 @@ function MonthlyMissionCalendar({ stats }: { stats: StatsPayload }) {
                 key={i}
                 className={cn(
                   "aspect-square rounded-[4px] flex items-center justify-center text-xs font-semibold tabular",
-                  t > 0 ? (t >= 0.5 ? "text-white" : "text-foreground") : "text-muted-foreground/50",
+                  t >= 0.75 ? "text-primary-foreground" : t > 0 ? "text-foreground" : "text-muted-foreground/50",
                   i === todayCellIdx && "ring-2 ring-gold"
                 )}
               >
@@ -494,7 +496,7 @@ function MonthlyMissionCalendar({ stats }: { stats: StatsPayload }) {
           {[0.3, 0.55, 0.8, 1].map((o) => (
             <span key={o} className="h-2.5 w-2.5 rounded-[3px]" style={{ background: "var(--primary)", opacity: o }} />
           ))}
-          <span className="text-[11px] text-muted-foreground ml-1">kosong → penuh</span>
+          <span className="text-xs text-muted-foreground ml-1">kosong → penuh</span>
         </div>
         <span className="text-xs text-muted-foreground tabular shrink-0">
           {todayStat && todayStat.missionsTotal > 0
@@ -529,7 +531,7 @@ function CrossModuleCalendar({ stats }: { stats: StatsPayload }) {
     >
       <div className="space-y-3">
         {/* Header hari — pola grid 7 kolom (Sen–Min) seperti Kalender Misi Bulan Ini */}
-        <div className="grid grid-cols-7 gap-1 text-center">
+        <div className="grid grid-cols-7 gap-2 text-center">
           {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d) => (
             <span key={d} className="text-xs font-bold text-muted-foreground">
               {d}
@@ -543,7 +545,7 @@ function CrossModuleCalendar({ stats }: { stats: StatsPayload }) {
           return (
             <div key={key}>
               <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">{monthName(m, true)}</p>
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-2">
                 {Array.from({ length: leadingBlanks }, (_, i) => (
                   <span key={`blank-${i}`} className="aspect-square" aria-hidden="true" />
                 ))}
@@ -555,7 +557,7 @@ function CrossModuleCalendar({ stats }: { stats: StatsPayload }) {
                       d.hasTransaction ? "transaksi ada" : "tanpa transaksi"
                     }, ${d.hasWorkout ? "latihan ada" : "tanpa latihan"}, ${d.journaled ? "jurnal ada" : "tanpa jurnal"}`}
                     className={cn(
-                      "press aspect-square rounded-[4px] p-1 grid grid-cols-2 gap-1 place-items-center transition-transform",
+                      "press aspect-square min-h-[44px] rounded-[4px] p-1 grid grid-cols-2 gap-1.5 place-items-center transition-transform",
                       cellIntensityBg(d.habitsDone),
                       d.date === todayStr() && "ring-2 ring-gold"
                     )}
@@ -670,24 +672,36 @@ function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: S
           <div className="grid grid-cols-2 gap-2.5">
             <div className="rounded-xl bg-studio-soft p-3">
               <span className="text-xs font-bold text-studio-deep uppercase tracking-wide">Latihan</span>
-              <p className="text-sm font-bold tabular text-studio-deep mt-1">
-                {dayWorkouts.length > 0 ? `${dayWorkouts.length} sesi` : "Tidak ada"}
-              </p>
-              {dayWorkouts.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatDuration(dayWorkouts.reduce((a, w) => a + w.durationMin, 0))}
-                </p>
+              {isLoading ? (
+                <div className="h-4 w-24 rounded bg-secondary animate-pulse mt-1" />
+              ) : (
+                <>
+                  <p className="text-sm font-bold tabular text-studio-deep mt-1">
+                    {dayWorkouts.length > 0 ? `${dayWorkouts.length} sesi` : "Tidak ada"}
+                  </p>
+                  {dayWorkouts.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formatDuration(dayWorkouts.reduce((a, w) => a + w.durationMin, 0))}
+                    </p>
+                  )}
+                </>
               )}
             </div>
             <div className="rounded-xl bg-writer-soft p-3">
               <span className="text-xs font-bold text-writer-deep uppercase tracking-wide">Jurnal</span>
-              <p className="text-sm font-bold tabular text-writer-deep mt-1">
-                {dayEntries.length > 0 ? `${dayEntries.length} catatan` : "Tidak ada"}
-              </p>
-              {dayEntries.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {dayEntries.reduce((a, e) => a + e.wordCount, 0)} kata
-                </p>
+              {isLoading ? (
+                <div className="h-4 w-24 rounded bg-secondary animate-pulse mt-1" />
+              ) : (
+                <>
+                  <p className="text-sm font-bold tabular text-writer-deep mt-1">
+                    {dayEntries.length > 0 ? `${dayEntries.length} catatan` : "Tidak ada"}
+                  </p>
+                  {dayEntries.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {dayEntries.reduce((a, e) => a + e.wordCount, 0)} kata
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -726,7 +740,7 @@ function AchievementCard({ achievement }: { achievement: AchievementItem }) {
           {formatDateID(achievement.unlockedAt!)}
         </Pill>
       ) : (
-        <span className="text-[11px] text-muted-foreground leading-tight line-clamp-2">{achievement.description}</span>
+        <span className="text-xs text-muted-foreground leading-tight line-clamp-2">{achievement.description}</span>
       )}
     </div>
   );

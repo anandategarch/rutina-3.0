@@ -59,9 +59,12 @@ export default function RootLayout({
         className={`${nunito.variable} ${dmSans.variable} ${caveat.variable} antialiased bg-background text-foreground`}
       >
         {children}
-        {/* Offset toast memperhitungkan notch/safe-area agar tidak tertutup status bar */}
+        {/* Offset toast memperhitungkan notch/safe-area agar tidak tertutup status bar.
+            duration 8000: toast error/gagal mutasi tidak boleh menghilang dalam 4s
+            sebelum user sempat membacanya (ux-guidelines #138 persistent errors). */}
         <Toaster
           position="top-center"
+          duration={8000}
           offset={{ top: "calc(16px + env(safe-area-inset-top, 0px))" }}
         />
       </body>

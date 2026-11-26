@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { rutinaApi } from "@/lib/rutina/api";
 import { todayStr, formatPace } from "@/lib/rutina/format";
+import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 import type { Workout, StrengthItem, ExerciseItem } from "@/types/rutina";
 
 type WorkoutType = Workout["type"];
@@ -75,11 +76,13 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
   const [exSearch, setExSearch] = React.useState("");
   const [muscleFilter, setMuscleFilter] = React.useState<string | null>(null);
 
-  // Reset form setiap kali sheet dibuka
+  // Reset form setiap kali sheet dibuka; snapshot tanggal awal untuk dirty-guard
+  const [initialDate, setInitialDate] = React.useState("");
   React.useEffect(() => {
     if (open) {
+      const d = todayStr();
       setType(null);
-      setDate(todayStr());
+      setDate(d);
       setDuration("");
       setDistance("");
       setCalories("");
@@ -88,6 +91,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
       setItems([]);
       setExSearch("");
       setMuscleFilter(null);
+      setInitialDate(d);
     }
   }, [open]);
 
@@ -139,6 +143,29 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
       toast.error(err.message || "Gagal menyimpan latihan");
     },
   });
+
+  // ===== Dirty-guard: jangan buang input yang sudah diketik diam-diam =====
+  // Tanggal dibandingkan dengan snapshot awal (bukan todayStr() segar) agar sheet
+  // yang dibiarkan terbuka melewati tengah malam tidak salah dianggap kotor.
+  const dirty =
+    type !== null ||
+    duration !== "" ||
+    distance !== "" ||
+    calories !== "" ||
+    title !== "" ||
+    notes !== "" ||
+    items.length > 0 ||
+    date !== initialDate;
+  const [confirmDiscard, setConfirmDiscard] = React.useState(false);
+  const handleOpenChange = (o: boolean) => {
+    if (!o) {
+      if (dirty && !mutation.isPending) {
+        setConfirmDiscard(true);
+        return;
+      }
+      onClose();
+    }
+  };
 
   const isCardio = type !== null && TYPE_META[type].cardio;
   const durNum = Number(duration);
@@ -192,7 +219,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
   };
 
   return (
-    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent className="max-h-[94dvh]">
         <DrawerHeader className="pb-2">
           <DrawerTitle className="text-studio-deep">Catat Latihan</DrawerTitle>
@@ -247,6 +274,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                   type="number"
                   inputMode="numeric"
                   min={1}
+                  step="any"
                   placeholder="45"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
@@ -295,6 +323,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                 type="number"
                 inputMode="numeric"
                 min={0}
+                step="any"
                 placeholder="320"
                 value={calories}
                 onChange={(e) => setCalories(e.target.value)}
@@ -475,6 +504,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
                 className="resize-none"
+                maxLength={1000}
               />
             </div>
           </div>
@@ -501,6 +531,9 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
             )}
           </div>
         </form>
+
+        {/* Konfirmasi buang perubahan yang belum disimpan */}
+        <ConfirmDiscard open={confirmDiscard} onOpenChange={setConfirmDiscard} onConfirm={onClose} />
       </DrawerContent>
     </Drawer>
   );

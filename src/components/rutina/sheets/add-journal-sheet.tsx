@@ -4,7 +4,7 @@ import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pin, Laugh, Smile, Meh, Frown, CloudRain } from "lucide-react";
 import { toast } from "sonner";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { rutinaApi } from "@/lib/rutina/api";
 import { cn } from "@/lib/utils";
+import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 
 const FOLDERS = ["Umum", "Refleksi", "Ide", "Sorotan"];
 
@@ -80,6 +81,25 @@ export default function AddJournalSheet({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // ===== Dirty-guard: bandingkan dengan nilai awal (prefill kutipan atau kosong) =====
+  const initialFolder = prefill?.folder && FOLDERS.includes(prefill.folder) ? prefill.folder : "Umum";
+  const dirty =
+    title !== (prefill?.title ?? "") ||
+    content !== (prefill?.content ?? "") ||
+    folder !== initialFolder ||
+    mood !== null ||
+    pinned;
+  const [confirmDiscard, setConfirmDiscard] = React.useState(false);
+  const handleOpenChange = (o: boolean) => {
+    if (!o) {
+      if (dirty && !createMutation.isPending) {
+        setConfirmDiscard(true);
+        return;
+      }
+      onClose();
+    }
+  };
+
   const canSubmit = content.trim().length > 0 && !createMutation.isPending;
 
   const handleSubmit = (ev: React.FormEvent) => {
@@ -92,13 +112,13 @@ export default function AddJournalSheet({
   };
 
   return (
-    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent className="max-h-[92dvh]">
         <DrawerHeader className="pb-2">
           <DrawerTitle className="text-writer-deep">Tulis Catatan</DrawerTitle>
-          <p className="text-xs text-muted-foreground">
+          <DrawerDescription className="text-xs text-muted-foreground">
             Catat apa pun yang layak diingat — refleksi, ide, atau sorotan hari ini.
-          </p>
+          </DrawerDescription>
         </DrawerHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
@@ -137,7 +157,11 @@ export default function AddJournalSheet({
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Hari ini aku ..."
                 className="min-h-40 resize-none"
+                maxLength={5000}
               />
+              {content.length > 0 && (
+                <p className="text-right text-[11px] text-muted-foreground">{content.length}/5000</p>
+              )}
               <p className="text-xs text-muted-foreground tabular text-right">
                 {content.trim() ? content.trim().split(/\s+/).length : 0} kata
               </p>
@@ -208,6 +232,9 @@ export default function AddJournalSheet({
             </button>
           </div>
         </form>
+
+        {/* Konfirmasi buang perubahan yang belum disimpan */}
+        <ConfirmDiscard open={confirmDiscard} onOpenChange={setConfirmDiscard} onConfirm={onClose} />
       </DrawerContent>
     </Drawer>
   );

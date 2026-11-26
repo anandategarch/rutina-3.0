@@ -167,7 +167,7 @@ function JournalFirstPage({ onBlank, onPrompt }: { onBlank: () => void; onPrompt
       <div className="mt-4 w-full max-w-[300px] rounded-xl border border-writer/30 bg-writer-soft/50 p-3.5 text-left">
         <div className="flex items-center gap-1.5">
           <Sparkles className="h-3.5 w-3.5 text-writer-deep" />
-          <p className="text-[11px] font-bold uppercase tracking-wide text-writer-deep">Prompt refleksi hari ini</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-writer-deep">Prompt refleksi hari ini</p>
         </div>
         <p className="text-sm font-semibold leading-snug mt-1.5">{prompt}</p>
         <button
@@ -191,7 +191,7 @@ export default function JournalScreen() {
   const setPage = useRutinaStore((s) => s.setPage);
   const openJournalSheet = useRutinaStore((s) => s.openJournalSheet);
 
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["journal"], queryFn: rutinaApi.journal });
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({ queryKey: ["journal"], queryFn: rutinaApi.journal });
   const entries: JournalEntry[] = React.useMemo(() => data?.entries ?? [], [data]);
 
   // ===== Filter & pencarian (debounce) =====
@@ -221,72 +221,121 @@ export default function JournalScreen() {
   );
 
   // ===== Statistik menulis =====
+  // Statistik turunan berat (map kalender, sort, dll.) dibungkus useMemo agar
+  // tidak dihitung ulang setiap ketikan pada kolom pencarian.
   const today = todayStr();
-  const ws = weekStart(today);
-  const ms = startOfMonth(today);
-  const dayOf = (iso: string) => toDateStr(new Date(iso));
-  const wordsThisWeek = entries.filter((e) => dayOf(e.createdAt) >= ws).reduce((a, e) => a + e.wordCount, 0);
-  const entriesThisMonth = entries.filter((e) => dayOf(e.createdAt) >= ms).length;
-  const totalWords = entries.reduce((a, e) => a + e.wordCount, 0);
-  const avgWords = entries.length ? Math.round(totalWords / entries.length) : 0;
+  const {
+    dayOf,
+    wordsThisWeek,
+    entriesThisMonth,
+    totalWords,
+    avgWords,
+    first,
+    monthDays,
+    leadingBlanks,
+    countByDay,
+    wordsByDay,
+    maxDayWords,
+    weeklyWords,
+    weekDelta,
+    dailyWords30,
+    words30,
+    lastEntry,
+    folderCounts,
+    maxFolder,
+    moodCounts,
+    maxMood,
+  } = React.useMemo(() => {
+    const dayOf = (iso: string) => toDateStr(new Date(iso));
+    const ws = weekStart(today);
+    const ms = startOfMonth(today);
+    const wordsThisWeek = entries.filter((e) => dayOf(e.createdAt) >= ws).reduce((a, e) => a + e.wordCount, 0);
+    const entriesThisMonth = entries.filter((e) => dayOf(e.createdAt) >= ms).length;
+    const totalWords = entries.reduce((a, e) => a + e.wordCount, 0);
+    const avgWords = entries.length ? Math.round(totalWords / entries.length) : 0;
 
-  // ===== Kalender menulis bulan berjalan =====
-  const first = parseDateStr(ms);
-  const dim = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
-  const monthDays = rangeDays(ms, toDateStr(new Date(first.getFullYear(), first.getMonth(), dim)));
-  const leadingBlanks = (first.getDay() + 6) % 7; // Senin mulai
-  const countByDay = new Map<string, number>();
-  for (const e of entries) {
-    const d = dayOf(e.createdAt);
-    if (d >= ms) countByDay.set(d, (countByDay.get(d) ?? 0) + 1);
-  }
+    // ===== Kalender menulis bulan berjalan =====
+    const first = parseDateStr(ms);
+    const dim = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+    const monthDays = rangeDays(ms, toDateStr(new Date(first.getFullYear(), first.getMonth(), dim)));
+    const leadingBlanks = (first.getDay() + 6) % 7; // Senin mulai
+    const countByDay = new Map<string, number>();
+    for (const e of entries) {
+      const d = dayOf(e.createdAt);
+      if (d >= ms) countByDay.set(d, (countByDay.get(d) ?? 0) + 1);
+    }
 
-  // Intensitas kalender = jumlah kata per hari bulan ini
-  const wordsByDay = new Map<string, number>();
-  for (const e of entries) {
-    const d = dayOf(e.createdAt);
-    if (d >= ms) wordsByDay.set(d, (wordsByDay.get(d) ?? 0) + e.wordCount);
-  }
-  const maxDayWords = Math.max(1, ...monthDays.map((d) => wordsByDay.get(d) ?? 0));
+    // Intensitas kalender = jumlah kata per hari bulan ini
+    const wordsByDay = new Map<string, number>();
+    for (const e of entries) {
+      const d = dayOf(e.createdAt);
+      if (d >= ms) wordsByDay.set(d, (wordsByDay.get(d) ?? 0) + e.wordCount);
+    }
+    const maxDayWords = Math.max(1, ...monthDays.map((d) => wordsByDay.get(d) ?? 0));
 
-  // ===== Kata per pekan (6 pekan terakhir) =====
-  const weeklyWords: { label: string; value: number }[] = [];
-  for (let w = 5; w >= 0; w--) {
-    const start = weekStart(addDays(today, -7 * w));
-    const end = addDays(start, 6);
-    const words = entries
-      .filter((e) => {
-        const d = dayOf(e.createdAt);
-        return d >= start && d <= end;
-      })
-      .reduce((a, e) => a + e.wordCount, 0);
-    weeklyWords.push({ label: w === 0 ? "Ini" : formatDayMonth(start), value: words });
-  }
-  const weekDelta = weeklyWords[weeklyWords.length - 1].value - weeklyWords[weeklyWords.length - 2].value;
+    // ===== Kata per pekan (6 pekan terakhir) =====
+    const weeklyWords: { label: string; value: number }[] = [];
+    for (let w = 5; w >= 0; w--) {
+      const start = weekStart(addDays(today, -7 * w));
+      const end = addDays(start, 6);
+      const words = entries
+        .filter((e) => {
+          const d = dayOf(e.createdAt);
+          return d >= start && d <= end;
+        })
+        .reduce((a, e) => a + e.wordCount, 0);
+      weeklyWords.push({ label: w === 0 ? "Ini" : formatDayMonth(start), value: words });
+    }
+    const weekDelta = weeklyWords[weeklyWords.length - 1].value - weeklyWords[weeklyWords.length - 2].value;
 
-  // ===== Tren kata 30 hari terakhir =====
-  const byDay30 = new Map<string, number>();
-  for (const e of entries) {
-    const d = dayOf(e.createdAt);
-    byDay30.set(d, (byDay30.get(d) ?? 0) + e.wordCount);
-  }
-  const dailyWords30 = rangeDays(addDays(today, -29), today).map((d) => byDay30.get(d) ?? 0);
-  const words30 = dailyWords30.reduce((a, b) => a + b, 0);
+    // ===== Tren kata 30 hari terakhir =====
+    const byDay30 = new Map<string, number>();
+    for (const e of entries) {
+      const d = dayOf(e.createdAt);
+      byDay30.set(d, (byDay30.get(d) ?? 0) + e.wordCount);
+    }
+    const dailyWords30 = rangeDays(addDays(today, -29), today).map((d) => byDay30.get(d) ?? 0);
+    const words30 = dailyWords30.reduce((a, b) => a + b, 0);
 
-  // ===== Draf terakhir (semangat "lanjutkan menulis" dari Beranda) =====
-  const lastEntry =
-    entries.length > 0
-      ? [...entries].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
-      : null;
+    // ===== Draf terakhir (semangat "lanjutkan menulis" dari Beranda) =====
+    const lastEntry =
+      entries.length > 0
+        ? [...entries].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
+        : null;
 
-  // ===== Distribusi =====
-  const folderCounts = FOLDERS.map((f) => ({ folder: f, count: entries.filter((e) => e.folder === f).length }));
-  const maxFolder = Math.max(1, ...folderCounts.map((f) => f.count));
-  const moodCounts = JOURNAL_MOODS.map((m) => ({
-    ...m,
-    count: entries.filter((e) => e.mood === m.key).length,
-  }));
-  const maxMood = Math.max(1, ...moodCounts.map((m) => m.count));
+    // ===== Distribusi =====
+    const folderCounts = FOLDERS.map((f) => ({ folder: f, count: entries.filter((e) => e.folder === f).length }));
+    const maxFolder = Math.max(1, ...folderCounts.map((f) => f.count));
+    const moodCounts = JOURNAL_MOODS.map((m) => ({
+      ...m,
+      count: entries.filter((e) => e.mood === m.key).length,
+    }));
+    const maxMood = Math.max(1, ...moodCounts.map((m) => m.count));
+
+    return {
+      dayOf,
+      wordsThisWeek,
+      entriesThisMonth,
+      totalWords,
+      avgWords,
+      first,
+      monthDays,
+      leadingBlanks,
+      countByDay,
+      wordsByDay,
+      maxDayWords,
+      weeklyWords,
+      weekDelta,
+      dailyWords30,
+      words30,
+      lastEntry,
+      folderCounts,
+      maxFolder,
+      moodCounts,
+      maxMood,
+    };
+    // today ikut jadi dependensi supaya pergantian hari tetap dihitung benar
+  }, [entries, today]);
 
   const [activeEntry, setActiveEntry] = React.useState<JournalEntry | null>(null);
 
@@ -459,6 +508,7 @@ export default function JournalScreen() {
               return (
                 <div
                   key={d}
+                  role="img"
                   title={`${formatDateID(d, true)}${
                     count > 0 ? ` · ${count} entri · ${formatNumber(words)} kata` : " · belum menulis"
                   }`}
@@ -552,8 +602,10 @@ export default function JournalScreen() {
               action={
                 <button
                   onClick={() => refetch()}
-                  className="press bg-writer-deep text-white text-sm font-bold rounded-xl px-4 min-h-[44px]"
+                  disabled={isFetching}
+                  className="press bg-writer-deep text-white text-sm font-bold rounded-xl px-4 min-h-[44px] inline-flex items-center justify-center gap-2"
                 >
+                  {isFetching && <Loader2 className="h-4 w-4 animate-spin" />}
                   Coba Lagi
                 </button>
               }
@@ -575,6 +627,19 @@ export default function JournalScreen() {
                 icon={<NotebookText className="h-6 w-6" />}
                 title="Tidak ada catatan yang cocok"
                 description="Coba ubah kata kunci atau filter folder dan mood."
+                action={
+                  <button
+                    onClick={() => {
+                      setSearch("");
+                      setFolder("Semua");
+                      setMoodFilter(null);
+                      setPinnedOnly(false);
+                    }}
+                    className="press bg-writer-deep text-white text-sm font-bold rounded-xl px-4 py-2.5 min-h-[44px] inline-flex items-center justify-center"
+                  >
+                    Hapus semua filter
+                  </button>
+                }
               />
             )
           ) : (
@@ -641,6 +706,7 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
   const [mood, setMood] = React.useState<string | null>(null);
   const [pinned, setPinned] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [confirmDiscard, setConfirmDiscard] = React.useState(false);
 
   React.useEffect(() => {
     if (entry) {
@@ -650,8 +716,18 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
       setMood(entry.mood);
       setPinned(entry.pinned);
       setConfirmDelete(false);
+      setConfirmDiscard(false);
     }
   }, [entry]);
+
+  // Ada edit yang belum disimpan? Bandingkan state lokal dengan entri aslinya.
+  const dirty =
+    !!entry &&
+    (title !== entry.title ||
+      content !== entry.content ||
+      folder !== entry.folder ||
+      mood !== entry.mood ||
+      pinned !== entry.pinned);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["journal"] });
@@ -681,6 +757,7 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
     onSuccess: () => {
       invalidate();
       toast.success("Catatan dihapus");
+      setConfirmDelete(false);
       onClose();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -690,7 +767,19 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
 
   return (
     <>
-      <Drawer open={!!entry} onOpenChange={(o) => !o && onClose()}>
+      <Drawer
+        open={!!entry}
+        onOpenChange={(o) => {
+          if (!o) {
+            // Jangan buang edit yang belum disimpan begitu saja — konfirmasi dulu.
+            if (dirty && !saveMutation.isPending) {
+              setConfirmDiscard(true);
+              return;
+            }
+            onClose();
+          }
+        }}
+      >
         <DrawerContent className="max-h-[92dvh]">
           <DrawerHeader className="pb-2">
             <DrawerTitle className="text-writer-deep">Baca & Edit Catatan</DrawerTitle>
@@ -816,10 +905,44 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteMutation.mutate()}
+              onClick={(e) => {
+                // preventDefault: dialog tetap terbuka selama proses hapus (spinner terlihat),
+                // ditutup lewat onClose() di onSuccess mutation.
+                e.preventDefault();
+                deleteMutation.mutate();
+              }}
+              disabled={deleteMutation.isPending}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Hapus"}
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Menghapus…
+                </>
+              ) : (
+                "Hapus"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Buang perubahan?</AlertDialogTitle>
+            <AlertDialogDescription>Perubahan yang belum disimpan akan hilang.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmDiscard(false);
+                onClose();
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Buang
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

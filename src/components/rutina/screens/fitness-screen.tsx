@@ -143,22 +143,22 @@ export default function FitnessScreen() {
         <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md">
           <ScreenHeader title="Bugar" subtitle="Latihan, asupan & tubuh dalam satu layar" tone="studio" />
           <div className="px-4 pt-3 pb-2 border-b border-border/40">
-            <TabsList className="w-full grid grid-cols-3 h-11 rounded-xl bg-secondary p-1">
+            <TabsList className="w-full grid grid-cols-3 h-[52px] rounded-xl bg-secondary p-1">
               <TabsTrigger
                 value="latihan"
-                className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[38px]"
+                className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[44px]"
               >
                 <Dumbbell className="h-4 w-4" /> Latihan
               </TabsTrigger>
               <TabsTrigger
                 value="asupan"
-                className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[38px]"
+                className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[44px]"
               >
                 <UtensilsCrossed className="h-4 w-4" /> Asupan
               </TabsTrigger>
               <TabsTrigger
                 value="tubuh"
-                className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[38px]"
+                className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[44px]"
               >
                 <HeartPulse className="h-4 w-4" /> Tubuh
               </TabsTrigger>
@@ -167,7 +167,7 @@ export default function FitnessScreen() {
         </div>
 
         <TabsContent value="latihan" className="px-4 pt-4 pb-6 space-y-4">
-          <WorkoutTab workouts={workouts} loading={workoutsQuery.isLoading} checkins={checkins} goals={goals} />
+          <WorkoutTab workouts={workouts} loading={workoutsQuery.isLoading || checkinsQuery.isLoading} checkins={checkins} goals={goals} />
         </TabsContent>
         <TabsContent value="asupan" className="px-4 pt-4 pb-6 space-y-4">
           <NutritionTab workouts={workouts} />
@@ -542,6 +542,7 @@ function WorkoutTab({
 // ---------- e1RM ----------
 
 function E1rmCard({ workouts }: { workouts: Workout[] }) {
+  const openQuickAction = useRutinaStore((s) => s.setQuickAction);
   const top3 = React.useMemo(() => {
     const best = new Map<string, { name: string; muscleGroup: string; e1rm: number }>();
     const history = new Map<string, number[]>();
@@ -579,6 +580,14 @@ function E1rmCard({ workouts }: { workouts: Workout[] }) {
           icon={<Dumbbell className="h-6 w-6" />}
           title="Belum ada data beban"
           description="Catat sesi latihan beban untuk melihat papan rekor e1RM-mu."
+          action={
+            <Button
+              onClick={() => openQuickAction("workout")}
+              className="press bg-studio-deep text-white text-sm font-bold rounded-xl px-4 py-2.5 min-h-[44px] inline-flex items-center justify-center"
+            >
+              Catat Latihan
+            </Button>
+          }
         />
       ) : (
         <ol className="space-y-2">
@@ -645,6 +654,7 @@ function classifyMuscleGroup(raw: string): MuscleGroupKey {
 }
 
 function MuscleBalanceCard({ workouts }: { workouts: Workout[] }) {
+  const openQuickAction = useRutinaStore((s) => s.setQuickAction);
   const rows = React.useMemo(() => {
     const end = todayStr();
     const start = addDays(end, -29);
@@ -676,6 +686,14 @@ function MuscleBalanceCard({ workouts }: { workouts: Workout[] }) {
           icon={<Dumbbell className="h-6 w-6" />}
           title="Belum ada volume beban"
           description="Catat sesi latihan beban untuk melihat keseimbangan push, pull, dan kaki."
+          action={
+            <Button
+              onClick={() => openQuickAction("workout")}
+              className="press bg-studio-deep text-white text-sm font-bold rounded-xl px-4 py-2.5 min-h-[44px] inline-flex items-center justify-center"
+            >
+              Catat Latihan
+            </Button>
+          }
         />
       ) : (
         <>
@@ -708,6 +726,7 @@ function MuscleBalanceCard({ workouts }: { workouts: Workout[] }) {
 // ---------- Riwayat ----------
 
 function HistorySection({ workouts }: { workouts: Workout[] }) {
+  const openQuickAction = useRutinaStore((s) => s.setQuickAction);
   const today = todayStr();
   const [typeFilter, setTypeFilter] = React.useState<string>("all");
   const [range, setRange] = React.useState<7 | 30 | 90>(30);
@@ -725,7 +744,7 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
 
   return (
     <SectionCard title="Riwayat Aktivitas" tone="studio" icon={<MapPin className="h-4 w-4 text-studio-deep" />}>
-      <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
         {[{ key: "all", label: "Semua" }, ...TYPE_FILTERS].map((f) => (
           <button
             key={f.key}
@@ -742,7 +761,7 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
           </button>
         ))}
       </div>
-      <div className="flex gap-1.5 mt-2 mb-3">
+      <div className="flex gap-2 mt-2 mb-3">
         {([7, 30, 90] as const).map((r) => (
           <button
             key={r}
@@ -763,6 +782,14 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
           icon={<Route className="h-6 w-6" />}
           title="Belum ada sesi"
           description={`Tidak ada latihan ${typeFilter !== "all" ? "pada filter ini " : ""}${range} hari terakhir.`}
+          action={
+            <Button
+              onClick={() => openQuickAction("workout")}
+              className="press bg-studio-deep text-white text-sm font-bold rounded-xl px-4 py-2.5 min-h-[44px] inline-flex items-center justify-center"
+            >
+              Catat Latihan
+            </Button>
+          }
         />
       ) : (
         <div className="max-h-[440px] overflow-y-auto scroll-thin space-y-2 pr-0.5">
@@ -775,7 +802,8 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
   );
 }
 
-function WorkoutHistoryCard({ workout: w }: { workout: Workout }) {
+// React.memo: props stabil (objek workout dari hasil useMemo, tanpa callback inline)
+const WorkoutHistoryCard = React.memo(function WorkoutHistoryCard({ workout: w }: { workout: Workout }) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = React.useState(false);
   const meta = TYPE_META[w.type];
@@ -879,7 +907,7 @@ function WorkoutHistoryCard({ workout: w }: { workout: Workout }) {
       )}
     </article>
   );
-}
+});
 
 // ---------- Tren 6 pekan ----------
 
@@ -1141,7 +1169,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
 
       {/* Neraca kalori */}
       <SectionCard title="Neraca Kalori 7 Hari" tone="studio" icon={<Activity className="h-4 w-4 text-studio-deep" />}>
-        <MiniBars data={balance7} height={72} color={SAGE} altColor={CLAY} showAlt highlightIndex={6} />
+        <MiniBars data={balance7} height={72} color={SAGE} altColor={CLAY} showAlt altLabel="Keluar (latihan)" highlightIndex={6} />
         <div className="mt-2 flex items-center justify-center gap-4">
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="h-2.5 w-2.5 rounded-full" style={{ background: SAGE }} /> Masuk (makan)
@@ -1253,14 +1281,41 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
                           <span className="shrink-0 text-xs font-bold tabular text-studio-deep">
                             {formatNumber(e.calories)} kkal
                           </span>
-                          <button
-                            onClick={() => deleteMutation.mutate(e.id)}
-                            disabled={deleteMutation.isPending}
-                            aria-label={`Hapus ${e.name}`}
-                            className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-clay-soft text-clay-deep"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <button
+                                disabled={deleteMutation.isPending}
+                                aria-label={`Hapus ${e.name}`}
+                                className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-clay-soft text-clay-deep"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="max-w-[320px]">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Hapus catatan asupan ini?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Catatan &ldquo;{e.name}&rdquo; akan dihapus permanen dan tidak bisa dikembalikan.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="rounded-xl">Batal</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMutation.mutate(e.id)}
+                                  disabled={deleteMutation.isPending}
+                                  className="rounded-xl bg-destructive text-white hover:bg-destructive/90"
+                                >
+                                  {deleteMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 animate-spin" /> Menghapus…
+                                    </>
+                                  ) : (
+                                    "Hapus"
+                                  )}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </li>
                       ))}
                     </ul>
@@ -1561,7 +1616,7 @@ function BodyTab({
           </div>
         </div>
 
-        <div className="mt-4 flex gap-1.5">
+        <div className="mt-4 flex gap-2">
           {([30, 90, 365] as const).map((r) => (
             <button
               key={r}
@@ -1679,10 +1734,10 @@ function BodyTab({
             <div className="grid grid-cols-4 gap-2">
               {(
                 [
-                  { icon: Smile, label: "Mood", value: todayCheckin.mood, tone: "bg-studio-soft text-studio-deep" },
-                  { icon: Zap, label: "Energi", value: todayCheckin.energy, tone: "bg-gold-soft text-gold" },
-                  { icon: Activity, label: "Nyeri", value: todayCheckin.soreness, tone: "bg-secondary text-secondary-foreground" },
-                  { icon: Brain, label: "Stres", value: todayCheckin.stress, tone: "bg-vault-soft text-vault-deep" },
+                  { icon: Smile, label: "Mood", value: todayCheckin.mood, tone: "bg-studio-soft text-studio-deep", labelTone: "text-studio-deep" },
+                  { icon: Zap, label: "Energi", value: todayCheckin.energy, tone: "bg-gold-soft text-gold-deep", labelTone: "text-gold-deep" },
+                  { icon: Activity, label: "Nyeri", value: todayCheckin.soreness, tone: "bg-secondary text-secondary-foreground", labelTone: "text-muted-foreground" },
+                  { icon: Brain, label: "Stres", value: todayCheckin.stress, tone: "bg-vault-soft text-vault-deep", labelTone: "text-vault-deep" },
                 ] as const
               ).map((row) => {
                 const Icon = row.icon;
@@ -1690,7 +1745,7 @@ function BodyTab({
                   <div key={row.label} className={cn("rounded-xl p-2.5 text-center", row.tone)}>
                     <Icon className="mx-auto h-4 w-4" />
                     <p className="mt-1 text-sm font-bold tabular">{row.value !== null ? `${row.value}/5` : "-"}</p>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">{row.label}</p>
+                    <p className={cn("text-xs font-semibold uppercase tracking-wide", row.labelTone)}>{row.label}</p>
                   </div>
                 );
               })}

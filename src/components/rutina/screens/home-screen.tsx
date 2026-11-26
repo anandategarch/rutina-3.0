@@ -155,6 +155,60 @@ export default function HomeScreen() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // ===== Data visual turunan (read-only, tidak mengubah perilaku) =====
+  // Di-memo-kan agar peta/sort hanya dihitung ulang saat payload/query berubah.
+  // Diletakkan sebelum early-return supaya urutan hook tetap konsisten di semua cabang render.
+  const {
+    stripDays,
+    xpToNextLevel,
+    activityByDate,
+    streakSpark,
+    weekBars,
+    todayBarIdx,
+    workoutDelta,
+    topBudget,
+    topGoals,
+  } = React.useMemo(() => {
+    const dd = data as HomePayload | undefined;
+    // rolling 7 hari berakhir hari ini
+    const stripDays: string[] = dd ? Array.from({ length: 7 }, (_, i) => addDays(dd.today, i - 6)) : [];
+    const activityByDate = new Map(
+      (statsQuery.data?.activityCalendar ?? []).map((a) => [a.date, a.habitsDone])
+    );
+    const streakSpark = stripDays.map((ds) => activityByDate.get(ds) ?? 0);
+    const monday = dd ? weekStart(dd.today) : null;
+    const weekDates: string[] = monday ? Array.from({ length: 7 }, (_, i) => addDays(monday, i)) : [];
+    const weekBars = weekDates.map((ds) => ({
+      label: dayName(ds, true),
+      value: activityByDate.get(ds) ?? 0,
+      alt: activityByDate.get(addDays(ds, -7)) ?? 0,
+    }));
+    const todayBarIdx = dd ? weekDates.indexOf(dd.today) : -1;
+    const weeklyWorkouts = statsQuery.data?.fitness.weeklyWorkouts ?? [];
+    const workoutDelta =
+      weeklyWorkouts.length >= 2
+        ? weeklyWorkouts[weeklyWorkouts.length - 1].sessions - weeklyWorkouts[weeklyWorkouts.length - 2].sessions
+        : null;
+    return {
+      stripDays,
+      xpToNextLevel: XP_PER_LEVEL - ((dd?.xp ?? 0) % XP_PER_LEVEL),
+      activityByDate,
+      streakSpark,
+      weekBars,
+      todayBarIdx,
+      workoutDelta,
+      topBudget: [...(budgetsQuery.data?.budgets ?? [])]
+        .filter((b) => b.monthlyLimit > 0)
+        .sort((a, b) => (b.spent ?? 0) / b.monthlyLimit - (a.spent ?? 0) / a.monthlyLimit)[0],
+      topGoals: [...(goalsQuery.data?.goals ?? [])]
+        .filter((g) => g.targetAmount > 0)
+        .sort((a, b) => b.currentAmount / b.targetAmount - a.currentAmount / a.targetAmount)
+        .slice(0, 3),
+    };
+    // selectedDate tidak dibaca blok ini (rolling 7 hari memakai dd.today
+    // dari payload), jadi tidak masuk deps — hitungan kalender mengikuti data.
+  }, [data, statsQuery.data, budgetsQuery.data, goalsQuery.data]);
+
   if (isError && !data) {
     return (
       <div className="px-4 pt-[max(4rem,env(safe-area-inset-top))]">
@@ -195,8 +249,6 @@ export default function HomeScreen() {
     return dayLog?.status === "done" || (a.habit.unitTarget && (dayLog?.value ?? 0) >= a.habit.unitTarget);
   }).length;
 
-  // rolling 7 hari berakhir hari ini
-  const stripDays = Array.from({ length: 7 }, (_, i) => addDays(d.today, i - 6));
   const isTodaySelected = selectedDate === d.today;
 
   const grouped: Record<string, typeof agenda> = { morning: [], afternoon: [], evening: [], anytime: [] };
@@ -209,31 +261,6 @@ export default function HomeScreen() {
   ];
 
   const HighlightIcon = d.highlight ? HIGHLIGHT_ICON[d.highlight.icon] ?? Flame : Flame;
-
-  // ===== Data visual turunan (read-only, tidak mengubah perilaku) =====
-  const xpToNextLevel = XP_PER_LEVEL - (d.xp % XP_PER_LEVEL);
-  const activityByDate = new Map((statsQuery.data?.activityCalendar ?? []).map((a) => [a.date, a.habitsDone]));
-  const streakSpark = stripDays.map((ds) => activityByDate.get(ds) ?? 0);
-  const monday = weekStart(d.today);
-  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
-  const weekBars = weekDates.map((ds) => ({
-    label: dayName(ds, true),
-    value: activityByDate.get(ds) ?? 0,
-    alt: activityByDate.get(addDays(ds, -7)) ?? 0,
-  }));
-  const todayBarIdx = weekDates.indexOf(d.today);
-  const weeklyWorkouts = statsQuery.data?.fitness.weeklyWorkouts ?? [];
-  const workoutDelta =
-    weeklyWorkouts.length >= 2
-      ? weeklyWorkouts[weeklyWorkouts.length - 1].sessions - weeklyWorkouts[weeklyWorkouts.length - 2].sessions
-      : null;
-  const topBudget = [...(budgetsQuery.data?.budgets ?? [])]
-    .filter((b) => b.monthlyLimit > 0)
-    .sort((a, b) => (b.spent ?? 0) / b.monthlyLimit - (a.spent ?? 0) / a.monthlyLimit)[0];
-  const topGoals = [...(goalsQuery.data?.goals ?? [])]
-    .filter((g) => g.targetAmount > 0)
-    .sort((a, b) => b.currentAmount / b.targetAmount - a.currentAmount / a.targetAmount)
-    .slice(0, 3);
 
   return (
     <div className="flex flex-col">
@@ -319,7 +346,7 @@ export default function HomeScreen() {
               {statsQuery.isError && (
                 <button
                   onClick={() => statsQuery.refetch()}
-                  className="press mt-1 text-left text-[11px] font-semibold text-muted-foreground underline underline-offset-2"
+                  className="press mt-1 inline-flex min-h-[44px] items-center text-left text-xs font-semibold text-muted-foreground underline underline-offset-2"
                 >
                   Grafik streak gagal dimuat — ketuk untuk coba lagi
                 </button>
@@ -397,7 +424,7 @@ export default function HomeScreen() {
               action={
                 <button
                   onClick={() => setQuickAction("habit")}
-                  className="press bg-garden-deep text-white text-sm font-bold rounded-xl px-4 py-2.5"
+                  className="press inline-flex min-h-[44px] items-center justify-center bg-garden-deep text-white text-sm font-bold rounded-xl px-4 py-2.5"
                 >
                   Tambah Kebiasaan
                 </button>
@@ -671,7 +698,9 @@ export default function HomeScreen() {
 
 // ============ Agenda row ============
 
-function AgendaRow({
+// React.memo: baris agenda cukup re-render saat props-nya berubah,
+// bukan saat state lain di HomeScreen berubah.
+const AgendaRow = React.memo(function AgendaRow({
   habit,
   log,
   isToday,
@@ -756,7 +785,7 @@ function AgendaRow({
       {locked && !done && <Pill tone="stone">Hanya hari ini</Pill>}
     </div>
   );
-}
+});
 
 // ============ Skeleton ============
 

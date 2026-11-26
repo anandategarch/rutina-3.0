@@ -355,6 +355,23 @@
 }
 
 /* ============================================================
+   Kontras teks dark mode (WCAG 1.4.3 ≥ 4.5:1) — ux-guidelines #36.
+   Di dark, --gold (#8a6b35) dan --clay (#a3483c) dipertahankan sebagai
+   warna latar SOLID (bg-gold/bg-clay tetap aman dengan teks putih 4.9:1+),
+   tetapi sebagai WARNA TEKS di atas card/soft gelap hanya mencapai
+   2.2–3.0:1 (gagal). Setiap text-gold/text-clay diremaps ke varian -deep
+   yang terang (7.3:1+ di dark, 6.3:1+ di light) — satu aturan memperbaiki
+   DeltaBadge, Pill, StatTile, SectionCard, Flame/XP, dan seluruh badge
+   streak tanpa menyentuh latar solid.
+   ============================================================ */
+.dark .text-gold {
+  color: var(--gold-deep);
+}
+.dark .text-clay {
+  color: var(--clay-deep);
+}
+
+/* ============================================================
    Bento grid tiles — ui-ux-pro-max-skill style #39 "Bento Box Grid"
    (active): modular cards, asymmetric grid, varied sizes (1x1, 2x1,
    2x2 / row-span). Spec tokens: gap 10–16px, radius 16–24px
@@ -449,5 +466,17 @@
   }
   .bento-tile:hover {
     transform: none !important;
+  }
+  /* Clamp global (ux-guidelines #9 reduced motion): transisi inline pada
+     komponen chart (width/dashoffset/height — diatur via style prop) tidak
+     terjangkau selector kelas, jadi semua transisi/animasi CSS dipatukkan.
+     framer-motion sudah ditangani MotionConfig reducedMotion="user". */
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -71,7 +71,9 @@ export function SectionCard({
     studio: "text-studio-deep",
     vault: "text-vault-deep",
     writer: "text-writer-deep",
-    gold: "text-gold",
+    // gold-deep: pasangan kontras benar di atas bg-card (gold #8a6b35 hanya 4.8:1
+    // di light & 3:1 di dark — deep 7:1+ di kedua tema)
+    gold: "text-gold-deep",
     clay: "text-clay-deep",
   };
   return (
@@ -100,7 +102,8 @@ const toneMap: Record<string, { bg: string; fg: string }> = {
   studio: { bg: "bg-studio-soft", fg: "text-studio-deep" },
   vault: { bg: "bg-vault-soft", fg: "text-vault-deep" },
   writer: { bg: "bg-writer-soft", fg: "text-writer-deep" },
-  gold: { bg: "bg-gold-soft", fg: "text-gold" },
+  // gold-deep: 6.3:1 di light / 7.3:1 di dark pada bg-gold-soft (gold 4.2:1 — gagal AA)
+  gold: { bg: "bg-gold-soft", fg: "text-gold-deep" },
   clay: { bg: "bg-clay-soft", fg: "text-clay-deep" },
 };
 
@@ -192,7 +195,14 @@ export function ProgressRing({
   const c = 2 * Math.PI * r;
   const clamped = Math.min(1, Math.max(0, progress));
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
+    <div
+      className="relative shrink-0"
+      style={{ width: size, height: size }}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(clamped * 100)}
+    >
       <svg width={size} height={size} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={trackColor} strokeWidth={stroke} />
         <circle

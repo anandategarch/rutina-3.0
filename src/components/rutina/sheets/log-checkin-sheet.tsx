@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { rutinaApi } from "@/lib/rutina/api";
 import { todayStr } from "@/lib/rutina/format";
+import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 import type { CheckIn } from "@/types/rutina";
 
 const SCALES: {
@@ -82,6 +83,14 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
   const [sleepHours, setSleepHours] = React.useState("");
   const [note, setNote] = React.useState("");
   const prefilledRef = React.useRef(false);
+  // Penanda bahwa user sudah mengedit tidur/catatan saat query prefill masih berjalan
+  const userEditedRef = React.useRef(false);
+  // Snapshot nilai awal (reset atau hasil prefill) sebagai acuan dirty-guard
+  const [initialSnap, setInitialSnap] = React.useState<{ scales: ScaleState; sleepHours: string; note: string }>({
+    scales: { mood: null, energy: null, soreness: null, stress: null },
+    sleepHours: "",
+    note: "",
+  });
 
   // Prefill dari check-in hari ini (jika ada)
   const checkinsQuery = useQuery({
@@ -93,9 +102,11 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
   React.useEffect(() => {
     if (open) {
       prefilledRef.current = false;
+      userEditedRef.current = false;
       setScales({ mood: null, energy: null, soreness: null, stress: null });
       setSleepHours("");
       setNote("");
+      setInitialSnap({ scales: { mood: null, energy: null, soreness: null, stress: null }, sleepHours: "", note: "" });
     }
   }, [open]);
 
@@ -105,14 +116,22 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
     if (!data) return;
     const today = data.find((c: CheckIn) => c.date === todayStr());
     if (today) {
-      setScales({
+      const nextScales: ScaleState = {
         mood: today.mood ?? null,
         energy: today.energy ?? null,
         soreness: today.soreness ?? null,
         stress: today.stress ?? null,
-      });
-      setSleepHours(today.sleepHours !== null ? String(today.sleepHours) : "");
-      setNote(today.note ?? "");
+      };
+      setScales(nextScales);
+      const nextSleep = today.sleepHours !== null ? String(today.sleepHours) : "";
+      const nextNote = today.note ?? "";
+      // Jangan timpa input yang sudah diketik user saat query masih berjalan;
+      // snapshot tetap kosong untuk tidur/catatan agar editan user tetap dihitung dirty.
+      if (!userEditedRef.current) {
+        setSleepHours(nextSleep);
+        setNote(nextNote);
+        setInitialSnap({ scales: nextScales, sleepHours: nextSleep, note: nextNote });
+      }
     }
     prefilledRef.current = true;
   }, [open, checkinsQuery.data]);
@@ -130,6 +149,25 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
       toast.error(err.message || "Gagal menyimpan check-in");
     },
   });
+
+  // ===== Dirty-guard: jangan buang input yang sudah diketik diam-diam =====
+  const dirty =
+    scales.mood !== initialSnap.scales.mood ||
+    scales.energy !== initialSnap.scales.energy ||
+    scales.soreness !== initialSnap.scales.soreness ||
+    scales.stress !== initialSnap.scales.stress ||
+    sleepHours !== initialSnap.sleepHours ||
+    note !== initialSnap.note;
+  const [confirmDiscard, setConfirmDiscard] = React.useState(false);
+  const handleOpenChange = (o: boolean) => {
+    if (!o) {
+      if (dirty && !mutation.isPending) {
+        setConfirmDiscard(true);
+        return;
+      }
+      onClose();
+    }
+  };
 
   const sleepNum = Number(sleepHours);
   const canSubmit =
@@ -160,7 +198,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
   };
 
   return (
-    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent className="max-h-[94dvh]">
         <DrawerHeader className="pb-2">
           <DrawerTitle className="text-studio-deep">Check-in Harian</DrawerTitle>
@@ -236,9 +274,9 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                               aria-label={`Energi: ${scale.labels[n - 1]} (${n})`}
                               className={cn(
                                 "press flex-1 rounded-lg border flex items-center justify-center transition-all",
-                                active ? "border-gold bg-gold text-white shadow-soft" : filled ? "border-gold/50 bg-gold-soft text-gold" : "border-border/70 bg-background text-muted-foreground"
+                                active ? "border-gold bg-gold text-white shadow-soft" : filled ? "border-gold/50 bg-gold-soft text-gold-deep" : "border-border/70 bg-background text-muted-foreground"
                               )}
-                              style={{ height: 26 + n * 5 }}
+                              style={{ height: Math.max(44, 26 + n * 5) }}
                             >
                               <Zap className="h-4 w-4" fill={filled || active ? "currentColor" : "none"} strokeWidth={active ? 2.2 : 1.8} />
                             </button>
@@ -286,7 +324,10 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                     <button
                       key={n}
                       type="button"
-                      onClick={() => setSleepHours(String(n))}
+                      onClick={() => {
+                        userEditedRef.current = true;
+                        setSleepHours(String(n));
+                      }}
                       aria-pressed={active}
                       aria-label={`Set tidur ${n} jam`}
                       className={cn(
@@ -314,7 +355,10 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                 max={24}
                 placeholder="Lainnya, mis. 7.5"
                 value={sleepHours}
-                onChange={(e) => setSleepHours(e.target.value)}
+                onChange={(e) => {
+                  userEditedRef.current = true;
+                  setSleepHours(e.target.value);
+                }}
                 className="h-11 tabular"
                 enterKeyHint="next"
                 onKeyDown={enterFocusNext("ci-note")}
@@ -332,9 +376,13 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                 id="ci-note"
                 placeholder="Sesuatu yang ingin kamu ingat tentang hari ini..."
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                onChange={(e) => {
+                  userEditedRef.current = true;
+                  setNote(e.target.value);
+                }}
                 rows={2}
                 className="resize-none"
+                maxLength={500}
               />
             </div>
           </div>
@@ -360,6 +408,9 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
             )}
           </div>
         </form>
+
+        {/* Konfirmasi buang perubahan yang belum disimpan */}
+        <ConfirmDiscard open={confirmDiscard} onOpenChange={setConfirmDiscard} onConfirm={onClose} />
       </DrawerContent>
     </Drawer>
   );

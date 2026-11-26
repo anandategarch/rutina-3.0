@@ -33,6 +33,7 @@ import {
   Clock3,
   Link2,
   Loader2,
+  WifiOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRutinaStore } from "@/store/rutina";
@@ -524,7 +525,7 @@ export default function HabitsScreen() {
   const [editOpen, setEditOpen] = React.useState(false);
   const [editingHabit, setEditingHabit] = React.useState<Habit | undefined>(undefined);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["habits"],
     queryFn: rutinaApi.habits,
   });
@@ -754,6 +755,28 @@ export default function HabitsScreen() {
     setEditOpen(true);
   };
 
+  // Error state: jangan tampilkan taman kosong palsu saat jaringan gagal.
+  // Pola sama dengan home-screen: EmptyState + tombol coba lagi (min 44px).
+  if (isError && !data) {
+    return (
+      <div className="px-4 pt-[max(4rem,env(safe-area-inset-top))]">
+        <EmptyState
+          icon={<WifiOff className="h-6 w-6" />}
+          title="Ada kendala memuat data"
+          description="Periksa koneksi internetmu lalu coba lagi."
+          action={
+            <button
+              onClick={() => refetch()}
+              className="press min-h-[44px] rounded-xl bg-garden-deep px-4 py-2.5 text-sm font-bold text-white"
+            >
+              Coba Lagi
+            </button>
+          }
+        />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return <HabitsSkeleton />;
   }
@@ -845,7 +868,7 @@ export default function HabitsScreen() {
           tone="gold"
           icon={<Flame className="h-4 w-4 text-gold" />}
           action={
-            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-1 text-xs font-bold text-gold">
+            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-1 text-xs font-bold text-gold-deep">
               <Trophy className="h-3 w-3" /> Terbaik {formatNumber(streaks.best)} hari
             </span>
           }
@@ -1008,6 +1031,8 @@ export default function HabitsScreen() {
             <LegendDot className="bg-clay/25" label="Meleset" />
             <LegendDot className="border border-border bg-card" label="Jeda" />
             <LegendDot className="bg-secondary/80" label="Tanpa jadwal" />
+            <LegendDot className="border border-dashed border-border bg-card" label="Belum dicatat" />
+            <LegendDot className="bg-secondary/40" label="Akan datang" />
           </div>
         </SectionCard>
       </div>
@@ -1129,11 +1154,11 @@ export default function HabitsScreen() {
             </p>
           ) : (
             <ul className="space-y-2">
-              {suggestions.map((s, i) => {
+              {suggestions.map((s) => {
                 const Icon = s.icon;
                 return (
                   <li
-                    key={i}
+                    key={s.text}
                     className="flex items-start gap-2.5 rounded-xl bg-garden-soft p-3"
                   >
                     <Icon className="h-4 w-4 text-garden-deep mt-0.5 shrink-0" />
@@ -1151,6 +1176,7 @@ export default function HabitsScreen() {
         habit={detailHabit}
         open={Boolean(detailHabit)}
         today={today}
+        checking={checkMutation.isPending && checkMutation.variables?.id === detailHabit?.id}
         onClose={() => setDetailId(null)}
         onEdit={openEdit}
         onCheck={(id, value, toastMsg) => checkMutation.mutate({ id, value, toastMsg })}
@@ -1291,6 +1317,7 @@ function HabitDetailDrawer({
   habit,
   open,
   today,
+  checking,
   onClose,
   onEdit,
   onCheck,
@@ -1298,12 +1325,15 @@ function HabitDetailDrawer({
   habit: Habit | undefined;
   open: boolean;
   today: string;
+  /** Guard dobel-ketuk: true saat mutasi check habit ini sedang berjalan (pola HabitCard). */
+  checking: boolean;
   onClose: () => void;
   onEdit: (h: Habit) => void;
   onCheck: (id: string, value?: number, toastMsg?: string) => void;
 }) {
   const qc = useQueryClient();
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = React.useState(false);
 
   const archiveMutation = useMutation({
     mutationFn: () => rutinaApi.updateHabit(habit!.id, { archived: !habit!.archived }),
@@ -1419,10 +1449,10 @@ function HabitDetailDrawer({
             />
             {habit.stackAfter && (
               <div className="flex items-start gap-2.5 p-3 bg-gold-soft/60">
-                <Link2 className="h-4 w-4 text-gold mt-0.5 shrink-0" />
+                <Link2 className="h-4 w-4 text-gold-deep mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Habit stacking</p>
-                  <p className="font-script text-lg leading-snug text-gold">
+                  <p className="font-script text-lg leading-snug text-gold-deep">
                     Setelah {habit.stackAfter}, saya akan {habit.name}.
                   </p>
                 </div>
@@ -1470,7 +1500,7 @@ function HabitDetailDrawer({
                       onCheck(habit.id, next, "Progres dikurangi");
                     }
                   }}
-                  disabled={!log}
+                  disabled={!log || checking}
                   aria-label="Kurangi progres hari ini"
                   className="press h-11 w-11 rounded-xl bg-card border border-border flex items-center justify-center disabled:opacity-40"
                 >
@@ -1497,7 +1527,7 @@ function HabitDetailDrawer({
                       Math.min(habit.unitTarget ?? 0, (log?.value ?? 0) + (habit.unitStep || 1))
                     )
                   }
-                  disabled={doneToday}
+                  disabled={doneToday || checking}
                   aria-label={doneToday ? "Target hari ini tercapai" : "Tambah progres hari ini"}
                   className="press h-11 w-11 rounded-xl bg-garden text-white flex items-center justify-center disabled:opacity-40"
                 >
@@ -1589,9 +1619,10 @@ function HabitDetailDrawer({
             <div className="space-y-1.5">
               <button
                 onClick={() => onCheck(habit.id, undefined, `${habit.name} tercatat (aturan 2 menit)`)}
-                className="press w-full h-11 rounded-xl bg-gold text-white text-sm font-bold flex items-center justify-center gap-2"
+                disabled={checking}
+                className="press w-full h-11 rounded-xl bg-gold text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                <Timer className="h-4 w-4" />
+                {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Timer className="h-4 w-4" />}
                 Tandai Selesai (aturan 2 menit)
               </button>
               <p className="text-xs text-muted-foreground">
@@ -1610,23 +1641,49 @@ function HabitDetailDrawer({
               <Pencil className="h-4 w-4" />
               Sunting
             </button>
-            <button
-              onClick={() => archiveMutation.mutate()}
-              disabled={deleteMutation.isPending || archiveMutation.isPending}
-              className="press h-11 rounded-xl border border-border bg-card text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-60"
-            >
-              {habit.archived ? (
-                <>
-                  <ArchiveRestore className="h-4 w-4" />
-                  Pulihkan
-                </>
-              ) : (
-                <>
-                  <Archive className="h-4 w-4" />
-                  Arsip
-                </>
-              )}
-            </button>
+            {habit.archived ? (
+              /* Pulihkan non-destruktif — langsung jalan tanpa konfirmasi */
+              <button
+                onClick={() => archiveMutation.mutate()}
+                disabled={deleteMutation.isPending || archiveMutation.isPending}
+                className="press h-11 rounded-xl border border-border bg-card text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-60"
+              >
+                <ArchiveRestore className="h-4 w-4" />
+                Pulihkan
+              </button>
+            ) : (
+              /* Arsip pakai konfirmasi dulu (pola sama dengan dialog hapus) */
+              <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+                <AlertDialogTrigger asChild>
+                  <button
+                    disabled={deleteMutation.isPending || archiveMutation.isPending}
+                    className="press h-11 rounded-xl border border-border bg-card text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  >
+                    <Archive className="h-4 w-4" />
+                    Arsip
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Arsipkan kebiasaan ini?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Kebiasaan pindah ke tab Arsip dan bisa dipulihkan kapan saja.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => archiveMutation.mutate()}
+                      disabled={archiveMutation.isPending}
+                      className="bg-garden text-white hover:bg-garden/90"
+                    >
+                      {archiveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                      Arsipkan
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
 
             <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
               <AlertDialogTrigger asChild>
@@ -1650,9 +1707,11 @@ function HabitDetailDrawer({
                   <AlertDialogCancel>Batal</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => deleteMutation.mutate()}
+                    disabled={deleteMutation.isPending}
                     className="bg-destructive text-white hover:bg-destructive/90"
                   >
-                    Hapus Permanen
+                    {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Hapus
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -1701,7 +1760,7 @@ function MiniStat({
 }) {
   const tones: Record<string, string> = {
     garden: "bg-garden-soft text-garden-deep",
-    gold: "bg-gold-soft text-gold",
+    gold: "bg-gold-soft text-gold-deep",
     studio: "bg-studio-soft text-studio-deep",
     vault: "bg-vault-soft text-vault-deep",
     stone: "bg-secondary text-foreground",

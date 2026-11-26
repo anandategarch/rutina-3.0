@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { rutinaApi } from "@/lib/rutina/api";
 import { todayStr, formatNumber } from "@/lib/rutina/format";
+import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 import type { FoodItem } from "@/types/rutina";
 
 const MEAL_OPTIONS: { value: string; label: string }[] = [
@@ -53,18 +54,22 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
   const [fat, setFat] = React.useState("");
   const [date, setDate] = React.useState(todayStr());
 
-  // Reset tiap kali sheet dibuka
+  // Reset tiap kali sheet dibuka; snapshot meal/tanggal awal sebagai acuan dirty-guard
+  const [initialMealDate, setInitialMealDate] = React.useState({ meal: "", date: "" });
   React.useEffect(() => {
     if (open) {
+      const m = guessMeal();
+      const d = todayStr();
       setQuery("");
       setSelected(null);
-      setMeal(guessMeal());
+      setMeal(m);
       setPortion("");
       setCalories("");
       setProtein("");
       setCarbs("");
       setFat("");
-      setDate(todayStr());
+      setDate(d);
+      setInitialMealDate({ meal: m, date: d });
     }
   }, [open]);
 
@@ -101,6 +106,28 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
     },
   });
 
+  // ===== Dirty-guard: jangan buang input yang sudah diketik diam-diam =====
+  const dirty =
+    query !== "" ||
+    selected !== null ||
+    portion !== "" ||
+    calories !== "" ||
+    protein !== "" ||
+    carbs !== "" ||
+    fat !== "" ||
+    meal !== initialMealDate.meal ||
+    date !== initialMealDate.date;
+  const [confirmDiscard, setConfirmDiscard] = React.useState(false);
+  const handleOpenChange = (o: boolean) => {
+    if (!o) {
+      if (dirty && !mutation.isPending) {
+        setConfirmDiscard(true);
+        return;
+      }
+      onClose();
+    }
+  };
+
   const calNum = Number(calories);
   const canSubmit = selected !== null && calories !== "" && Number.isFinite(calNum) && calNum >= 0 && !mutation.isPending;
 
@@ -129,7 +156,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
   const items = itemsQuery.data?.items ?? [];
 
   return (
-    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent className="max-h-[94dvh]">
         <DrawerHeader className="pb-2">
           <DrawerTitle className="text-studio-deep">Catat Asupan</DrawerTitle>
@@ -277,6 +304,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                       type="number"
                       inputMode="decimal"
                       min={0}
+                      step="any"
                       placeholder="30"
                       value={protein}
                       onChange={(e) => setProtein(e.target.value)}
@@ -293,6 +321,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                       type="number"
                       inputMode="decimal"
                       min={0}
+                      step="any"
                       placeholder="50"
                       value={carbs}
                       onChange={(e) => setCarbs(e.target.value)}
@@ -309,6 +338,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                       type="number"
                       inputMode="decimal"
                       min={0}
+                      step="any"
                       placeholder="15"
                       value={fat}
                       onChange={(e) => setFat(e.target.value)}
@@ -340,6 +370,9 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
             </div>
           </form>
         )}
+
+        {/* Konfirmasi buang perubahan yang belum disimpan */}
+        <ConfirmDiscard open={confirmDiscard} onOpenChange={setConfirmDiscard} onConfirm={onClose} />
       </DrawerContent>
     </Drawer>
   );

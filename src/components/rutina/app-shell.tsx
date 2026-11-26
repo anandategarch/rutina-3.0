@@ -147,7 +147,7 @@ function QuickActionHub() {
     { key: "transaction" as const, icon: Wallet, label: "Catat Transaksi", desc: "Masuk, keluar, transfer", tone: "bg-vault-soft text-vault-deep" },
     { key: "workout" as const, icon: Dumbbell, label: "Catat Latihan", desc: "Kardio atau beban", tone: "bg-studio-soft text-studio-deep" },
     { key: "food" as const, icon: UtensilsCrossed, label: "Catat Asupan", desc: "Makanan & kalori", tone: "bg-studio-soft text-studio-deep" },
-    { key: "checkin" as const, icon: HeartPulse, label: "Check-in Harian", desc: "Mood, energi, tidur", tone: "bg-gold-soft text-gold" },
+    { key: "checkin" as const, icon: HeartPulse, label: "Check-in Harian", desc: "Mood, energi, tidur", tone: "bg-gold-soft text-gold-deep" },
   ];
 
   const shortcuts = [

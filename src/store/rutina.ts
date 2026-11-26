@@ -24,7 +24,7 @@ interface RutinaState {
   page: RutinaPage;
   hubOpen: boolean;
   quickAction: QuickAction;
-  /** Prefill jurnal aktif; dihapus otomatis saat sheet ditutup. */
+  /** Prefill jurnal aktif; dibersihkan oleh app-shell saat sheet jurnal ditutup (closeJournal). */
   journalPrefill: JournalPrefillPayload | null;
   setPage: (p: RutinaPage) => void;
   setHubOpen: (open: boolean) => void;

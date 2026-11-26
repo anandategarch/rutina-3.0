@@ -88,6 +88,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { Budget, SavingsGoal, Transaction } from "@/types/rutina";
+import { useRutinaStore } from "@/store/rutina";
 import { cn } from "@/lib/utils";
 
 // ============ Konstanta modul Vault ============
@@ -253,10 +254,104 @@ function DrawerActions({
   );
 }
 
+// ============ Baris transaksi (di-memo) ============
+
+// Di-memo agar mengetik di kotak pencarian tidak me-render ulang setiap baris;
+// prop harus referensi stabil: t dari useMemo groups, onDelete dari useCallback.
+const TxRow = React.memo(function TxRow({
+  t,
+  deletePending,
+  onDelete,
+}: {
+  t: Transaction;
+  deletePending: boolean;
+  onDelete: (id: string) => void;
+}) {
+  const Icon = CATEGORY_ICON[t.category] ?? CircleDollarSign;
+  const isIncome = t.type === "income";
+  const isTransfer = t.type === "transfer";
+  const catTone = CATEGORY_TONE[t.category] ?? "stone";
+  return (
+    <div className="flex items-center gap-3 py-2.5">
+      <span
+        className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+          isIncome
+            ? "bg-garden-soft text-garden-deep"
+            : isTransfer
+              ? "bg-vault-soft text-vault-deep"
+              : "bg-secondary text-foreground"
+        )}
+      >
+        {isTransfer ? <ArrowLeftRight className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="truncate text-sm font-semibold">{t.note ?? catLabel(t.category)}</span>
+          {t.recurring !== "none" && <Repeat className="h-3 w-3 shrink-0 text-muted-foreground" />}
+        </div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+          {!isTransfer && (
+            <Pill tone={catTone} className="px-1.5 py-0.5">
+              {catLabel(t.category)}
+            </Pill>
+          )}
+          <span className="min-w-0 truncate">
+            {isTransfer
+              ? `${t.wallet?.name ?? "?"} → ${t.toWallet?.name ?? "?"}`
+              : t.wallet?.name}
+          </span>
+        </div>
+      </div>
+      <span
+        className={cn(
+          "shrink-0 whitespace-nowrap text-sm font-bold tabular",
+          isIncome ? "text-garden" : isTransfer ? "text-vault" : "text-clay"
+        )}
+      >
+        {isIncome ? "+" : isTransfer ? "" : "−"}
+        {formatRupiah(t.amount, { compact: true })}
+      </span>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <button
+            className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-clay-soft hover:text-clay-deep"
+            aria-label={`Hapus transaksi ${t.note ?? t.category}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus transaksi ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Transaksi &quot;{t.note ?? catLabel(t.category)}&quot; ({formatRupiah(t.amount)}) akan dihapus
+              permanen dan saldo dompet akan disesuaikan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="min-h-[44px] rounded-xl">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => onDelete(t.id)}
+              disabled={deletePending}
+              className="min-h-[44px] rounded-xl bg-destructive text-white hover:bg-destructive/90"
+            >
+              {deletePending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {deletePending ? "Menghapus…" : "Hapus"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+});
+
 // ============ FinanceScreen ============
 
 export default function FinanceScreen() {
   const qc = useQueryClient();
+  // CTA EmptyState → sheet aksi cepat (pola yang sama dengan layar Fitness/Profil)
+  const openQuickAction = useRutinaStore((s) => s.setQuickAction);
 
   const qTx = useQuery({ queryKey: ["transactions"], queryFn: rutinaApi.transactions });
   const qWallets = useQuery({ queryKey: ["wallets"], queryFn: rutinaApi.wallets });
@@ -338,6 +433,10 @@ export default function FinanceScreen() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Referensi stabil untuk TxRow yang di-memo (mutate React Query v5 identik antar render)
+  const mutateDeleteTx = deleteTx.mutate;
+  const onDeleteTx = React.useCallback((id: string) => mutateDeleteTx(id), [mutateDeleteTx]);
 
   const updateBudget = useMutation({
     mutationFn: ({ id, monthlyLimit }: { id: string; monthlyLimit: number }) => patchBudget(id, monthlyLimit),
@@ -817,10 +916,10 @@ export default function FinanceScreen() {
               {walletRows.map((w) => (
                 <span
                   key={w.id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white/95"
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white/95"
                 >
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: w.color }} aria-hidden />
-                  {w.name}
+                  <span className="truncate">{w.name}</span>
                   {walletRows.length > 1 && w.share > 0 && (
                     <span className="font-bold tabular text-white/95">{Math.round(w.share * 100)}%</span>
                   )}
@@ -916,6 +1015,15 @@ export default function FinanceScreen() {
               icon={<PieChartIcon className="h-6 w-6" />}
               title="Belum ada pengeluaran bulan ini"
               description="Catat transaksi keluar untuk melihat komposisi per kategori."
+              action={
+                <button
+                  type="button"
+                  onClick={() => openQuickAction("transaction")}
+                  className="press bg-vault-deep text-white text-sm font-bold rounded-xl px-4 py-2.5 min-h-[44px] inline-flex items-center justify-center"
+                >
+                  Catat Transaksi
+                </button>
+              }
             />
           ) : (
             <>
@@ -1051,7 +1159,7 @@ export default function FinanceScreen() {
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <button
-                            className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-clay-soft hover:text-clay"
+                            className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-clay-soft hover:text-clay-deep"
                             aria-label={`Hapus anggaran ${b.category}`}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1069,9 +1177,11 @@ export default function FinanceScreen() {
                             <AlertDialogCancel className="min-h-[44px] rounded-xl">Batal</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => deleteBudget.mutate(b.id)}
+                              disabled={deleteBudget.isPending}
                               className="min-h-[44px] rounded-xl bg-destructive text-white hover:bg-destructive/90"
                             >
-                              Hapus
+                              {deleteBudget.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                              {deleteBudget.isPending ? "Menghapus…" : "Hapus"}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -1080,13 +1190,20 @@ export default function FinanceScreen() {
                     <div className="pl-9">
                       <div className="mb-1 flex items-baseline justify-between gap-2 text-xs tabular text-muted-foreground">
                         <span>
-                          {formatRupiah(b.spent ?? 0)} <span className="opacity-60">/ {formatRupiah(b.monthlyLimit)}</span>
+                          {formatRupiah(b.spent ?? 0)} <span>/ {formatRupiah(b.monthlyLimit)}</span>
                         </span>
                         <span className={cn("font-bold", sisa < 0 ? "text-clay" : "text-primary")}>
                           Sisa {formatRupiah(sisa, { compact: true })}
                         </span>
                       </div>
-                      <MetricBar value={b.spent ?? 0} max={b.monthlyLimit} height={8} color={SAGE} overColor={CLAY} />
+                      <MetricBar
+                        value={b.spent ?? 0}
+                        max={b.monthlyLimit}
+                        height={8}
+                        color={SAGE}
+                        overColor={CLAY}
+                        label={`Anggaran ${catLabel(b.category)}`}
+                      />
                     </div>
                   </div>
                 );
@@ -1150,7 +1267,7 @@ export default function FinanceScreen() {
                         <span className="truncate text-sm font-bold">{g.name}</span>
                       </div>
                       <div className="mt-0.5 text-xs tabular text-muted-foreground">
-                        {formatRupiah(g.currentAmount)} <span className="opacity-60">/ {formatRupiah(g.targetAmount)}</span>
+                        {formatRupiah(g.currentAmount)} <span>/ {formatRupiah(g.targetAmount)}</span>
                       </div>
                       {g.deadline && (
                         <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
@@ -1188,6 +1305,15 @@ export default function FinanceScreen() {
               icon={<Repeat className="h-6 w-6" />}
               title="Belum ada langganan"
               description="Transaksi berulang mingguan atau bulanan akan tampil di sini."
+              action={
+                <button
+                  type="button"
+                  onClick={() => openQuickAction("transaction")}
+                  className="press bg-vault-deep text-white text-sm font-bold rounded-xl px-4 py-2.5 min-h-[44px] inline-flex items-center justify-center"
+                >
+                  Catat Transaksi
+                </button>
+              }
             />
           ) : (
             <div className="space-y-3">
@@ -1252,26 +1378,33 @@ export default function FinanceScreen() {
           </div>
 
           {/* Filter tipe */}
-          <div className="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
-            {(
-              [
-                { key: "all", label: "Semua" },
-                { key: "income", label: "Masuk" },
-                { key: "expense", label: "Keluar" },
-                { key: "transfer", label: "Transfer" },
-              ] as const
-            ).map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setTypeFilter(f.key)}
-                className={cn(
-                  "press min-h-[44px] shrink-0 rounded-full px-4 text-xs font-bold",
-                  typeFilter === f.key ? "bg-vault text-white" : "bg-secondary text-muted-foreground"
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
+          <div className="relative mb-3">
+            <div className="no-scrollbar flex gap-2 overflow-x-auto">
+              {(
+                [
+                  { key: "all", label: "Semua" },
+                  { key: "income", label: "Masuk" },
+                  { key: "expense", label: "Keluar" },
+                  { key: "transfer", label: "Transfer" },
+                ] as const
+              ).map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setTypeFilter(f.key)}
+                  className={cn(
+                    "press min-h-[44px] shrink-0 rounded-full px-4 text-xs font-bold",
+                    typeFilter === f.key ? "bg-vault text-white" : "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            {/* Afirmasi geser: gradasi tepi kanan menandakan chip bisa digeser horizontal */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent"
+            />
           </div>
 
           {/* Pencarian */}
@@ -1308,83 +1441,10 @@ export default function FinanceScreen() {
                     )}
                   </div>
                   <div className="divide-y divide-border/50">
-                    {g.items.map((t) => {
-                      const Icon = CATEGORY_ICON[t.category] ?? CircleDollarSign;
-                      const isIncome = t.type === "income";
-                      const isTransfer = t.type === "transfer";
-                      const catTone = CATEGORY_TONE[t.category] ?? "stone";
-                      return (
-                        <div key={t.id} className="flex items-center gap-3 py-2.5">
-                          <span
-                            className={cn(
-                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                              isIncome
-                                ? "bg-garden-soft text-garden-deep"
-                                : isTransfer
-                                  ? "bg-vault-soft text-vault-deep"
-                                  : "bg-secondary text-foreground"
-                            )}
-                          >
-                            {isTransfer ? <ArrowLeftRight className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className="truncate text-sm font-semibold">{t.note ?? catLabel(t.category)}</span>
-                              {t.recurring !== "none" && <Repeat className="h-3 w-3 shrink-0 text-muted-foreground" />}
-                            </div>
-                            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                              {!isTransfer && (
-                                <Pill tone={catTone} className="px-1.5 py-0.5">
-                                  {catLabel(t.category)}
-                                </Pill>
-                              )}
-                              <span className="min-w-0 truncate">
-                                {isTransfer
-                                  ? `${t.wallet?.name ?? "?"} → ${t.toWallet?.name ?? "?"}`
-                                  : t.wallet?.name}
-                              </span>
-                            </div>
-                          </div>
-                          <span
-                            className={cn(
-                              "shrink-0 whitespace-nowrap text-sm font-bold tabular",
-                              isIncome ? "text-garden" : isTransfer ? "text-vault" : "text-clay"
-                            )}
-                          >
-                            {isIncome ? "+" : isTransfer ? "" : "−"}
-                            {formatRupiah(t.amount, { compact: true })}
-                          </span>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <button
-                                className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-clay-soft hover:text-clay"
-                                aria-label={`Hapus transaksi ${t.note ?? t.category}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Hapus transaksi ini?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Transaksi &quot;{t.note ?? catLabel(t.category)}&quot; ({formatRupiah(t.amount)}) akan
-                                  dihapus permanen dan saldo dompet akan disesuaikan.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel className="min-h-[44px] rounded-xl">Batal</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteTx.mutate(t.id)}
-                                  className="min-h-[44px] rounded-xl bg-destructive text-white hover:bg-destructive/90"
-                                >
-                                  Hapus
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      );
-                    })}
+                    {/* Baris di-memo: mengetik di pencarian tidak me-render ulang seluruh daftar */}
+                    {g.items.map((t) => (
+                      <TxRow key={t.id} t={t} deletePending={deleteTx.isPending} onDelete={onDeleteTx} />
+                    ))}
                   </div>
                 </div>
               ))}
@@ -1405,11 +1465,12 @@ export default function FinanceScreen() {
             </p>
           ) : (
             <div className="space-y-2.5">
-              {insights.map((ins, i) => {
+              {insights.map((ins) => {
                 const Icon = ins.icon;
+                // Kunci konten stabil (teks temuan unik), bukan indeks posisi
                 return (
                   <div
-                    key={i}
+                    key={ins.text.slice(0, 48)}
                     className={cn(
                       "flex items-start gap-2.5 rounded-xl p-3",
                       ins.tone === "sage" ? "bg-sage-soft" : "bg-clay-soft"

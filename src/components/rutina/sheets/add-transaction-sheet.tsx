@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Banknote, Landmark, Smartphone, ArrowLeftRight } from "lucide-react";
+import { Loader2, Plus, Banknote, Landmark, Smartphone, ArrowLeftRight, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { rutinaApi } from "@/lib/rutina/api";
 import { todayStr, formatNumber } from "@/lib/rutina/format";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Wallet } from "@/types/rutina";
 import { cn } from "@/lib/utils";
+import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 
 type TxType = "income" | "expense" | "transfer";
 
@@ -36,7 +37,16 @@ function catLabel(c: string) {
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
+/** Ambil digit saja untuk nominal. Tangani desimal id-ID: koma = desimal, titik = ribuan
+ *  (tampilan masked input memakai formatNumber id-ID). Tempel "12500,5" atau "12.500,5"
+ *  dibulatkan jadi "12501" — JANGAN digabung digitnya jadi "125005" (error 1000x). */
 function digitsOnly(s: string) {
+  // Deteksi bagian desimal: koma/titik diikuti 1-2 digit di akhir string
+  if (/[,\.]\d{1,2}$/.test(s)) {
+    // Buang pemisah ribuan (titik), ubah koma jadi titik, lalu bulatkan ke integer
+    const num = Number(s.replace(/\./g, "").replace(/,/g, "."));
+    if (Number.isFinite(num)) return String(Math.round(num));
+  }
   return s.replace(/[^\d]/g, "");
 }
 
@@ -118,6 +128,31 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // ===== Dirty-guard: jangan buang input yang sudah diketik diam-diam =====
+  // Dompet sumber/tujuan diisi otomatis oleh efek default, jadi dibandingkan dengan
+  // nilai default tersebut — bukan string kosong — agar sheet yang belum disentuh
+  // tidak pernah dianggap kotor.
+  const defaultWalletId = wallets[0]?.id ?? "";
+  const defaultToWalletId = wallets.find((w) => w.id !== defaultWalletId)?.id ?? "";
+  const dirty =
+    type !== "expense" ||
+    amountRaw !== "" ||
+    category !== "makan" ||
+    note !== "" ||
+    recurring !== "none" ||
+    date !== todayStr() ||
+    (wallets.length > 0 && (walletId !== defaultWalletId || toWalletId !== defaultToWalletId));
+  const [confirmDiscard, setConfirmDiscard] = React.useState(false);
+  const handleOpenChange = (o: boolean) => {
+    if (!o) {
+      if (dirty && !createTx.isPending) {
+        setConfirmDiscard(true);
+        return;
+      }
+      onClose();
+    }
+  };
+
   const amount = Number(amountRaw || 0);
   const targetWallets = wallets.filter((w) => w.id !== walletId);
 
@@ -162,7 +197,7 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
   };
 
   return (
-    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerContent className="max-h-[92dvh]">
         <DrawerHeader className="pb-2">
           <DrawerTitle>Catat Transaksi</DrawerTitle>
@@ -331,6 +366,19 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
 
           {/* ===== Submit (footer sticky di luar area scroll) ===== */}
           <div className="border-t border-border/60 bg-background p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
+            {qWallets.isError && (
+              <div className="mb-3 flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3">
+                <WifiOff className="h-4 w-4 shrink-0 text-destructive" />
+                <p className="min-w-0 flex-1 text-sm font-semibold text-destructive">Gagal memuat dompet</p>
+                <button
+                  type="button"
+                  onClick={() => qWallets.refetch()}
+                  className="press flex min-h-[44px] shrink-0 items-center rounded-xl border border-destructive/40 px-3 text-sm font-bold text-destructive"
+                >
+                  Coba Lagi
+                </button>
+              </div>
+            )}
             <button
               type="submit"
               disabled={createTx.isPending || qWallets.isLoading || !wallets.length}
@@ -341,6 +389,9 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
             </button>
           </div>
         </form>
+
+        {/* Konfirmasi buang perubahan yang belum disimpan */}
+        <ConfirmDiscard open={confirmDiscard} onOpenChange={setConfirmDiscard} onConfirm={onClose} />
       </DrawerContent>
     </Drawer>
   );

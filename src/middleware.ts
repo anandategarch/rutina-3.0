@@ -16,7 +16,10 @@ export function middleware(req: NextRequest) {
   const isMutation = !["GET", "HEAD", "OPTIONS"].includes(req.method);
   if (isMutation && req.nextUrl.pathname.startsWith("/api/")) {
     const origin = req.headers.get("origin") ?? req.headers.get("referer");
-    if (origin) {
+    // Origin: null — literal "null" dikirim browser untuk konteks sandboxed iframe
+    // / webview privacy. Bukan situs lain yang memaksa, jadi diizinkan lewat
+    // (new URL("null") akan throw dan 403-kan user legitimate).
+    if (origin && origin !== "null") {
       try {
         const originHost = new URL(origin).host;
         if (originHost && originHost !== req.nextUrl.host) {

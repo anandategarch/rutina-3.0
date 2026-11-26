@@ -31,6 +31,12 @@ export function rampColor(i: number, n: number): string {
   return RAMP[idx];
 }
 
+/** Ringkasan data untuk aria-label chart agar makna tren terbaca screen reader
+ *  dan tetap tersedia tanpa penglihatan (ux-guidelines: text alternatives). */
+function fmtNum(v: number): string {
+  return Math.round(v * 10) / 10 + "";
+}
+
 function buildSmoothPath(points: { x: number; y: number }[]): string {
   if (points.length === 0) return "";
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
@@ -82,8 +88,15 @@ export function Sparkline({
   }));
   const line = buildSmoothPath(pts);
   const last = pts[pts.length - 1];
+  // Tren diringkas jadi teks — sparkline murni visual, tanpa alternatif teks
+  // makna naik/turun tak terjangkau screen reader.
+  const trendWord = min === max ? "tetap" : vals[vals.length - 1] > vals[0] ? "naik" : "turun";
+  const trendLabel =
+    data.length < 2
+      ? "Grafik tren"
+      : `Tren ${trendWord}: dari ${fmtNum(vals[0])} ke ${fmtNum(vals[vals.length - 1])}`;
   return (
-    <div className={cn("relative w-full", className)} style={{ height }}>
+    <div className={cn("relative w-full", className)} style={{ height }} role="img" aria-label={trendLabel}>
       <svg
         viewBox={`0 0 ${w} ${h}`}
         preserveAspectRatio="none"
@@ -131,6 +144,7 @@ export function MiniBars({
   labelEvery = 1,
   showLabels = true,
   highlightIndex,
+  altLabel,
   className,
 }: {
   data: { label: string; value: number; alt?: number }[];
@@ -141,12 +155,32 @@ export function MiniBars({
   labelEvery?: number;
   showLabels?: boolean;
   highlightIndex?: number;
+  /** Nama seri kedua (untuk legend + aria-label) saat showAlt aktif. */
+  altLabel?: string;
   className?: string;
 }) {
   const max = Math.max(1, ...data.map((d) => Math.max(d.value, showAlt ? d.alt ?? 0 : 0)));
+  // aria-label berisi data per kolom — nilai hanya via title() tidak terjangkau
+  // screen reader maupun sentuhan (title tidak ada di layar sentuh).
+  const summary = data
+    .map((d) => `${d.label} ${fmtNum(d.value)}${showAlt ? ` / ${fmtNum(d.alt ?? 0)}` : ""}`)
+    .join(", ");
+  const seriesSuffix = showAlt && altLabel ? ` (dua seri: utama & ${altLabel})` : "";
   return (
     <div className={cn("w-full", className)}>
-      <div className="flex items-end gap-[2px]" style={{ height }} role="img" aria-label="Grafik batang">
+      {showAlt && altLabel && (
+        <div className="flex items-center gap-4 mb-1.5 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden="true" className="h-2 w-2 rounded-sm" style={{ background: color }} />
+            Utama
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden="true" className="h-2 w-2 rounded-sm" style={{ background: altColor }} />
+            {altLabel}
+          </span>
+        </div>
+      )}
+      <div className="flex items-end gap-[2px]" style={{ height }} role="img" aria-label={`Grafik batang${seriesSuffix}: ${summary}`}>
         {data.map((d, i) => {
           const hl = highlightIndex === i;
           return (
@@ -181,7 +215,7 @@ export function MiniBars({
           {data.map((d, i) => (
             <div
               key={i}
-              className="flex-1 text-center text-[11px] text-muted-foreground tabular"
+              className="flex-1 text-center text-xs text-muted-foreground tabular"
               style={{ visibility: i % labelEvery === 0 ? "visible" : "hidden" }}
             >
               {d.label}
@@ -224,7 +258,17 @@ export function Donut({
   });
   return (
     <div className={cn("relative shrink-0", className)} style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90" role="img" aria-label="Grafik komposisi">
+      {/* Label berisi komposisi perslice — agar tidak bergantung warna/hover saja */}
+      <svg
+        width={size}
+        height={size}
+        className="-rotate-90"
+        role="img"
+        aria-label={`Grafik komposisi: ${slices
+          .filter((s) => s.value > 0)
+          .map((s) => `${s.label} ${Math.round((s.value / total) * 100)}%`)
+          .join(", ") || "belum ada data"}`}
+      >
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--secondary)" strokeWidth={thickness} />
         {segs.map((seg) => (
           <circle
@@ -259,7 +303,15 @@ export function StackBar({
 }) {
   const total = segments.reduce((s, x) => s + Math.max(0, x.value), 0) || 1;
   return (
-    <div className={cn("flex w-full overflow-hidden rounded-full bg-secondary", className)} style={{ height }} role="img" aria-label="Komposisi">
+    <div
+      className={cn("flex w-full overflow-hidden rounded-full bg-secondary", className)}
+      style={{ height }}
+      role="img"
+      aria-label={`Komposisi: ${segments
+        .filter((s) => s.value > 0)
+        .map((s) => `${s.label} ${Math.round((Math.max(0, s.value) / total) * 100)}%`)
+        .join(", ") || "belum ada data"}`}
+    >
       {segments.map((s, i) => (
         <div
           key={i}
@@ -331,6 +383,7 @@ export function TrendLine({
 }) {
   const w = 100;
   const h = height;
+  const id = React.useId();
   const vals = data.filter((d) => d.value !== null).map((d) => d.value as number);
   const pool = target != null ? [...vals, target] : vals;
   const min = pool.length ? Math.min(...pool) : 0;
@@ -344,8 +397,22 @@ export function TrendLine({
     y: d.value === null ? null : y(d.value),
   }));
   const valid = pts.filter((p) => p.y !== null) as { x: number; y: number }[];
+  // Tanpa satu pun nilai terisi: canvas kosong menyesatkan — tampilkan pesan
+  // netral alih-alih grafik kosong (ux-guidelines: empty state, never blank).
+  if (valid.length === 0) {
+    return (
+      <div className={cn("w-full", className)}>
+        <div
+          className="flex items-center justify-center rounded-xl border border-dashed border-border/70 text-xs text-muted-foreground"
+          style={{ height }}
+          role="status"
+        >
+          Belum ada data untuk periode ini
+        </div>
+      </div>
+    );
+  }
   const line = buildSmoothPath(valid);
-  const id = React.useId();
   const last = valid[valid.length - 1];
   return (
     <div className={cn("w-full", className)}>
@@ -382,14 +449,14 @@ export function TrendLine({
       </div>
       <div className="flex justify-between mt-1">
         {data.map((d, i) => (
-          <span key={i} className="text-[11px] text-muted-foreground tabular">
+          <span key={i} className="text-xs text-muted-foreground tabular">
             {i % Math.ceil(data.length / 4) === 0 || i === data.length - 1 ? d.label : ""}
           </span>
         ))}
       </div>
       <div className="flex justify-between mt-0.5">
-        <span className="text-[11px] text-muted-foreground tabular">{formatValue(min)}</span>
-        <span className="text-[11px] text-muted-foreground tabular">{formatValue(max)}</span>
+        <span className="text-xs text-muted-foreground tabular">{formatValue(min)}</span>
+        <span className="text-xs text-muted-foreground tabular">{formatValue(max)}</span>
       </div>
     </div>
   );
@@ -413,7 +480,12 @@ export function HeatGrid({
   cellClassName?: string;
 }) {
   return (
-    <div className={cn("grid gap-1", className)} style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }} role="img" aria-label="Peta aktivitas">
+    <div
+      className={cn("grid gap-1", className)}
+      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      role="img"
+      aria-label={`Peta aktivitas: ${cells.filter((c) => c.value > 0).length} dari ${cells.length} hari terisi`}
+    >
       {cells.map((c, i) => {
         const t = Math.max(0, Math.min(1, max > 0 ? c.value / max : 0));
         return (
@@ -440,6 +512,7 @@ export function MetricBar({
   overColor = CLAY,
   color = SAGE,
   height = 8,
+  label,
   className,
 }: {
   value: number;
@@ -447,12 +520,22 @@ export function MetricBar({
   color?: string;
   overColor?: string;
   height?: number;
+  /** Nama metrik untuk aria-label progressbar (mis. "Anggaran Makan"). */
+  label?: string;
   className?: string;
 }) {
   const frac = max > 0 ? value / max : 0;
   const over = frac > 1;
   return (
-    <div className={cn("w-full rounded-full overflow-hidden bg-secondary", className)} style={{ height }}>
+    <div
+      className={cn("w-full rounded-full overflow-hidden bg-secondary", className)}
+      style={{ height }}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={Math.round(max)}
+      aria-valuenow={Math.round(value)}
+      aria-label={label ?? "Progres"}
+    >
       <div
         className="h-full rounded-full"
         style={{
@@ -464,6 +547,8 @@ export function MetricBar({
           transition: "width 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
       />
+      {/* "Limit terlampaui" tidak boleh disampaikan lewat warna bar saja */}
+      {over && <span className="sr-only">Melebihi batas</span>}
     </div>
   );
 }
@@ -488,7 +573,7 @@ export function DeltaBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular",
+        "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-bold tabular",
         color,
         className
       )}
@@ -530,7 +615,14 @@ export function RingStat({
   const c = 2 * Math.PI * r;
   const clamped = Math.min(1, Math.max(0, progress));
   return (
-    <div className={cn("flex flex-col items-center gap-1.5", className)}>
+    <div
+      className={cn("flex flex-col items-center gap-1.5", className)}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(clamped * 100)}
+      aria-label={caption ?? "Progres"}
+    >
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={trackColor} strokeWidth={stroke} />
@@ -554,7 +646,7 @@ export function RingStat({
           <span className="text-sm font-extrabold tabular">{value}</span>
         </div>
       </div>
-      {caption && <span className="text-[11px] font-medium text-muted-foreground text-center leading-tight">{caption}</span>}
+      {caption && <span className="text-xs font-medium text-muted-foreground text-center leading-tight">{caption}</span>}
     </div>
   );
 }
@@ -579,9 +671,15 @@ export function ActivityRings({
 }) {
   const n = rings.length || 1;
   const radiusFor = (i: number) => (size - stroke) / 2 - (n - 1 - i) * (stroke + gap);
+  const ringsLabel =
+    rings.length > 0
+      ? `Ring aktivitas: ${rings
+          .map((ring, i) => `ring ${i + 1} ${Math.round(Math.min(1, Math.max(0, ring.max > 0 ? ring.value / ring.max : 0)) * 100)}%`)
+          .join(", ")}`
+      : "Ring aktivitas";
   return (
     <div className={cn("relative shrink-0", className)} style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90" role="img" aria-label="Ring aktivitas">
+      <svg width={size} height={size} className="-rotate-90" role="img" aria-label={ringsLabel}>
         {rings.map((ring, i) => {
           const r = radiusFor(i);
           const c = 2 * Math.PI * r;
@@ -637,10 +735,13 @@ export function RadarChart({
     y: cy + Math.sin(angle(i)) * rMax * Math.max(0, Math.min(1, frac)),
   });
   const poly = axes.map((a, i) => pt(i, a.value)).map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const radarLabel = axes.length
+    ? `Radar keseimbangan: ${axes.map((a) => `${a.label} ${a.display ?? fmtNum(a.value)}`).join(", ")}`
+    : "Radar keseimbangan";
   const id = React.useId();
   return (
     <div className={cn("w-full flex flex-col items-center", className)}>
-      <svg width={size} height={size} role="img" aria-label="Radar keseimbangan" className="overflow-visible">
+      <svg width={size} height={size} role="img" aria-label={radarLabel} className="overflow-visible">
         {/* web grid */}
         {Array.from({ length: levels }, (_, l) => {
           const frac = (l + 1) / levels;
@@ -668,16 +769,22 @@ export function RadarChart({
         {/* axis labels + display value */}
         {axes.map((a, i) => {
           const lp = pt(i, 1.18);
+          const side = Math.abs(lp.x - cx) < 6 ? "middle" : lp.x > cx ? "start" : "end";
+          // Label SVG tidak bisa wrap — clamp panjang label samping agar tidak
+          // meluber melewati tepi layar di viewport sempit (375px).
+          const clampLen = side === "middle" ? undefined : a.label.length > 10 ? Math.max(48, size * 0.32) : undefined;
           return (
             <g key={i}>
               <text
                 x={lp.x}
                 y={lp.y - 4}
-                textAnchor={Math.abs(lp.x - cx) < 6 ? "middle" : lp.x > cx ? "start" : "end"}
+                textAnchor={side}
                 dominantBaseline="middle"
                 className="fill-foreground"
                 fontSize={12}
                 fontWeight={700}
+                textLength={clampLen}
+                lengthAdjust={clampLen ? "spacingAndGlyphs" : undefined}
               >
                 {a.label}
               </text>
@@ -685,11 +792,13 @@ export function RadarChart({
                 <text
                   x={lp.x}
                   y={lp.y + 10}
-                  textAnchor={Math.abs(lp.x - cx) < 6 ? "middle" : lp.x > cx ? "start" : "end"}
+                  textAnchor={side}
                   dominantBaseline="middle"
                   className="fill-[var(--muted-foreground)]"
                   fontSize={11}
                   fontWeight={600}
+                  textLength={clampLen}
+                  lengthAdjust={clampLen ? "spacingAndGlyphs" : undefined}
                 >
                   {a.display}
                 </text>

@@ -3,16 +3,33 @@
 // ============ Typed API client for Rutina ============
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
-  });
+  // Timeout 15s: jaringan mobile bisa stall tanpa EOF — tanpa batas waktu,
+  // mutation.isPending menggantung selamanya (tombol disabled + spinner abadi).
+  // Signal eksplisit dari caller (mis. React Query) tetap dihormati.
+  const signal = init?.signal ?? AbortSignal.timeout(15_000);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...init,
+      signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers || {}),
+      },
+    });
+  } catch (err) {
+    if (err instanceof DOMException && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new Error("Koneksi lambat atau terputus. Coba lagi.");
+    }
+    throw err;
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error || `Request gagal (${res.status})`);
+    const e = new Error(
+      (body as { error?: string }).error || `Request gagal (${res.status})`
+    ) as Error & { status?: number };
+    e.status = res.status; // status dipertahankan agar UI bisa membedakan 4xx vs 5xx
+    throw e;
   }
   return res.json() as Promise<T>;
 }

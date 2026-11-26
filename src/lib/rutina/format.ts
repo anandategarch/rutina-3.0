@@ -77,7 +77,15 @@ export function monthName(m: number, short = false): string {
 }
 
 export function greeting(): string {
-  const h = new Date().getHours();
+  // Jam diambil dari zona waktu aplikasi (Asia/Jakarta) — bukan jam perangkat —
+  // agar sapaan konsisten dengan tanggal log/check-in saat user bepergian.
+  const h = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Jakarta",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date())
+  );
   if (h >= 4 && h < 11) return "Selamat pagi";
   if (h >= 11 && h < 15) return "Selamat siang";
   if (h >= 15 && h < 18) return "Selamat sore";
@@ -115,6 +123,10 @@ export function formatDuration(min: number): string {
 export function formatPace(minPerKm: number): string {
   const m = Math.floor(minPerKm);
   const s = Math.round((minPerKm - m) * 60);
+  // Carry overflow: 5.9995 km/menit sebelumnya menghasilkan "5:60 /km"
+  if (s >= 60) {
+    return formatPace(m + 1);
+  }
   return `${m}:${String(s).padStart(2, "0")} /km`;
 }
 

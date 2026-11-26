@@ -65,7 +65,13 @@ function DrawerContent({
         )}
         {...props}
       >
-        <div className="bg-muted mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
+        {/* Handle terlihat: affordance tutup yang jelas — swipe-down saja adalah
+            gesture tersembunyi (ux-guidelines: gesture-only actions need visible
+            affordance). Aplikasi ini hanya memakai bottom drawer. */}
+        <div
+          aria-hidden="true"
+          className="bg-muted mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block"
+        />
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>

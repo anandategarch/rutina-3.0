@@ -4,6 +4,7 @@
 // with error.tsx). Menangkap error render tak tertangkap dari client components
 // agar pengguna melihat halaman bergaya, bukan fallback default Next.js.
 import { useEffect } from "react";
+import Link from "next/link";
 import { RefreshCw, Sprout } from "lucide-react";
 
 export default function Error({
@@ -19,7 +20,8 @@ export default function Error({
 
   return (
     <main className="min-h-dvh w-full bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-3xl border border-border/70 bg-card p-6 text-center shadow-clay">
+      {/* role=alert: kegagalan harus diumumkan ke screen reader (ux #44) */}
+      <div role="alert" className="w-full max-w-sm rounded-3xl border border-border/70 bg-card p-6 text-center shadow-clay">
         <span className="mx-auto h-12 w-12 rounded-2xl bg-garden-soft text-garden-deep flex items-center justify-center">
           <Sprout className="h-6 w-6" />
         </span>
@@ -34,6 +36,14 @@ export default function Error({
           <RefreshCw className="h-4 w-4" />
           Coba Lagi
         </button>
+        {/* Jalur pulang: jika error persisten, reset saja akan melempar error yang
+            sama — user tidak boleh terjebak tanpa jalan keluar (ux #4/#5). */}
+        <Link
+          href="/"
+          className="press mt-2 min-h-[44px] w-full rounded-xl border border-border bg-card text-foreground text-sm font-semibold inline-flex items-center justify-center"
+        >
+          Kembali ke Beranda
+        </Link>
       </div>
     </main>
   );
