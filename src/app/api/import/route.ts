@@ -8,6 +8,8 @@ export const dynamic = "force-dynamic";
 type Row = Record<string, unknown>;
 
 const MAX_PAYLOAD_CHARS = 10_000_000;
+/** Pra-cek byte: JSON ASCII ~1 byte/char; 15 MB memberi ruang aman utk multibyte. */
+const MAX_PAYLOAD_BYTES = 15_000_000;
 const TX_TYPES = ["income", "expense", "transfer"];
 
 function str(v: unknown): string | undefined {
@@ -213,6 +215,16 @@ export async function POST(req: Request) {
   try {
     if (!isSameOrigin(req)) {
       return NextResponse.json({ error: "Permintaan dari origin tidak diizinkan" }, { status: 403 });
+    }
+
+    // Pra-cek Content-Length SEBELUM membuffer body — mencegah body multi-GB
+    // dibaca penuh ke memori hanya untuk ditolak belakangan.
+    const declaredBytes = Number(req.headers.get("content-length") ?? 0);
+    if (Number.isFinite(declaredBytes) && declaredBytes > MAX_PAYLOAD_BYTES) {
+      return NextResponse.json(
+        { error: "Payload terlalu besar (maksimal 10 juta karakter)" },
+        { status: 413 }
+      );
     }
 
     const raw = await req.text();

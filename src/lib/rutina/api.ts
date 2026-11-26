@@ -87,6 +87,10 @@ export const rutinaApi = {
   createBudget: (body: Record<string, unknown>) => api.post<{ budget: Budget }>("/api/budgets", body),
   goals: () => api.get<{ goals: SavingsGoal[] }>("/api/goals"),
   createGoal: (body: Record<string, unknown>) => api.post<{ goal: SavingsGoal }>("/api/goals", body),
+  // Kontribusi dana: kirim DELTA (increment atomik di server) — aman dari race
+  // dua kontribusi cepat, bukan read-modify-write dari cache klien.
+  contributeToGoal: (id: string, contribution: number) =>
+    api.patch<{ goal: SavingsGoal }>(`/api/goals/${id}`, { contribution }),
   updateGoal: (id: string, body: Record<string, unknown>) =>
     api.patch<{ goal: SavingsGoal }>(`/api/goals/${id}`, body),
 

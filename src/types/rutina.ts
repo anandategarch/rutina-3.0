@@ -32,6 +32,8 @@ export interface Habit {
   stackAfter: string | null;
   archived: boolean;
   logs?: HabitLog[];
+  /** Streak full-history dihitung server-side (sumber kebenaran); opsional agar objek lama tetap valid. */
+  streak?: { current: number; best: number };
 }
 
 export interface Workout {

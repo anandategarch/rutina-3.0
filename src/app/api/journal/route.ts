@@ -44,6 +44,9 @@ export async function POST(req: Request) {
     if (!content) {
       return NextResponse.json({ error: "Isi catatan wajib diisi" }, { status: 400 });
     }
+    if (content.length > 50_000) {
+      return NextResponse.json({ error: "Isi catatan maksimal 50.000 karakter" }, { status: 400 });
+    }
 
     const title = typeof body.title === "string" ? body.title.trim().slice(0, 200) : "";
     const folder = typeof body.folder === "string" && FOLDERS.includes(body.folder) ? body.folder : "Umum";

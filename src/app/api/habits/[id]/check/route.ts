@@ -20,7 +20,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!body || typeof body !== "object") {
       return NextResponse.json({ error: "Body JSON tidak valid" }, { status: 400 });
     }
-    const date = isValidDateStr(body.date) ? body.date : jakartaToday();
+    // Tanggal: wajib valid bila dikirim — tanggal sampah jangan diam-diam dicatat
+    // pada "hari ini" WIB (korupsi streak/statistik). Absen → hari ini.
+    const date = body.date === undefined || body.date === null ? jakartaToday() : isValidDateStr(body.date) ? body.date : null;
+    if (!date) {
+      return NextResponse.json({ error: "Format tanggal tidak valid" }, { status: 400 });
+    }
 
     const habit = await db.habit.findUnique({ where: { id } });
     if (!habit) return NextResponse.json({ error: "Kebiasaan tidak ditemukan" }, { status: 404 });
@@ -37,6 +42,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       Number.isFinite(v) &&
       v > 0;
 
+    // Nilai terukur tidak boleh melebihi target — clamp server-side agar
+    // statistik rata-rata tidak korup walau klien bermasalah.
+    const clampedValue =
+      habit.unitTarget !== null ? Math.min(v, habit.unitTarget) : v;
+
     const existing = await db.habitLog.findUnique({ where: { habitId_date: { habitId: id, date } } });
 
     if (existing) {
@@ -45,7 +55,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         try {
           const log = await db.habitLog.update({
             where: { id: existing.id },
-            data: { value: v, status: "done" },
+            data: { value: clampedValue, status: "done" },
           });
           return NextResponse.json({ log });
         } catch (err) {
@@ -61,7 +71,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ log: null });
     }
 
-    const value = habit.unitTarget !== null ? (hasMeasuredValue ? v : habit.unitTarget) : null;
+    const value = habit.unitTarget !== null ? (hasMeasuredValue ? clampedValue : habit.unitTarget) : null;
 
     try {
       const log = await db.habitLog.create({

@@ -75,14 +75,14 @@ model Workout {
 }
 
 model Exercise {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   muscleGroup String // chest | back | shoulders | arms | legs | core | fullbody
   equipment   String?
 }
 
 model FoodItem {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   name     String
   calories Float
   protein  Float?
@@ -128,14 +128,14 @@ model BodyMetric {
 // ============ FINANCE (The Vault) ============
 
 model Wallet {
-  id             String        @id @default(cuid())
-  name           String
-  type           String        @default("cash") // cash | bank | ewallet
-  initialBalance Float         @default(0)
-  color          String        @default("teal")
-  icon           String        @default("wallet")
-  archived       Boolean       @default(false)
-  createdAt      DateTime      @default(now())
+  id              String        @id @default(cuid())
+  name            String
+  type            String        @default("cash") // cash | bank | ewallet
+  initialBalance  Float         @default(0)
+  color           String        @default("teal")
+  icon            String        @default("wallet")
+  archived        Boolean       @default(false)
+  createdAt       DateTime      @default(now())
   outTransactions Transaction[] @relation("WalletSource")
   inTransactions  Transaction[] @relation("WalletTarget")
 }

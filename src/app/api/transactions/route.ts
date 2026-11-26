@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
     let category =
       typeof body.category === "string" && body.category.trim()
-        ? body.category.trim()
+        ? body.category.trim().slice(0, 60)
         : "lainnya";
     if (type === "transfer") category = "lainnya";
 
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
     const recurring = RECURRING.includes(body.recurring) ? body.recurring : "none";
 
-    const note = typeof body.note === "string" && body.note.trim() ? body.note.trim() : null;
+    const note = typeof body.note === "string" && body.note.trim() ? body.note.trim().slice(0, 500) : null;
 
     const transaction = await db.transaction.create({
       data: { type, amount, category, walletId, toWalletId, date, note, recurring },

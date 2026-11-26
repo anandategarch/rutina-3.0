@@ -5,7 +5,8 @@ import { isValidDateStr } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
-/** PATCH: dipakai untuk kontribusi dana (kirim currentAmount baru), ubah nama/target/deadline. */
+/** PATCH: dipakai untuk kontribusi dana (kirim `contribution` — increment atomik, aman race),
+ *  ubah dana langsung (currentAmount), nama/target/deadline. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -14,9 +15,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const data: {
       name?: string;
       targetAmount?: number;
-      currentAmount?: number;
+      currentAmount?: number | { increment: number };
       deadline?: string | null;
     } = {};
+
+    // Kontribusi delta: increment atomik di server — dua kontribusi cepat tidak saling
+    // menimpa (bukan read-modify-write dari cache klien).
+    if (body.contribution !== undefined) {
+      const contribution = Number(body.contribution);
+      if (!Number.isFinite(contribution) || contribution <= 0)
+        return NextResponse.json({ error: "Jumlah kontribusi harus lebih dari 0" }, { status: 400 });
+      data.currentAmount = { increment: contribution };
+    }
 
     if (body.name !== undefined) {
       const name = typeof body.name === "string" ? body.name.trim() : "";

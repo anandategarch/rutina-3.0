@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/rutina/server";
+import { db, computeHabitStreaks } from "@/lib/rutina/server";
+import { addDays, jakartaToday } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
-function localDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 const TIME_OF_DAY = ["morning", "afternoon", "evening", "anytime"];
+const CATEGORIES = ["health", "productivity", "mind", "finance", "social", "learning"];
+const COLORS = ["emerald", "amber", "teal", "rose", "orange", "stone"];
+
+/** HH:MM sungguhan (00-23 : 00-59) — bukan hanya bentuknya. */
+function isValidTimeStr(s: string): boolean {
+  if (!/^\d{2}:\d{2}$/.test(s)) return false;
+  const [h, m] = s.split(":").map(Number);
+  return h <= 23 && m <= 59;
+}
 
 /**
  * GET /api/habits
@@ -19,19 +22,27 @@ const TIME_OF_DAY = ["morning", "afternoon", "evening", "anytime"];
  */
 export async function GET() {
   try {
-    const since = new Date();
-    since.setDate(since.getDate() - 34); // 35 hari inklusif
-    const sinceStr = localDateStr(since);
+    // Jendela 35 hari mengikuti zona WIB (bukan TZ server), konsisten dengan hari ini WIB
+    const sinceStr = addDays(jakartaToday(), -34); // 35 hari inklusif
 
-    const habits = await db.habit.findMany({
-      include: {
-        logs: {
-          where: { date: { gte: sinceStr } },
-          orderBy: { date: "asc" },
+    const [habitsRaw, streaks] = await Promise.all([
+      db.habit.findMany({
+        include: {
+          logs: {
+            where: { date: { gte: sinceStr } },
+            orderBy: { date: "asc" },
+          },
         },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+        orderBy: { createdAt: "asc" },
+      }),
+      // Streak dihitung dari SELURUH riwayat di server — klien tak lagi capped 35 hari
+      computeHabitStreaks(),
+    ]);
+
+    const habits = habitsRaw.map((h) => ({
+      ...h,
+      streak: streaks[h.id] ?? { current: 0, best: 0 },
+    }));
 
     return NextResponse.json({ habits });
   } catch (e) {
@@ -56,6 +67,9 @@ export async function POST(req: Request) {
     if (!name) {
       return NextResponse.json({ error: "Nama kebiasaan wajib diisi" }, { status: 400 });
     }
+    if (name.length > 80) {
+      return NextResponse.json({ error: "Nama kebiasaan maksimal 80 karakter" }, { status: 400 });
+    }
 
     // daysOfWeek: terima array angka atau csv string → csv ter-normalisasi "0,1,2,..."
     let daysOfWeek = "0,1,2,3,4,5,6";
@@ -75,22 +89,22 @@ export async function POST(req: Request) {
       typeof body.reminderTime === "string" && body.reminderTime.trim() !== ""
         ? body.reminderTime.trim()
         : null;
-    if (reminderTime && !/^\d{2}:\d{2}$/.test(reminderTime)) {
-      return NextResponse.json({ error: "Format waktu pengingat tidak valid" }, { status: 400 });
+    if (reminderTime && !isValidTimeStr(reminderTime)) {
+      return NextResponse.json({ error: "Format waktu pengingat tidak valid (HH:MM)" }, { status: 400 });
     }
 
     const habit = await db.habit.create({
       data: {
         name,
-        category: typeof body.category === "string" && body.category ? body.category : "health",
-        icon: typeof body.icon === "string" && body.icon ? body.icon : "sprout",
-        color: typeof body.color === "string" && body.color ? body.color : "emerald",
+        category: CATEGORIES.includes(body.category) ? body.category : "health",
+        icon: typeof body.icon === "string" && body.icon ? body.icon.slice(0, 40) : "sprout",
+        color: COLORS.includes(body.color) ? body.color : "emerald",
         scheduleType: body.scheduleType === "custom" ? "custom" : "daily",
         daysOfWeek,
         timeOfDay: TIME_OF_DAY.includes(body.timeOfDay) ? body.timeOfDay : "anytime",
         unitLabel:
           typeof body.unitLabel === "string" && body.unitLabel.trim() !== ""
-            ? body.unitLabel.trim()
+            ? body.unitLabel.trim().slice(0, 24)
             : null,
         unitTarget:
           body.unitTarget !== undefined && body.unitTarget !== null && Number(body.unitTarget) > 0
@@ -103,7 +117,7 @@ export async function POST(req: Request) {
         reminderTime,
         stackAfter:
           typeof body.stackAfter === "string" && body.stackAfter.trim() !== ""
-            ? body.stackAfter.trim()
+            ? body.stackAfter.trim().slice(0, 120)
             : null,
         archived: body.archived === true,
       },

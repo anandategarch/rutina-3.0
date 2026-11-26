@@ -41,7 +41,14 @@ export async function PATCH(req: Request) {
       data.name = name;
     }
     if (body.identityVoice !== undefined && typeof body.identityVoice === "string") {
-      data.identityVoice = body.identityVoice;
+      const voice = body.identityVoice.trim();
+      if (voice.length > 500) {
+        return NextResponse.json(
+          { error: "Identitas suara maksimal 500 karakter" },
+          { status: 400 }
+        );
+      }
+      data.identityVoice = voice;
     }
     if (body.dailyMissionTarget !== undefined) {
       const target = Number(body.dailyMissionTarget);

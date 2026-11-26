@@ -1,8 +1,11 @@
 // ============ Rutina formatting & date helpers ============
 
+/**
+ * "Hari ini" untuk UI klien — disamakan dengan zona waktu server (Asia/Jakarta)
+ * agar tanggal log/check-in konsisten antara klien dan API, apa pun TZ perangkat.
+ */
 export function todayStr(): string {
-  const d = new Date();
-  return toDateStr(d);
+  return jakartaToday();
 }
 
 export function toDateStr(d: Date): string {
@@ -20,6 +23,11 @@ export function parseDateStr(s: string): Date {
 /** "Hari ini" menurut zona waktu aplikasi (pengguna berada di Asia/Jakarta). */
 export function jakartaToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date()); // YYYY-MM-DD
+}
+
+/** Konversi timestamp (mis. createdAt) ke tanggal YYYY-MM-DD menurut zona WIB. */
+export function jakartaDateStr(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(d); // YYYY-MM-DD
 }
 
 /** Validasi string tanggal YYYY-MM-DD, termasuk cek tanggal benar-benar ada (bukan 2024-02-31). */
@@ -77,9 +85,11 @@ export function greeting(): string {
 }
 
 export function formatRupiah(n: number, opts?: { compact?: boolean }): string {
+  if (!Number.isFinite(n)) return "Rp 0";
   const neg = n < 0;
   const abs = Math.abs(n);
-  if (opts?.compact && abs >= 1_000_000) {
+  // Ambang 999.500 mencegah "Rp 1000 rb" / "Rp 1000,0 jt" pada nilai di bawah batas bulat
+  if (opts?.compact && abs >= 999_500) {
     const v = abs / 1_000_000;
     return `${neg ? "-" : ""}Rp ${v.toFixed(v >= 10 ? 0 : 1).replace(".", ",")} jt`;
   }

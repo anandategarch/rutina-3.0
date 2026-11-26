@@ -63,6 +63,7 @@ export async function POST(req: Request) {
     const initialBalance = Number(body.initialBalance ?? 0);
 
     if (!name) return bad("Nama dompet wajib diisi");
+    if (name.length > 60) return bad("Nama dompet maksimal 60 karakter");
     if (!WALLET_TYPES.includes(type)) return bad("Tipe dompet tidak valid");
     if (!Number.isFinite(initialBalance) || initialBalance < 0)
       return bad("Saldo awal tidak valid");

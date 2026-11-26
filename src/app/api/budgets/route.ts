@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { jakartaToday } from "@/lib/rutina/format";
 
@@ -64,6 +65,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ budget }, { status: existing ? 200 : 201 });
   } catch (e) {
+    // Balapan dua POST kategori sama (unique) → 409, bukan 500 generik
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return bad("Anggaran kategori ini sudah ada", 409);
+    }
     console.error("POST /api/budgets error", e);
     return NextResponse.json({ error: "Gagal menyimpan anggaran" }, { status: 500 });
   }

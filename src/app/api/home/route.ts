@@ -57,7 +57,8 @@ export async function GET() {
     const prevMonday = addDays(monday, -7);
     const prevWeekDates = rangeDays(prevMonday, addDays(prevMonday, 6));
     const weekLogs = await db.habitLog.findMany({
-      where: { status: "done", date: { in: [...weekDates, ...prevWeekDates] } },
+      // Hanya log habit aktif — log habit terarsip tidak boleh menggelembungkan missionsDone
+      where: { status: "done", date: { in: [...weekDates, ...prevWeekDates] }, habit: { archived: false } },
     });
     const doneByDate = new Map<string, number>();
     weekLogs.forEach((l) => doneByDate.set(l.date, (doneByDate.get(l.date) ?? 0) + 1));

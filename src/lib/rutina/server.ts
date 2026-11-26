@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { addDays, jakartaToday, parseDateStr, toDateStr } from "@/lib/rutina/format";
+import { addDays, jakartaToday, parseDateStr, rangeDays, toDateStr } from "@/lib/rutina/format";
 
 /**
  * Aturan XP Rutina (satu sumber kebenaran untuk semua endpoint):
@@ -72,3 +72,96 @@ export async function computeStreaks() {
 }
 
 export { db };
+
+/**
+ * Streak PER-HABIT dari SELURUH riwayat log (bukan hanya 35 hari).
+ * Sumber kebenaran tunggal untuk /api/habits — semantik sama dengan versi klien:
+ * - hanya hari terjadwal yang dihitung (daily / daysOfWeek)
+ * - done = status "done" ATAU value >= unitTarget (habit terukur)
+ * - hari ini yang belum selesai diberi grace (tidak memutus streak)
+ */
+export async function computeHabitStreaks(): Promise<Record<string, { current: number; best: number }>> {
+  const today = jakartaToday();
+  const [habits, logs] = await Promise.all([
+    db.habit.findMany({
+      select: { id: true, createdAt: true, scheduleType: true, daysOfWeek: true, unitTarget: true },
+    }),
+    db.habitLog.findMany({
+      select: { habitId: true, date: true, status: true, value: true },
+    }),
+  ]);
+
+  const logsByHabit = new Map<string, Map<string, { status: string; value: number | null }>>();
+  for (const l of logs) {
+    let m = logsByHabit.get(l.habitId);
+    if (!m) {
+      m = new Map();
+      logsByHabit.set(l.habitId, m);
+    }
+    m.set(l.date, { status: l.status, value: l.value });
+  }
+
+  const isScheduled = (daysOfWeek: string, scheduleType: string, ds: string) => {
+    if (scheduleType === "daily") return true;
+    const days = daysOfWeek.split(",").map(Number);
+    return days.includes(parseDateStr(ds).getDay());
+  };
+  const isDone = (
+    unitTarget: number | null,
+    log?: { status: string; value: number | null } | null
+  ) => {
+    if (!log) return false;
+    if (log.status === "done") return true;
+    return unitTarget !== null && (log.value ?? 0) >= unitTarget;
+  };
+
+  const out: Record<string, { current: number; best: number }> = {};
+  for (const h of habits) {
+    const m = logsByHabit.get(h.id) ?? new Map<string, { status: string; value: number | null }>();
+
+    // ---- current streak (jalan mundur dari hari ini, dengan grace hari ini) ----
+    let current = 0;
+    let cursor = today;
+    for (let i = 0; i < 3650; i++) {
+      if (!isScheduled(h.daysOfWeek, h.scheduleType, cursor)) {
+        cursor = addDays(cursor, -1);
+        continue;
+      }
+      if (isDone(h.unitTarget, m.get(cursor))) {
+        current++;
+        cursor = addDays(cursor, -1);
+        continue;
+      }
+      if (cursor === today && current === 0) {
+        cursor = addDays(cursor, -1); // grace: hari ini belum selesai
+        continue;
+      }
+      break;
+    }
+
+    // ---- best streak (jalan maju sejak log done pertama, semantik identik dengan
+    //      klien: hari non-terjadwal di-skip tanpa memutus run; log backfill tetap dihitung) ----
+    const doneSet = new Set(
+      Array.from(m.entries())
+        .filter(([, l]) => isDone(h.unitTarget, l))
+        .map(([ds]) => ds)
+    );
+    let best = 0;
+    let run = 0;
+    if (doneSet.size > 0) {
+      const firstDone = Array.from(doneSet).sort()[0];
+      for (const ds of rangeDays(firstDone, today)) {
+        if (!isScheduled(h.daysOfWeek, h.scheduleType, ds)) continue;
+        if (doneSet.has(ds)) {
+          run++;
+          best = Math.max(best, run);
+        } else {
+          run = 0;
+        }
+      }
+    }
+
+    out[h.id] = { current, best };
+  }
+  return out;
+}

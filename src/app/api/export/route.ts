@@ -4,6 +4,9 @@ import { db } from "@/lib/rutina/server";
 export const dynamic = "force-dynamic";
 
 function csvEscape(value: string): string {
+  // Sel numerik murni (mis. -150000) aman dari formula injection — jangan diberi kutip,
+  // agar nilai negatif tidak berubah menjadi teks "'-150000" di spreadsheet.
+  if (/^-?\d+(\.\d+)?$/.test(value)) return value;
   // Cegah CSV/formula injection: sel berawalan = + - @ diawali kutip tunggal
   const first = value.charAt(0);
   const guarded = first === "=" || first === "+" || first === "-" || first === "@" ? `'${value}` : value;

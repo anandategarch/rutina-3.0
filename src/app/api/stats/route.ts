@@ -8,7 +8,7 @@ import {
   formatDayMonth,
   formatDuration,
   formatRupiah,
-  toDateStr,
+  jakartaDateStr,
   jakartaToday,
 } from "@/lib/rutina/format";
 
@@ -188,7 +188,8 @@ export async function GET() {
       .sort((a, b) => b.amount - a.amount);
 
     // ===== Jurnal =====
-    const recentEntries = journalEntries.filter((e) => toDateStr(e.createdAt) >= d30);
+    // Tanggal entri jurnal mengikuti WIB (bukan TZ server) agar konsisten dgn log habit/tx
+    const recentEntries = journalEntries.filter((e) => jakartaDateStr(e.createdAt) >= d30);
     const entries30d = recentEntries.length;
     const words30d = recentEntries.reduce((a, e) => a + e.wordCount, 0);
     const moodMap = new Map<string, number>();
@@ -201,7 +202,7 @@ export async function GET() {
     }));
 
     // ===== Kalender aktivitas 90 hari =====
-    const journalDates = new Set(journalEntries.map((e) => toDateStr(e.createdAt)));
+    const journalDates = new Set(journalEntries.map((e) => jakartaDateStr(e.createdAt)));
     const txDates = new Set(transactions.map((t) => t.date));
     const workoutDates = new Set(workouts.map((w) => w.date));
     const activityCalendar = rangeDays(addDays(today, -89), today).map((date) => ({

@@ -40,10 +40,27 @@ export async function POST(req: Request) {
     if (!name) {
       return NextResponse.json({ error: "Nama makanan wajib diisi" }, { status: 400 });
     }
+    if (name.length > 120) {
+      return NextResponse.json({ error: "Nama makanan maksimal 120 karakter" }, { status: 400 });
+    }
 
     const calories = num(body.calories);
     if (calories === null || calories < 0) {
       return NextResponse.json({ error: "Kalori wajib diisi (angka)" }, { status: 400 });
+    }
+
+    // Zat gizi opsional, tapi tidak boleh negatif (drift integritas data)
+    const protein = num(body.protein);
+    const carbs = num(body.carbs);
+    const fat = num(body.fat);
+    if (protein !== null && protein < 0) {
+      return NextResponse.json({ error: "Protein tidak boleh negatif" }, { status: 400 });
+    }
+    if (carbs !== null && carbs < 0) {
+      return NextResponse.json({ error: "Karbohidrat tidak boleh negatif" }, { status: 400 });
+    }
+    if (fat !== null && fat < 0) {
+      return NextResponse.json({ error: "Lemak tidak boleh negatif" }, { status: 400 });
     }
 
     const meal = str(body.meal) ?? "lunch";
@@ -61,9 +78,9 @@ export async function POST(req: Request) {
         name,
         portion: str(body.portion),
         calories,
-        protein: num(body.protein),
-        carbs: num(body.carbs),
-        fat: num(body.fat),
+        protein,
+        carbs,
+        fat,
         meal,
         date,
       },
