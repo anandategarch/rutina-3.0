@@ -214,6 +214,73 @@ const QUOTES = [
   { text: "Tumbuh itu tidak selalu terasa nyaman, dan rasa nyaman jarang membuatmu tumbuh.", author: "Anonim" },
 ];
 
+/** Katalog latihan untuk picker sheet Workout (tanpa ini picker kosong di install baru). */
+const EXERCISE_CATALOG = [
+  { name: "Bench Press", muscleGroup: "chest", equipment: "barbell" },
+  { name: "Incline Dumbbell Press", muscleGroup: "chest", equipment: "dumbbell" },
+  { name: "Push-Up", muscleGroup: "chest", equipment: null },
+  { name: "Cable Fly", muscleGroup: "chest", equipment: "cable" },
+  { name: "Deadlift", muscleGroup: "back", equipment: "barbell" },
+  { name: "Barbell Row", muscleGroup: "back", equipment: "barbell" },
+  { name: "Lat Pulldown", muscleGroup: "back", equipment: "cable" },
+  { name: "Pull-Up", muscleGroup: "back", equipment: null },
+  { name: "Seated Row", muscleGroup: "back", equipment: "cable" },
+  { name: "Overhead Press", muscleGroup: "shoulders", equipment: "barbell" },
+  { name: "Lateral Raise", muscleGroup: "shoulders", equipment: "dumbbell" },
+  { name: "Face Pull", muscleGroup: "shoulders", equipment: "cable" },
+  { name: "Barbell Curl", muscleGroup: "arms", equipment: "barbell" },
+  { name: "Dumbbell Curl", muscleGroup: "arms", equipment: "dumbbell" },
+  { name: "Triceps Pushdown", muscleGroup: "arms", equipment: "cable" },
+  { name: "Hammer Curl", muscleGroup: "arms", equipment: "dumbbell" },
+  { name: "Squat", muscleGroup: "legs", equipment: "barbell" },
+  { name: "Lunge", muscleGroup: "legs", equipment: "dumbbell" },
+  { name: "Leg Press", muscleGroup: "legs", equipment: "machine" },
+  { name: "Romanian Deadlift", muscleGroup: "legs", equipment: "barbell" },
+  { name: "Calf Raise", muscleGroup: "legs", equipment: "machine" },
+  { name: "Leg Curl", muscleGroup: "legs", equipment: "machine" },
+  { name: "Plank", muscleGroup: "core", equipment: null },
+  { name: "Hanging Leg Raise", muscleGroup: "core", equipment: null },
+  { name: "Cable Crunch", muscleGroup: "core", equipment: "cable" },
+  { name: "Russian Twist", muscleGroup: "core", equipment: null },
+  { name: "Burpee", muscleGroup: "fullbody", equipment: null },
+  { name: "Kettlebell Swing", muscleGroup: "fullbody", equipment: "kettlebell" },
+  { name: "Farmer Walk", muscleGroup: "fullbody", equipment: "dumbbell" },
+];
+
+/** Katalog makanan umum untuk saran sheet Food (tanpa ini saran kosong di install baru). */
+const FOOD_ITEM_CATALOG = [
+  { name: "Nasi putih", calories: 205, protein: 4.3, carbs: 45, fat: 0.4, serving: "1 piring (100 g)" },
+  { name: "Nasi goreng", calories: 350, protein: 8, carbs: 50, fat: 12, serving: "1 porsi" },
+  { name: "Ayam goreng", calories: 260, protein: 22, carbs: 5, fat: 16, serving: "1 potong" },
+  { name: "Ayam panggang", calories: 165, protein: 26, carbs: 0, fat: 6, serving: "1 potong (100 g)" },
+  { name: "Telur rebus", calories: 78, protein: 6.3, carbs: 0.6, fat: 5.3, serving: "1 butir" },
+  { name: "Telur dadar", calories: 154, protein: 9, carbs: 2, fat: 12, serving: "1 porsi" },
+  { name: "Tempe goreng", calories: 120, protein: 10, carbs: 6, fat: 6, serving: "1 potong" },
+  { name: "Tahu goreng", calories: 95, protein: 8, carbs: 3, fat: 5, serving: "2 potong" },
+  { name: "Roti tawar", calories: 75, protein: 2.6, carbs: 14, fat: 1, serving: "1 lembar" },
+  { name: "Mie instan", calories: 380, protein: 8, carbs: 55, fat: 15, serving: "1 bungkus" },
+  { name: "Bakso sapi", calories: 280, protein: 15, carbs: 25, fat: 12, serving: "1 mangkuk" },
+  { name: "Soto ayam", calories: 250, protein: 14, carbs: 20, fat: 11, serving: "1 mangkuk" },
+  { name: "Gado-gado", calories: 290, protein: 10, carbs: 28, fat: 15, serving: "1 porsi" },
+  { name: "Susu UHT full cream", calories: 150, protein: 8, carbs: 12, fat: 8, serving: "1 gelas (250 ml)" },
+  { name: "Yogurt plain", calories: 95, protein: 6, carbs: 9, fat: 4, serving: "1 cup (150 g)" },
+  { name: "Pisang", calories: 105, protein: 1.3, carbs: 27, fat: 0.4, serving: "1 buah" },
+  { name: "Apel", calories: 95, protein: 0.5, carbs: 25, fat: 0.3, serving: "1 buah" },
+  { name: "Pepaya", calories: 60, protein: 1, carbs: 15, fat: 0.4, serving: "1 potong (150 g)" },
+  { name: "Mangga", calories: 100, protein: 1.4, carbs: 25, fat: 0.6, serving: "1 potong (150 g)" },
+  { name: "Kopi susu gula aren", calories: 180, protein: 3, carbs: 24, fat: 7, serving: "1 gelas" },
+  { name: "Es teh manis", calories: 90, protein: 0, carbs: 22, fat: 0, serving: "1 gelas" },
+  { name: "Air mineral", calories: 0, protein: null, carbs: null, fat: null, serving: "1 gelas (250 ml)" },
+  { name: "Whey protein", calories: 120, protein: 24, carbs: 3, fat: 1.5, serving: "1 scoop" },
+  { name: "Oatmeal", calories: 150, protein: 5, carbs: 27, fat: 3, serving: "1 mangkuk (40 g)" },
+  { name: "Kentang goreng", calories: 310, protein: 4, carbs: 40, fat: 15, serving: "1 porsi sedang" },
+  { name: "Burger sapi", calories: 480, protein: 25, carbs: 40, fat: 24, serving: "1 buah" },
+  { name: "Pizza pepperoni", calories: 300, protein: 13, carbs: 32, fat: 13, serving: "2 potong" },
+  { name: "Martabak manis", calories: 450, protein: 8, carbs: 55, fat: 20, serving: "1 potong" },
+  { name: "Rendang daging", calories: 330, protein: 18, carbs: 8, fat: 25, serving: "1 porsi" },
+  { name: "Ikan goreng nila", calories: 220, protein: 24, carbs: 3, fat: 13, serving: "1 ekor sedang" },
+];
+
 const ACHIEVEMENT_DEFS = [
   { key: "first-habit", title: "Langkah Pertama", description: "Ciptakan kebiasaan pertamamu di Taman.", icon: "sprout", unlockedAt: DAY(28) },
   { key: "streak-7", title: "Api Menyala — 7 Hari", description: "Jaga satu kebiasaan tanpa putus selama 7 hari.", icon: "flame", unlockedAt: DAY(6) },
@@ -326,7 +393,9 @@ async function seedHabitLogs(habitIds: Record<string, string>) {
     const scheduledDays = def.scheduleType === "custom" ? def.daysOfWeek.split(",").map(Number) : null;
     for (let i = 29; i >= 0; i--) {
       const date = DAY(i);
-      const dow = D(i).getDay();
+      // DOW dihitung dari tanggal WIB (bukan new Date() server-local) agar habit
+      // custom tidak dapat log di luar hari jadwalnya di sekitar tengah malam.
+      const dow = new Date(`${date}T12:00:00`).getDay();
       if (scheduledDays && !scheduledDays.includes(dow)) continue;
       // Hari terakhir (i=0) biarkan sebagian terbuka agar tampilan "misi hari ini" hidup.
       const isToday = i === 0;
@@ -353,7 +422,8 @@ async function seedWorkouts() {
   const rows: Array<Parameters<typeof db.workout.create>[0]["data"]> = [];
   let runCount = 0;
   for (let i = 29; i >= 0; i--) {
-    const dow = D(i).getDay();
+    const date = DAY(i);
+    const dow = new Date(`${date}T12:00:00`).getDay();
     // latihan kekuasaan Sen/Rab/Jum (1,3,5), lari Sab/Minggu pagi, badminton 2x sebulan
     const isStrengthDay = [1, 3, 5].includes(dow) && rand() < 0.75;
     const isRunDay = [0, 6].includes(dow) && rand() < 0.8;
@@ -365,7 +435,7 @@ async function seedWorkouts() {
       rows.push({
         type: "run",
         title: runCount % 3 === 0 ? "Easy Run Pagi" : "Lari 5K",
-        date: DAY(i),
+        date,
         startTime: "06:15",
         durationMin: Math.round(dur),
         distanceKm: Math.round(dist * 100) / 100,
@@ -630,6 +700,15 @@ async function seedGamification() {
   if ((await db.achievement.count()) === 0) {
     await db.achievement.createMany({ data: ACHIEVEMENT_DEFS });
     n += ACHIEVEMENT_DEFS.length;
+  }
+  // Katalog latihan & makanan: wajib terisi agar picker/saran di sheet tidak kosong
+  if ((await db.exercise.count()) === 0) {
+    await db.exercise.createMany({ data: EXERCISE_CATALOG });
+    n += EXERCISE_CATALOG.length;
+  }
+  if ((await db.foodItem.count()) === 0) {
+    await db.foodItem.createMany({ data: FOOD_ITEM_CATALOG });
+    n += FOOD_ITEM_CATALOG.length;
   }
   return n;
 }

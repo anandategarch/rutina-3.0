@@ -33,9 +33,12 @@ bun install
 
 # 2. Siapkan environment
 cp .env.example .env
-#   isi DATABASE_URL, mis. DATABASE_URL=file:./db/custom.db
+#   isi DATABASE_URL dengan path ABSOLUT atau relatif-dari-folder-prisma, mis.:
+#   DATABASE_URL="file:../db/custom.db"   (mengarah ke folder db/ di root project)
+#   Catatan: Prisma me-resolve path relatif terhadap prisma/, bukan root —
+#   lihat penjelasan di .env.example.
 
-# 3. Buat/sinkronkan database SQLite (folder db/ otomatis dibuat)
+# 3. Buat/sinkronkan database SQLite (folder db/ di root project)
 bun run db:push
 
 # 4. Jalankan development server

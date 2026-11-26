@@ -56,8 +56,13 @@ server.log
 
 # local runtime data & artifacts (never commit)
 db/*.db
+db/*.db-wal
+db/*.db-shm
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
+prisma/db/
 *.tar
 dev.pid
 upload/

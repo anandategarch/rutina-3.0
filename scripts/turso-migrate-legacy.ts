@@ -141,27 +141,38 @@ const setting = (key: string): string | null => {
   return row ? str(row, 1) : null;
 };
 
-/* ---------------- 2. bersihkan data sampling di tabel target ---------------- */
+/* ---------------- 2+3. bersihkan + impor dalam SATU transaksi ----------------
+ * Kegagalan di tengah impor (FK, duplikat id) tidak boleh meninggalkan DB
+ * setengah terhapus — seluruh wipe + import atomik (rollback otomatis).
+ */
+console.log("🧹📦 Transaksi atomik: menghapus data sampling + mengimpor data legacy…");
 
-console.log("🧹 Menghapus data sampling di tabel target (dictionary tetap aman)…");
-await db.transaction.deleteMany();
-await db.habitLog.deleteMany();
-await db.habit.deleteMany();
-await db.wallet.deleteMany();
-await db.budget.deleteMany();
-await db.savingsGoal.deleteMany();
-await db.journalEntry.deleteMany();
-await db.checkIn.deleteMany();
-await db.bodyMetric.deleteMany();
-await db.foodEntry.deleteMany();
-await db.workout.deleteMany();
+// Dompet fallback untuk transaksi legacy tanpa walletId (dompetnya sudah dihapus).
+const needsFallback = legacyTx.some((r) => !str(r, 6));
+let fallbackWalletId: string | null =
+  legacyWallets.length > 0 ? String(val(legacyWallets[0], 0)) : null;
+
+/* Profile: target misi harian dari pengaturan legacy (app.dailyGoal). */
+const dailyGoal = Number(setting("app.dailyGoal") ?? 4);
+
+await db.$transaction(
+  async (tx) => {
+await tx.transaction.deleteMany();
+await tx.habitLog.deleteMany();
+await tx.habit.deleteMany();
+await tx.wallet.deleteMany();
+await tx.budget.deleteMany();
+await tx.savingsGoal.deleteMany();
+await tx.journalEntry.deleteMany();
+await tx.checkIn.deleteMany();
+await tx.bodyMetric.deleteMany();
+await tx.foodEntry.deleteMany();
+await tx.workout.deleteMany();
 // Achievement di-reset dulu, lalu dievaluasi ulang dari data asli di langkah 4.
-await db.achievement.updateMany({ data: { unlockedAt: null } });
-
-/* ---------------- 3. impor ke schema 3.0 ---------------- */
+await tx.achievement.updateMany({ data: { unlockedAt: null } });
 
 console.log("📦 Mengimpor wallet…");
-await db.wallet.createMany({
+await tx.wallet.createMany({
   data: legacyWallets.map((r) => {
     const id = String(val(r, 0));
     const name = String(val(r, 1) ?? "Dompet");
@@ -179,8 +190,24 @@ await db.wallet.createMany({
   }),
 });
 
+// Legacy tanpa satu pun wallet tapi ada transaksi tanpa walletId → buat dompet fallback
+if (fallbackWalletId === null && needsFallback) {
+  await tx.wallet.create({
+    data: {
+      id: "kas-fallback",
+      name: "Kas",
+      type: "cash",
+      initialBalance: 0,
+      color: "emerald",
+      icon: "wallet",
+      createdAt: dateAt(jakartaToday()),
+    },
+  });
+  fallbackWalletId = "kas-fallback";
+}
+
 console.log("📦 Mengimpor habit…");
-await db.habit.createMany({
+await tx.habit.createMany({
   data: legacyHabits.map((r) => {
     const title = String(val(r, 1) ?? "Kebiasaan");
     const catRaw = String(val(r, 2) ?? "Pribadi");
@@ -209,7 +236,7 @@ await db.habit.createMany({
 });
 
 console.log("📦 Mengimpor habit log…");
-await db.habitLog.createMany({
+await tx.habitLog.createMany({
   data: legacyLogs.map((r) => ({
     id: String(val(r, 0)),
     habitId: String(val(r, 1)),
@@ -223,34 +250,39 @@ await db.habitLog.createMany({
 console.log("📦 Mengimpor transaksi…");
 // 2 transaksi legacy tidak punya dompet (walletId NULL — dompetnya sudah dihapus).
 // Agar tidak ada data hilang, sematkan ke dompet pertama (Kas).
-const fallbackWalletId = String(val(legacyWallets[0], 0));
-await db.transaction.createMany({
-  data: legacyTx.map((r) => {
+const txRows = legacyTx
+  .map((r) => {
     const dateStr = String(val(r, 5));
     const recRaw = str(r, 8);
+    const walletId = str(r, 6) ?? fallbackWalletId;
+    if (!walletId) return null; // tanpa dompet fallback → baris dilewati
     return {
       id: String(val(r, 0)),
       type: TX_TYPE_MAP[String(val(r, 1))] ?? "expense",
       amount: num(r, 3) ?? 0,
       category: String(val(r, 2) ?? "lainnya"),
-      walletId: str(r, 6) ?? fallbackWalletId,
+      walletId,
       toWalletId: str(r, 7),
       date: dateStr,
       note: str(r, 4),
       recurring: recRaw === "weekly" || recRaw === "monthly" ? recRaw : "none",
       createdAt: dateAt(dateStr),
     };
-  }),
-});
+  })
+  .filter((r): r is NonNullable<typeof r> => r !== null);
+if (txRows.length < legacyTx.length) {
+  console.warn(`⚠️ ${legacyTx.length - txRows.length} transaksi dilewati (tanpa walletId & tidak ada dompet fallback)`);
+}
+await tx.transaction.createMany({ data: txRows });
 
 console.log("📦 Mengimpor budget & target tabungan…");
-await db.budget.createMany({
+await tx.budget.createMany({
   data: legacyBudgets.map((r) => ({
     category: String(val(r, 0)),
     monthlyLimit: num(r, 1) ?? 0,
   })),
 });
-await db.savingsGoal.createMany({
+await tx.savingsGoal.createMany({
   data: legacyGoals.map((r) => ({
     id: String(val(r, 0)),
     name: String(val(r, 1) ?? "Target"),
@@ -271,7 +303,7 @@ for (const r of legacyMood) {
 const bodyDates = new Set(legacyBody.map((r) => String(val(r, 0))));
 const moodOnly = [...moodByDate.keys()].filter((d) => !bodyDates.has(d));
 
-await db.checkIn.createMany({
+await tx.checkIn.createMany({
   data: [
     ...legacyBody.map((r) => {
       const d = String(val(r, 0));
@@ -298,7 +330,7 @@ await db.checkIn.createMany({
     })),
   ],
 });
-await db.bodyMetric.createMany({
+await tx.bodyMetric.createMany({
   data: legacyBody.map((r) => ({
     date: String(val(r, 0)),
     weightKg: num(r, 2),
@@ -307,7 +339,7 @@ await db.bodyMetric.createMany({
 });
 
 console.log("📦 Mengimpor workout…");
-await db.workout.createMany({
+await tx.workout.createMany({
   data: legacyWorkouts.map((r) => {
     const durationMin = num(r, 3) ?? 0;
     const distanceKm = num(r, 6);
@@ -329,12 +361,14 @@ await db.workout.createMany({
 });
 
 /* Profile: target misi harian dari pengaturan legacy (app.dailyGoal). */
-const dailyGoal = Number(setting("app.dailyGoal") ?? 4);
-await db.profile.upsert({
+await tx.profile.upsert({
   where: { id: "main" },
   update: { dailyMissionTarget: Number.isFinite(dailyGoal) ? dailyGoal : 4 },
   create: { id: "main", dailyMissionTarget: Number.isFinite(dailyGoal) ? dailyGoal : 4 },
 });
+  },
+  { timeout: 120_000 } // impor bisa memakan waktu di koneksi Turso lambat
+);
 
 /* ---------------- 4. evaluasi achievement dari data asli ---------------- */
 
