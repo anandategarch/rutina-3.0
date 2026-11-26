@@ -54,7 +54,7 @@ import {
   rangeDays,
   dayOfWeek,
 } from "@/lib/rutina/format";
-import { ScreenHeader, SectionCard, StatTile, EmptyState, Pill } from "@/components/rutina/primitives";
+import { ScreenHeader, SectionCard, StatTile, EmptyState, Pill, ShowAllToggle } from "@/components/rutina/primitives";
 import {
   CLAY,
   DeltaBadge,
@@ -405,6 +405,14 @@ export default function FinanceScreen() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // ux-guidelines #84: pratinjau daftar mutasi dibatasi, sisanya via disclosure "Lihat semua"
+  const [showAllTx, setShowAllTx] = React.useState(false);
+
+  // Disclosure direset ke tertutup saat filter bulan/tipe/pencarian berubah
+  React.useEffect(() => {
+    setShowAllTx(false);
+  }, [viewYear, viewMonthIdx, typeFilter, search]);
+
   const shiftMonth = (delta: number) => {
     const d = new Date(viewYear, viewMonthIdx + delta, 1);
     setViewYear(d.getFullYear());
@@ -692,6 +700,12 @@ export default function FinanceScreen() {
         expense: items.filter((t) => t.type === "expense").reduce((a, t) => a + t.amount, 0),
       }));
   }, [transactions, viewYear, viewMonthIdx, typeFilter, search]);
+
+  // ux-guidelines #84: hitungan disclosure — total transaksi terfilter (sama dengan jumlah
+  // seluruh item grup) vs jumlah yang tampil (maks 5 per grup hari saat tertutup)
+  const txTotal = groups.reduce((a, g) => a + g.items.length, 0);
+  const txVisible = showAllTx ? txTotal : groups.reduce((a, g) => a + Math.min(g.items.length, 5), 0);
+  const txHidden = txTotal - txVisible;
 
   // Temuan otomatis
   const insights = React.useMemo(() => {
@@ -1355,6 +1369,7 @@ export default function FinanceScreen() {
           icon={<List className="h-4 w-4 text-vault-deep" />}
           tone="vault"
           className="rise-in"
+          action={<Pill tone="vault">{formatNumber(txTotal)} transaksi</Pill>}
         >
           {/* Navigasi bulan */}
           <div className="mb-3 flex items-center gap-2">
@@ -1427,7 +1442,7 @@ export default function FinanceScreen() {
               description="Coba ubah bulan, filter, atau kata kunci pencarian."
             />
           ) : (
-            <div className="max-h-[520px] overflow-y-auto scroll-thin rounded-xl">
+            <div id="mutasi-list" className="max-h-[520px] overflow-y-auto scroll-thin rounded-xl">
               {groups.map((g) => (
                 <div key={g.date}>
                   <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-card/95 px-1 py-2 backdrop-blur-sm">
@@ -1442,12 +1457,23 @@ export default function FinanceScreen() {
                   </div>
                   <div className="divide-y divide-border/50">
                     {/* Baris di-memo: mengetik di pencarian tidak me-render ulang seluruh daftar */}
-                    {g.items.map((t) => (
+                    {/* ux-guidelines #84: saat tertutup, maksimal 5 baris per grup hari */}
+                    {(showAllTx ? g.items : g.items.slice(0, 5)).map((t) => (
                       <TxRow key={t.id} t={t} deletePending={deleteTx.isPending} onDelete={onDeleteTx} />
                     ))}
                   </div>
                 </div>
               ))}
+              {/* ux-guidelines #84: disclosure "Lihat semua" di bawah grup terakhir (aria-controls → mutasi-list) */}
+              {(txHidden > 0 || showAllTx) && (
+                <ShowAllToggle
+                  total={txTotal}
+                  visibleCount={txVisible}
+                  expanded={showAllTx}
+                  onToggle={() => setShowAllTx((v) => !v)}
+                  controlsId="mutasi-list"
+                />
+              )}
             </div>
           )}
         </SectionCard>

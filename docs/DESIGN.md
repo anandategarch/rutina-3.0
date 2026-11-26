@@ -189,6 +189,11 @@ hover scale 1.02. Papan bento pertama: ringkasan Beranda
 7. **react-perf#26 (lanjutan)** — `content-visibility` untuk daftar transaksi & arsip kebiasaan.
 8. **nextjs#51 (lanjutan)** — CSP dengan nonce per-request via middleware (menghapus
    `'unsafe-inline'`).
+9. **ux#84/#113/#115 (progressive disclosure)** — daftar panjang (agenda hari ini,
+   jurnal, mutasi, riwayat) wajib dibatasi preview (5–10 item) + tombol
+   "Lihat semua (X)" operable dengan `aria-expanded` + bisa di-collapse kembali
+   (quick-reference Forms & Feedback "Progressive disclosure"). Beranda (agenda)
+   & Jurnal sudah memakai `ShowAllToggle`; mutasi & riwayat menyusul.
 
 ## 6. Atribusi
 

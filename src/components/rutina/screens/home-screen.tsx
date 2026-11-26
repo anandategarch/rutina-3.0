@@ -33,7 +33,7 @@ import {
   parseDateStr,
   weekStart,
 } from "@/lib/rutina/format";
-import { SectionCard, Pill, EmptyState } from "@/components/rutina/primitives";
+import { SectionCard, Pill, EmptyState, ShowAllToggle } from "@/components/rutina/primitives";
 import { habitIcon, habitColor } from "@/components/rutina/habit-icons";
 import {
   DeltaBadge,
@@ -58,11 +58,24 @@ const HIGHLIGHT_ICON: Record<string, React.ElementType> = {
 // Sumber kebenaran XP ada di server (levelFromXp): 1 level = 500 XP.
 const XP_PER_LEVEL = 500;
 
+// Progressive disclosure agenda (ux-guidelines #84, #115): preview daftar
+// dibatasi maks 6 item (maks 3 per kelompok waktu); sisanya via tombol
+// "Lihat semua (X)" — mission ring & hitungan selesai tetap pakai data penuh.
+const AGENDA_PREVIEW_TOTAL = 6;
+const AGENDA_PREVIEW_PER_GROUP = 3;
+
 export default function HomeScreen() {
   const qc = useQueryClient();
   const setQuickAction = useRutinaStore((s) => s.setQuickAction);
   const setPage = useRutinaStore((s) => s.setPage);
   const [selectedDate, setSelectedDate] = React.useState(todayStr());
+
+  // ux-guidelines #84 & #115 (progressive disclosure): kembalikan agenda ke
+  // mode preview setiap tanggal berganti, agar daftar tak meledak jadi 20 baris.
+  const [showAllAgenda, setShowAllAgenda] = React.useState(false);
+  React.useEffect(() => {
+    setShowAllAgenda(false);
+  }, [selectedDate]);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["home"],
@@ -260,6 +273,21 @@ export default function HomeScreen() {
     { key: "anytime", label: "Kapan saja" },
   ];
 
+  // Preview daftar untuk render saja (ux-guidelines #84, #115): saat collapsed
+  // dibatasi kuota total & per kelompok (urutan Pagi→Siang→Malam→Kapan saja),
+  // saat expanded tampilkan semua. `agendaForSelected` & `grouped` penuh tetap
+  // dipakai ring misi / done count / server missions.
+  let agendaQuota = AGENDA_PREVIEW_TOTAL;
+  const agendaPreviewGroups = groupLabels
+    .map((g) => {
+      const all: typeof agenda = grouped[g.key] ?? [];
+      if (showAllAgenda) return { ...g, items: all };
+      const take = Math.min(all.length, AGENDA_PREVIEW_PER_GROUP, Math.max(0, agendaQuota));
+      agendaQuota -= take;
+      return { ...g, items: all.slice(0, take) };
+    })
+    .filter((group) => group.items.length > 0);
+
   const HighlightIcon = d.highlight ? HIGHLIGHT_ICON[d.highlight.icon] ?? Flame : Flame;
 
   return (
@@ -431,9 +459,9 @@ export default function HomeScreen() {
               }
             />
           ) : (
-            <div className="space-y-4">
-              {groupLabels.map((g) => {
-                const items = grouped[g.key];
+            <div id="agenda-hari-ini-list" className="space-y-4">
+              {agendaPreviewGroups.map((g) => {
+                const items = g.items;
                 if (!items?.length) return null;
                 return (
                   <div key={g.key}>
@@ -458,6 +486,14 @@ export default function HomeScreen() {
                   </div>
                 );
               })}
+              {/* ux-guidelines #84 & #115: disclosure "+n" — buka sisa agenda / lipat kembali */}
+              <ShowAllToggle
+                total={agendaForSelected.length}
+                visibleCount={showAllAgenda ? agendaForSelected.length : Math.min(agendaForSelected.length, AGENDA_PREVIEW_TOTAL)}
+                expanded={showAllAgenda}
+                onToggle={() => setShowAllAgenda((v) => !v)}
+                controlsId="agenda-hari-ini-list"
+              />
               <button
                 onClick={() => setPage("habits")}
                 className="press w-full min-h-[44px] text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 py-1"

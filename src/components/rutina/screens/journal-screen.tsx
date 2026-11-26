@@ -33,7 +33,7 @@ import {
   monthName,
 } from "@/lib/rutina/format";
 import { MiniBars, DeltaBadge, HBarList, Sparkline, rampColor } from "@/components/rutina/charts";
-import { ScreenHeader, SectionCard, StatTile, EmptyState, Pill } from "@/components/rutina/primitives";
+import { ScreenHeader, SectionCard, StatTile, EmptyState, Pill, ShowAllToggle } from "@/components/rutina/primitives";
 import { JOURNAL_MOODS } from "@/components/rutina/sheets/add-journal-sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
@@ -219,6 +219,13 @@ export default function JournalScreen() {
       }),
     [entries, debounced, folder, moodFilter, pinnedOnly]
   );
+
+  // ux-guidelines #84 & #115 (progressive disclosure): daftar catatan dibatasi
+  // 10 entri + tombol "Muat semua"; reset ke preview setiap filter berubah.
+  const [visibleCount, setVisibleCount] = React.useState(10);
+  React.useEffect(() => {
+    setVisibleCount(10);
+  }, [debounced, folder, moodFilter, pinnedOnly]);
 
   // ===== Statistik menulis =====
   // Statistik turunan berat (map kalender, sort, dll.) dibungkus useMemo agar
@@ -643,8 +650,8 @@ export default function JournalScreen() {
               />
             )
           ) : (
-            <div className="space-y-2.5">
-              {filtered.map((e) => {
+            <div id="jurnal-list" className="space-y-2.5">
+              {filtered.slice(0, visibleCount).map((e) => {
                 const moodMeta = e.mood ? JOURNAL_MOODS.find((m) => m.key === e.mood) : null;
                 const MoodIcon = moodMeta?.icon as LucideIcon | undefined;
                 return (
@@ -675,6 +682,17 @@ export default function JournalScreen() {
                   </button>
                 );
               })}
+              {/* ux-guidelines #84 & #115: disclosure hanya saat ada entri tersembunyi (>10) */}
+              {filtered.length > 10 && (
+                <ShowAllToggle
+                  labelAll="Muat semua"
+                  total={filtered.length}
+                  visibleCount={visibleCount}
+                  expanded={visibleCount >= filtered.length}
+                  onToggle={() => setVisibleCount(visibleCount >= filtered.length ? 10 : filtered.length)}
+                  controlsId="jurnal-list"
+                />
+              )}
             </div>
           )}
         </SectionCard>

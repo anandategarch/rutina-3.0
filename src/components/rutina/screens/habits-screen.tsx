@@ -56,6 +56,7 @@ import {
   StatTile,
   EmptyState,
   Pill,
+  ShowAllToggle,
   HABIT_CATEGORY_META,
   TIME_OF_DAY_META,
 } from "@/components/rutina/primitives";
@@ -524,6 +525,14 @@ export default function HabitsScreen() {
   const [detailId, setDetailId] = React.useState<string | null>(null);
   const [editOpen, setEditOpen] = React.useState(false);
   const [editingHabit, setEditingHabit] = React.useState<Habit | undefined>(undefined);
+
+  // ux-guidelines #84: pratinjau 8 habit teratas, sisanya via disclosure "Lihat semua"
+  const [showAllHabits, setShowAllHabits] = React.useState(false);
+
+  // Disclosure direset ke tertutup saat tab/pencarian/filter berubah
+  React.useEffect(() => {
+    setShowAllHabits(false);
+  }, [tab, search, filter]);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["habits"],
@@ -1099,7 +1108,8 @@ export default function HabitsScreen() {
           </div>
 
           {/* Daftar habit */}
-          <div className="mt-3 max-h-[480px] overflow-y-auto scroll-thin space-y-2 pr-0.5">
+          {/* ux-guidelines #84: id "perpustakaan-list" jadi target aria-controls disclosure */}
+          <div id="perpustakaan-list" className="mt-3 max-h-[480px] overflow-y-auto scroll-thin space-y-2 pr-0.5">
             {visibleHabits.length === 0 ? (
               <EmptyState
                 icon={<Sprout className="h-6 w-6" />}
@@ -1121,21 +1131,34 @@ export default function HabitsScreen() {
                 }
               />
             ) : (
-              visibleHabits.map((h) => (
-                <HabitCard
-                  key={h.id}
-                  habit={h}
-                  today={today}
-                  checking={checkMutation.isPending && checkMutation.variables?.id === h.id}
-                  onOpen={() => setDetailId(h.id)}
-                  onCheck={() => checkMutation.mutate({ id: h.id })}
-                  onStep={() => {
-                    const log = logOn(h, today);
-                    const next = Math.min(h.unitTarget ?? 0, (log?.value ?? 0) + (h.unitStep || 1));
-                    checkMutation.mutate({ id: h.id, value: next });
-                  }}
-                />
-              ))
+              <>
+                {/* ux-guidelines #84: saat tertutup, maksimal 8 habit teratas */}
+                {(showAllHabits ? visibleHabits : visibleHabits.slice(0, 8)).map((h) => (
+                  <HabitCard
+                    key={h.id}
+                    habit={h}
+                    today={today}
+                    checking={checkMutation.isPending && checkMutation.variables?.id === h.id}
+                    onOpen={() => setDetailId(h.id)}
+                    onCheck={() => checkMutation.mutate({ id: h.id })}
+                    onStep={() => {
+                      const log = logOn(h, today);
+                      const next = Math.min(h.unitTarget ?? 0, (log?.value ?? 0) + (h.unitStep || 1));
+                      checkMutation.mutate({ id: h.id, value: next });
+                    }}
+                  />
+                ))}
+                {/* ux-guidelines #84: disclosure "Lihat semua" di bawah daftar (aria-controls → perpustakaan-list) */}
+                {(visibleHabits.length > 8 || showAllHabits) && (
+                  <ShowAllToggle
+                    total={visibleHabits.length}
+                    visibleCount={showAllHabits ? visibleHabits.length : Math.min(visibleHabits.length, 8)}
+                    expanded={showAllHabits}
+                    onToggle={() => setShowAllHabits((v) => !v)}
+                    controlsId="perpustakaan-list"
+                  />
+                )}
+              </>
             )}
           </div>
         </SectionCard>

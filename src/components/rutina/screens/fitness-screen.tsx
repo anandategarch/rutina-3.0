@@ -50,7 +50,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ScreenHeader, SectionCard, StatTile, EmptyState, ProgressRing } from "../primitives";
+import { ScreenHeader, SectionCard, StatTile, EmptyState, ProgressRing, ShowAllToggle } from "../primitives";
 import {
   MiniBars,
   Sparkline,
@@ -731,6 +731,14 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
   const [typeFilter, setTypeFilter] = React.useState<string>("all");
   const [range, setRange] = React.useState<7 | 30 | 90>(30);
 
+  // ux-guidelines #84: pratinjau 5 sesi teratas, sisanya via disclosure "Lihat semua"
+  const [showAllWorkouts, setShowAllWorkouts] = React.useState(false);
+
+  // Disclosure direset ke tertutup saat filter tipe/rentang berubah
+  React.useEffect(() => {
+    setShowAllWorkouts(false);
+  }, [typeFilter, range]);
+
   const filtered = React.useMemo(
     () =>
       workouts.filter(
@@ -792,10 +800,21 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
           }
         />
       ) : (
-        <div className="max-h-[440px] overflow-y-auto scroll-thin space-y-2 pr-0.5">
-          {filtered.map((w) => (
+        <div id="riwayat-aktivitas-list" className="max-h-[440px] overflow-y-auto scroll-thin space-y-2 pr-0.5">
+          {/* ux-guidelines #84: saat tertutup, maksimal 5 sesi teratas */}
+          {(showAllWorkouts ? filtered : filtered.slice(0, 5)).map((w) => (
             <WorkoutHistoryCard key={w.id} workout={w} />
           ))}
+          {/* ux-guidelines #84: disclosure "Lihat semua" di bawah daftar (aria-controls → riwayat-aktivitas-list) */}
+          {(filtered.length > 5 || showAllWorkouts) && (
+            <ShowAllToggle
+              total={filtered.length}
+              visibleCount={showAllWorkouts ? filtered.length : Math.min(filtered.length, 5)}
+              expanded={showAllWorkouts}
+              onToggle={() => setShowAllWorkouts((v) => !v)}
+              controlsId="riwayat-aktivitas-list"
+            />
+          )}
         </div>
       )}
     </SectionCard>

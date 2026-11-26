@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ============ Screen header (mobile app bar) ============
@@ -171,6 +171,56 @@ export function EmptyState({
       {description && <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">{description}</p>}
       {action && <div className="mt-3">{action}</div>}
     </div>
+  );
+}
+
+// ============ Show-all toggle (progressive disclosure daftar) ============
+
+/**
+ * Tombol disclosure "+n" untuk daftar panjang (ux-guidelines #84 Truncation with
+ * expand option, #115 operable +n disclosure). Menampilkan sisa item tersembunyi
+ * dan bisa di-collapse kembali. Selalu touch target >= 44px.
+ */
+export function ShowAllToggle({
+  total,
+  visibleCount,
+  expanded,
+  onToggle,
+  controlsId,
+  labelAll = "Lihat semua",
+  labelLess = "Tampilkan lebih sedikit",
+}: {
+  total: number;
+  visibleCount: number;
+  expanded: boolean;
+  onToggle: () => void;
+  /** id elemen daftar yang dikontrol, untuk aria-controls */
+  controlsId?: string;
+  labelAll?: string;
+  labelLess?: string;
+}) {
+  const hidden = Math.max(0, total - visibleCount);
+  if (!expanded && hidden <= 0) return null;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      aria-controls={controlsId}
+      className="press flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold text-muted-foreground transition-colors hover:text-garden-deep"
+    >
+      {expanded ? (
+        <>
+          <ChevronUp className="size-3.5" aria-hidden="true" />
+          {labelLess}
+        </>
+      ) : (
+        <>
+          <ChevronDown className="size-3.5" aria-hidden="true" />
+          {labelAll} ({total})
+        </>
+      )}
+    </button>
   );
 }
 
