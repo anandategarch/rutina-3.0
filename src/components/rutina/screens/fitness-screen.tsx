@@ -68,6 +68,7 @@ import {
 } from "../charts";
 import { cn } from "@/lib/utils";
 import { rutinaApi } from "@/lib/rutina/api";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import {
   todayStr,
   addDays,
@@ -227,7 +228,7 @@ function WeeklyDailyCharts({ workouts }: { workouts: Workout[] }) {
               <span className="truncate text-xs font-semibold text-muted-foreground">{c.title}</span>
               <span className="shrink-0 text-xs font-bold tabular">
                 {formatNumber(c.values[6] ?? 0, c.digits)}
-                <span className="ml-0.5 text-[10px] font-semibold text-muted-foreground"> {c.unit}</span>
+                <span className="ml-0.5 text-[11px] font-semibold text-muted-foreground"> {c.unit}</span>
               </span>
             </div>
             <MiniBars data={days.map((d, i) => ({ label: d.label, value: c.values[i] }))} height={48} color={c.color} highlightIndex={6} />
@@ -764,7 +765,7 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
           description={`Tidak ada latihan ${typeFilter !== "all" ? "pada filter ini " : ""}${range} hari terakhir.`}
         />
       ) : (
-        <div className="max-h-[440px] overflow-y-auto overscroll-contain scroll-thin space-y-2 pr-0.5">
+        <div className="max-h-[440px] overflow-y-auto scroll-thin space-y-2 pr-0.5">
           {filtered.map((w) => (
             <WorkoutHistoryCard key={w.id} workout={w} />
           ))}
@@ -784,8 +785,7 @@ function WorkoutHistoryCard({ workout: w }: { workout: Workout }) {
   const deleteMutation = useMutation({
     mutationFn: rutinaApi.deleteWorkout,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
-      queryClient.invalidateQueries({ queryKey: ["home"] });
+      invalidateAfterMutation(queryClient, ["workouts"]);
       toast.success("Latihan dihapus");
     },
     onError: (err: Error) => {
@@ -989,9 +989,10 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
   const [calTarget, setCalTarget] = React.useState(() => readCalorieTarget());
   const [targetDraft, setTargetDraft] = React.useState(() => String(readCalorieTarget()));
 
-  const entries = foodsQuery.data?.entries ?? [];
+  // Di-memo: array baru tiap render akan memaksa semua useMemo turunannya menghitung ulang
+  const entries = React.useMemo(() => foodsQuery.data?.entries ?? [], [foodsQuery.data]);
   const today = todayStr();
-  const todayEntries = entries.filter((e) => e.date === today);
+  const todayEntries = React.useMemo(() => entries.filter((e) => e.date === today), [entries, today]);
 
   const totals = React.useMemo(() => {
     let calories = 0;
@@ -1037,8 +1038,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
   const deleteMutation = useMutation({
     mutationFn: rutinaApi.deleteFood,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["foods"] });
-      queryClient.invalidateQueries({ queryKey: ["home"] });
+      invalidateAfterMutation(queryClient, ["foods"]);
       toast.success("Asupan dihapus");
     },
     onError: (err: Error) => {
@@ -1394,8 +1394,7 @@ function BodyTab({
   const weightMutation = useMutation({
     mutationFn: rutinaApi.upsertBodyMetric,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["body-metrics"] });
-      queryClient.invalidateQueries({ queryKey: ["home"] });
+      invalidateAfterMutation(queryClient, ["body-metrics"]);
       setWeightInput("");
       toast.success("Berat badan tersimpan");
     },
@@ -1418,8 +1417,7 @@ function BodyTab({
   const hydrationMutation = useMutation({
     mutationFn: rutinaApi.upsertBodyMetric,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["body-metrics"] });
-      queryClient.invalidateQueries({ queryKey: ["home"] });
+      invalidateAfterMutation(queryClient, ["body-metrics"]);
       toast.success("Hidrasi dicatat");
     },
     onError: (err: Error) => {
@@ -1692,7 +1690,7 @@ function BodyTab({
                   <div key={row.label} className={cn("rounded-xl p-2.5 text-center", row.tone)}>
                     <Icon className="mx-auto h-4 w-4" />
                     <p className="mt-1 text-sm font-bold tabular">{row.value !== null ? `${row.value}/5` : "-"}</p>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{row.label}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70">{row.label}</p>
                   </div>
                 );
               })}
@@ -1751,7 +1749,7 @@ function BodyTab({
                     }
                     className={cn("h-7 w-7 rounded-full", bg)}
                   />
-                  <span className="text-[10px] font-semibold text-muted-foreground">{dayName(d, true)}</span>
+                  <span className="text-[11px] font-semibold text-muted-foreground">{dayName(d, true)}</span>
                 </div>
               );
             })}

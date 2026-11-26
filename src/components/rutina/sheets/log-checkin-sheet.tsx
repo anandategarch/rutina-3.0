@@ -135,7 +135,15 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
   const canSubmit =
     !mutation.isPending &&
     Object.values(scales).some((v) => v !== null) &&
-    (sleepHours === "" || (Number.isFinite(sleepNum) && sleepNum >= 0));
+    // Tidur > 24 jam tidak valid (attr max tidak menahan ketikan manual)
+    (sleepHours === "" || (Number.isFinite(sleepNum) && sleepNum >= 0 && sleepNum <= 24));
+
+  /** Enter pada input → fokus ke input berikutnya (rantai ketik mobile, tanpa submit). */
+  const enterFocusNext = (nextId: string) => (ev: React.KeyboardEvent<HTMLInputElement>) => {
+    if (ev.key !== "Enter") return;
+    ev.preventDefault();
+    document.getElementById(nextId)?.focus();
+  };
 
   const handleSubmit = (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -146,7 +154,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
       ...(scales.energy !== null ? { energy: scales.energy } : {}),
       ...(scales.soreness !== null ? { soreness: scales.soreness } : {}),
       ...(scales.stress !== null ? { stress: scales.stress } : {}),
-      ...(sleepHours !== "" ? { sleepHours: sleepNum } : {}),
+      ...(sleepHours !== "" ? { sleepHours: Math.min(24, sleepNum) } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
     });
   };
@@ -208,7 +216,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                               )}
                             >
                               <FaceIcon className="h-6 w-6" strokeWidth={active ? 2.2 : 1.8} />
-                              <span className="text-[10px] font-bold leading-none">{scale.labels[i]}</span>
+                              <span className="text-[11px] font-bold leading-none">{scale.labels[i]}</span>
                             </button>
                           );
                         })}
@@ -308,7 +316,12 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                 value={sleepHours}
                 onChange={(e) => setSleepHours(e.target.value)}
                 className="h-11 tabular"
+                enterKeyHint="next"
+                onKeyDown={enterFocusNext("ci-note")}
               />
+              {sleepHours !== "" && Number.isFinite(sleepNum) && sleepNum > 24 && (
+                <p className="text-xs text-clay mt-1">Durasi tidur maksimal 24 jam.</p>
+              )}
             </div>
 
             <div className="space-y-1.5">

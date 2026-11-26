@@ -59,7 +59,8 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
     queryFn: rutinaApi.wallets,
     enabled: open,
   });
-  const wallets: Wallet[] = qWallets.data?.wallets ?? [];
+  // useMemo: array stabil antar render agar useEffect default-dompet tidak jalan berulang
+  const wallets: Wallet[] = React.useMemo(() => qWallets.data?.wallets ?? [], [qWallets.data]);
 
   const [type, setType] = React.useState<TxType>("expense");
   const [amountRaw, setAmountRaw] = React.useState("");
@@ -204,6 +205,12 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
                   placeholder="0"
                   aria-label="Nominal transaksi"
                   enterKeyHint="next"
+                  onKeyDown={(e) => {
+                    // Enter → lompat ke field berikutnya (bukan submit form)
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    document.getElementById(type === "transfer" ? "tx-wallet" : "tx-category")?.focus();
+                  }}
                   className="w-full bg-transparent text-2xl font-bold tabular outline-none placeholder:text-muted-foreground"
                 />
               </div>

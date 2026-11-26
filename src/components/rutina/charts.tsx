@@ -181,7 +181,7 @@ export function MiniBars({
           {data.map((d, i) => (
             <div
               key={i}
-              className="flex-1 text-center text-[10px] text-muted-foreground tabular"
+              className="flex-1 text-center text-[11px] text-muted-foreground tabular"
               style={{ visibility: i % labelEvery === 0 ? "visible" : "hidden" }}
             >
               {d.label}
@@ -382,14 +382,14 @@ export function TrendLine({
       </div>
       <div className="flex justify-between mt-1">
         {data.map((d, i) => (
-          <span key={i} className="text-[10px] text-muted-foreground tabular">
+          <span key={i} className="text-[11px] text-muted-foreground tabular">
             {i % Math.ceil(data.length / 4) === 0 || i === data.length - 1 ? d.label : ""}
           </span>
         ))}
       </div>
       <div className="flex justify-between mt-0.5">
-        <span className="text-[10px] text-muted-foreground tabular">{formatValue(min)}</span>
-        <span className="text-[10px] text-muted-foreground tabular">{formatValue(max)}</span>
+        <span className="text-[11px] text-muted-foreground tabular">{formatValue(min)}</span>
+        <span className="text-[11px] text-muted-foreground tabular">{formatValue(max)}</span>
       </div>
     </div>
   );
@@ -488,7 +488,7 @@ export function DeltaBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular",
+        "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular",
         color,
         className
       )}
@@ -554,7 +554,7 @@ export function RingStat({
           <span className="text-sm font-extrabold tabular">{value}</span>
         </div>
       </div>
-      {caption && <span className="text-[10px] font-medium text-muted-foreground text-center leading-tight">{caption}</span>}
+      {caption && <span className="text-[11px] font-medium text-muted-foreground text-center leading-tight">{caption}</span>}
     </div>
   );
 }

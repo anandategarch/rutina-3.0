@@ -157,7 +157,7 @@ export default function HomeScreen() {
 
   if (isError && !data) {
     return (
-      <div className="px-4 pt-16">
+      <div className="px-4 pt-[max(4rem,env(safe-area-inset-top))]">
         <EmptyState
           icon={<WifiOff className="h-6 w-6" />}
           title="Ada kendala memuat data"
@@ -240,7 +240,8 @@ export default function HomeScreen() {
       {/* ===== Header ===== */}
       {/* Band header memakai tint teal (garden-soft) — disiplin tone:
           gold HANYA untuk streak/XP/piala (docs/DESIGN.md §1a). */}
-      <div className="bg-garden-soft/30 px-4 pt-6 pb-4">
+      {/* pt safe-area: konten tidak tertutup notch/status bar di PWA standalone */}
+      <div className="bg-garden-soft/30 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-4">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-muted-foreground">{formatDateID(d.today, true)}</p>
@@ -300,7 +301,7 @@ export default function HomeScreen() {
               <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Streak</p>
               {/* Rekor historis tetap terlihat saat streak berjalan sedang 0 — motivasi tanpa menggurui */}
               {d.streak.best > 0 && (
-                <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold text-gold-deep bg-gold-soft rounded-full px-2 py-0.5 tabular shrink-0">
+                <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold text-gold-deep bg-gold-soft rounded-full px-2 py-0.5 tabular shrink-0">
                   rekor {d.streak.best} hari
                 </span>
               )}
@@ -312,13 +313,13 @@ export default function HomeScreen() {
               {statsQuery.data && (
                 <div className="mt-1.5">
                   <Sparkline data={streakSpark} height={22} strokeWidth={2} />
-                  <p className="text-[10px] text-muted-foreground mt-0.5">misi per hari · 7 hari</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">misi per hari · 7 hari</p>
                 </div>
               )}
               {statsQuery.isError && (
                 <button
                   onClick={() => statsQuery.refetch()}
-                  className="press mt-1 text-left text-[10px] font-semibold text-muted-foreground underline underline-offset-2"
+                  className="press mt-1 text-left text-[11px] font-semibold text-muted-foreground underline underline-offset-2"
                 >
                   Grafik streak gagal dimuat — ketuk untuk coba lagi
                 </button>
@@ -361,7 +362,7 @@ export default function HomeScreen() {
               <p className="text-lg font-extrabold tabular leading-none truncate">
                 {statsQuery.data ? formatRupiah(statsQuery.data.finance.netBalance, { compact: true }) : "—"}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1 truncate tabular">
+              <p className="text-[11px] text-muted-foreground mt-1 truncate tabular">
                 keluar{" "}
                 <span className="font-bold text-clay-deep">
                   {statsQuery.data ? formatRupiah(statsQuery.data.finance.expense30d, { compact: true }) : "—"}
@@ -421,6 +422,7 @@ export default function HomeScreen() {
                             habit={a.habit}
                             log={dayLog}
                             isToday={isTodaySelected}
+                            checking={checkMutation.isPending && checkMutation.variables?.id === a.habit.id}
                             onCheck={(value) => checkMutation.mutate({ id: a.habit.id, value })}
                           />
                         );
@@ -463,7 +465,7 @@ export default function HomeScreen() {
                   key={ds}
                   onClick={() => setSelectedDate(ds)}
                   className={cn(
-                    "press relative w-full flex flex-col items-center py-2 rounded-xl min-h-[52px] justify-center border after:content-[''] after:absolute after:inset-y-0 after:-left-1 after:-right-1",
+                    "press relative w-full flex flex-col items-center py-2 rounded-xl min-h-[52px] justify-center border after:content-[''] after:absolute after:inset-y-0 after:-left-2 after:-right-2",
                     active
                       ? "bg-gold text-white border-gold shadow-soft"
                       : "bg-card border-border/60 text-foreground"
@@ -489,7 +491,7 @@ export default function HomeScreen() {
         </div>
         {statsQuery.data && (
           <div className="mt-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
               Intensitas misi · 7 hari terakhir
             </p>
             <HeatGrid
@@ -673,11 +675,15 @@ function AgendaRow({
   habit,
   log,
   isToday,
+  checking,
   onCheck,
 }: {
   habit: Habit;
   log: import("@/types/rutina").HabitLog | null;
   isToday: boolean;
+  /** Guard dobel-ketuk: true saat mutasi check baris ini sedang berjalan
+      (pola sama dengan habits-screen) agar tap cepat 2× tidak toggle maju-mundur. */
+  checking: boolean;
   onCheck: (value?: number) => void;
 }) {
   const IconEl = React.createElement(habitIcon(habit.icon), {
@@ -728,7 +734,7 @@ function AgendaRow({
             "press h-11 min-w-11 px-2 rounded-xl bg-garden text-white font-bold text-sm flex items-center justify-center gap-1 disabled:opacity-50",
             locked && !done && "opacity-60"
           )}
-          disabled={done || locked}
+          disabled={done || locked || checking}
         >
           {done ? <Check className="h-5 w-5" /> : `+${habit.unitStep}`}
         </button>
@@ -737,11 +743,11 @@ function AgendaRow({
           onClick={() => onCheck()}
           aria-label={`Tandai ${habit.name} selesai`}
           className={cn(
-            "press h-11 w-11 rounded-xl flex items-center justify-center border-2 transition-colors",
+            "press h-11 w-11 rounded-xl flex items-center justify-center border-2 transition-colors disabled:opacity-60",
             done ? "bg-garden border-garden text-white" : "border-input text-muted-foreground",
             locked && !done && "opacity-60"
           )}
-          disabled={locked}
+          disabled={locked || checking}
         >
           <Check className="h-5 w-5" strokeWidth={3} />
         </button>
@@ -756,7 +762,7 @@ function AgendaRow({
 
 function HomeSkeleton() {
   return (
-    <div className="flex flex-col gap-4 p-4 animate-pulse">
+    <div className="flex flex-col gap-4 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] animate-pulse">
       <div className="h-10 w-2/3 rounded-xl bg-secondary" />
       <div className="grid grid-cols-2 gap-2">
         <div className="h-16 rounded-xl bg-secondary" />

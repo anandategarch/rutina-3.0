@@ -33,7 +33,7 @@ export function ScreenHeader({
           <button
             onClick={onBack}
             aria-label="Kembali"
-            className="press h-10 w-10 rounded-full flex items-center justify-center bg-secondary text-foreground shrink-0"
+            className="press h-11 w-11 rounded-full flex items-center justify-center bg-secondary text-foreground shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>

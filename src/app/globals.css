@@ -325,6 +325,10 @@
     box-shadow 0.2s ease-out,
     background-color 0.15s ease-out;
   cursor: pointer;
+  /* Touch hygiene: tekanan lama tidak memicu seleksi teks / zoom dobel */
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 .press:active {
   transform: scale(0.96);
@@ -333,6 +337,10 @@
 .press-squish {
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease-out;
   cursor: pointer;
+  /* Touch hygiene: tekanan lama tidak memicu seleksi teks / zoom dobel */
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 .press-squish:active {
   transform: scale(0.92);

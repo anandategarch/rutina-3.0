@@ -114,6 +114,16 @@ export default function AddJournalSheet({
                 placeholder="Tanpa judul juga boleh"
                 maxLength={200}
                 enterKeyHint="next"
+                onKeyDown={(e) => {
+                  // Enter → lanjut ke isi catatan (caret di akhir, bukan submit)
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  const el = document.getElementById("journal-content");
+                  if (el instanceof HTMLTextAreaElement) {
+                    el.focus();
+                    el.setSelectionRange(el.value.length, el.value.length);
+                  }
+                }}
               />
             </div>
 
@@ -136,7 +146,7 @@ export default function AddJournalSheet({
             <div className="space-y-1.5">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Folder</p>
               <Select value={folder} onValueChange={setFolder}>
-                <SelectTrigger className="w-full" aria-label="Pilih folder catatan">
+                <SelectTrigger className="w-full min-h-[44px]" aria-label="Pilih folder catatan">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -145,6 +145,13 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
   const distNum = Number(distance);
   const pace = isCardio && durNum > 0 && distNum > 0 ? durNum / distNum : null;
 
+  /** Enter pada input → fokus ke input berikutnya (rantai ketik mobile, tanpa submit). */
+  const enterFocusNext = (nextId: string) => (ev: React.KeyboardEvent<HTMLInputElement>) => {
+    if (ev.key !== "Enter") return;
+    ev.preventDefault();
+    document.getElementById(nextId)?.focus();
+  };
+
   const itemsValid =
     type !== "strength" ||
     (items.length > 0 &&
@@ -244,6 +251,8 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   className="h-11 tabular"
+                  enterKeyHint="next"
+                  onKeyDown={enterFocusNext(isCardio ? "wo-distance" : "wo-calories")}
                 />
               </div>
             </div>
@@ -264,6 +273,8 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                   value={distance}
                   onChange={(e) => setDistance(e.target.value)}
                   className="h-11 tabular"
+                  enterKeyHint="next"
+                  onKeyDown={enterFocusNext("wo-calories")}
                 />
                 {pace !== null && pace > 0 && (
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -288,6 +299,8 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                 value={calories}
                 onChange={(e) => setCalories(e.target.value)}
                 className="h-11 tabular"
+                enterKeyHint="next"
+                onKeyDown={enterFocusNext("wo-title")}
               />
             </div>
 
@@ -447,6 +460,8 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="h-11"
+                enterKeyHint="next"
+                onKeyDown={enterFocusNext("wo-notes")}
               />
             </div>
             <div className="space-y-1.5">

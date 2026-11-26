@@ -18,6 +18,8 @@ import {
   Minus,
   Plus,
   Info,
+  WifiOff,
+  AlertTriangle,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +30,7 @@ import { ScreenHeader, SectionCard, Pill } from "@/components/rutina/primitives"
 import { MetricBar } from "@/components/rutina/charts";
 import { formatNumber } from "@/lib/rutina/format";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -47,8 +50,16 @@ export default function ProfileScreen() {
   const openQuickAction = useRutinaStore((s) => s.setQuickAction);
   const qc = useQueryClient();
 
-  const { data: profileData } = useQuery({ queryKey: ["profile"], queryFn: rutinaApi.profile });
-  const { data: statsData } = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
+  const {
+    data: profileData,
+    isError: profileError,
+    refetch: refetchProfile,
+  } = useQuery({ queryKey: ["profile"], queryFn: rutinaApi.profile });
+  const {
+    data: statsData,
+    isError: statsError,
+    refetch: refetchStats,
+  } = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
 
   const profile = profileData?.profile ?? null;
   const level = statsData?.level ?? null;
@@ -200,6 +211,25 @@ export default function ProfileScreen() {
       />
 
       <div className="p-4 space-y-4">
+        {/* ===== Banner gagal muat (ikuti pola layar Beranda) ===== */}
+        {(profileError || statsError) && (
+          <div className="flex items-center gap-3 rounded-xl border border-clay/40 bg-clay-soft p-3">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-clay" />
+            <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-clay-deep">
+              Gagal memuat data profil — periksa koneksi internetmu.
+            </p>
+            <button
+              onClick={() => {
+                if (profileError) refetchProfile();
+                if (statsError) refetchStats();
+              }}
+              className="press min-h-[44px] shrink-0 rounded-lg bg-clay px-3 text-xs font-bold text-white"
+            >
+              Coba Lagi
+            </button>
+          </div>
+        )}
+
         {/* ===== Kartu identitas ===== */}
         <SectionCard>
           {profile ? (
@@ -228,6 +258,17 @@ export default function ProfileScreen() {
                 <Pencil className="h-4 w-4" />
               </button>
             </div>
+          ) : profileError ? (
+            <div className="flex items-center gap-3 py-6">
+              <WifiOff className="h-5 w-5 shrink-0 text-clay" />
+              <p className="min-w-0 flex-1 text-xs text-muted-foreground">Gagal memuat profil.</p>
+              <button
+                onClick={() => refetchProfile()}
+                className="press min-h-[44px] rounded-xl bg-garden-deep px-4 text-sm font-bold text-white"
+              >
+                Coba Lagi
+              </button>
+            </div>
           ) : (
             <div className="h-32 rounded-xl bg-secondary animate-pulse" />
           )}
@@ -248,6 +289,17 @@ export default function ProfileScreen() {
               <p className="text-xs text-muted-foreground">
                 {formatNumber(Math.max(0, xpToNext ?? 0))} XP lagi menuju Level {level + 1}
               </p>
+            </div>
+          ) : statsError ? (
+            <div className="flex items-center gap-3 py-4">
+              <WifiOff className="h-5 w-5 shrink-0 text-clay" />
+              <p className="min-w-0 flex-1 text-xs text-muted-foreground">Gagal memuat level & XP.</p>
+              <button
+                onClick={() => refetchStats()}
+                className="press min-h-[44px] rounded-xl bg-garden-deep px-4 text-sm font-bold text-white"
+              >
+                Coba Lagi
+              </button>
             </div>
           ) : (
             <div className="h-16 rounded-xl bg-secondary animate-pulse" />
@@ -415,46 +467,50 @@ export default function ProfileScreen() {
         <p className="text-center text-xs text-muted-foreground pb-2">Rutina 3.0 — dibuat dengan disiplin hangat</p>
       </div>
 
-      {/* ===== Dialog edit identitas ===== */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-h-[85dvh] overflow-y-auto scroll-thin">
-          <DialogHeader>
-            <DialogTitle>Edit Profil</DialogTitle>
-            <DialogDescription>Perbarui nama dan suara identitasmu.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label htmlFor="edit-name" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                Nama
-              </label>
-              <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} maxLength={60} />
+      {/* ===== Drawer edit identitas (bottom sheet — aman dari keyboard iOS) ===== */}
+      <Drawer open={editOpen} onOpenChange={setEditOpen}>
+        <DrawerContent className="flex flex-col h-auto max-h-[85dvh] rounded-t-2xl">
+          <DrawerHeader className="px-4 text-left">
+            <DrawerTitle>Edit Profil</DrawerTitle>
+            <DrawerDescription>Perbarui nama dan suara identitasmu.</DrawerDescription>
+          </DrawerHeader>
+          <div className="flex flex-1 min-h-0 flex-col">
+            <div className="flex-1 min-h-0 space-y-4 overflow-y-auto scroll-thin px-4 pb-4">
+              <div className="space-y-1.5">
+                <label htmlFor="edit-name" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                  Nama
+                </label>
+                <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} maxLength={60} />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="edit-voice" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                  Suara identitas
+                </label>
+                <Textarea
+                  id="edit-voice"
+                  value={editVoice}
+                  onChange={(e) => setEditVoice(e.target.value)}
+                  placeholder="Aku adalah orang yang ..."
+                  className="min-h-24 resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Kalimat ini tampil sebagai pengingat siapa dirimu — baca setiap pagi.
+                </p>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label htmlFor="edit-voice" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                Suara identitas
-              </label>
-              <Textarea
-                id="edit-voice"
-                value={editVoice}
-                onChange={(e) => setEditVoice(e.target.value)}
-                placeholder="Aku adalah orang yang ..."
-                className="min-h-24 resize-none"
-              />
-              <p className="text-xs text-muted-foreground">
-                Kalimat ini tampil sebagai pengingat siapa dirimu — baca setiap pagi.
-              </p>
+            <div className="border-t border-border/60 bg-background p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
+              <button
+                onClick={saveEdit}
+                disabled={updateMutation.isPending}
+                className="press w-full min-h-[48px] rounded-xl bg-garden text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Simpan Perubahan
+              </button>
             </div>
-            <button
-              onClick={saveEdit}
-              disabled={updateMutation.isPending}
-              className="press w-full min-h-[48px] rounded-xl bg-garden text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Simpan Perubahan
-            </button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
 
       {/* ===== Dialog FAQ ===== */}
       <Dialog open={faqOpen} onOpenChange={setFaqOpen}>

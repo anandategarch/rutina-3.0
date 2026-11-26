@@ -104,6 +104,13 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
   const calNum = Number(calories);
   const canSubmit = selected !== null && calories !== "" && Number.isFinite(calNum) && calNum >= 0 && !mutation.isPending;
 
+  /** Enter pada input → fokus ke input berikutnya (rantai ketik mobile, tanpa submit). */
+  const enterFocusNext = (nextId: string) => (ev: React.KeyboardEvent<HTMLInputElement>) => {
+    if (ev.key !== "Enter") return;
+    ev.preventDefault();
+    document.getElementById(nextId)?.focus();
+  };
+
   const handleSubmit = (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!canSubmit || !selected) return;
@@ -238,6 +245,8 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                   value={portion}
                   onChange={(e) => setPortion(e.target.value)}
                   className="h-11"
+                  enterKeyHint="next"
+                  onKeyDown={enterFocusNext("food-calories")}
                 />
               </div>
 
@@ -253,6 +262,8 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                   value={calories}
                   onChange={(e) => setCalories(e.target.value)}
                   className="h-11 tabular"
+                  enterKeyHint="next"
+                  onKeyDown={enterFocusNext("food-protein")}
                 />
               </div>
 
@@ -262,6 +273,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                   <div>
                     <label className="text-xs font-semibold text-studio-deep block mb-1">Protein</label>
                     <Input
+                      id="food-protein"
                       type="number"
                       inputMode="decimal"
                       min={0}
@@ -270,11 +282,14 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                       onChange={(e) => setProtein(e.target.value)}
                       className="h-10 tabular"
                       aria-label="Protein gram"
+                      enterKeyHint="next"
+                      onKeyDown={enterFocusNext("food-carbs")}
                     />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-garden-deep block mb-1">Karbo</label>
                     <Input
+                      id="food-carbs"
                       type="number"
                       inputMode="decimal"
                       min={0}
@@ -283,11 +298,14 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                       onChange={(e) => setCarbs(e.target.value)}
                       className="h-10 tabular"
                       aria-label="Karbohidrat gram"
+                      enterKeyHint="next"
+                      onKeyDown={enterFocusNext("food-fat")}
                     />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-vault-deep block mb-1">Lemak</label>
                     <Input
+                      id="food-fat"
                       type="number"
                       inputMode="decimal"
                       min={0}
@@ -296,6 +314,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                       onChange={(e) => setFat(e.target.value)}
                       className="h-10 tabular"
                       aria-label="Lemak gram"
+                      enterKeyHint="done"
                     />
                   </div>
                 </div>

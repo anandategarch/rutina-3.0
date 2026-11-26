@@ -37,6 +37,7 @@ import {
 import { toast } from "sonner";
 import { useRutinaStore } from "@/store/rutina";
 import { rutinaApi } from "@/lib/rutina/api";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import { Input } from "@/components/ui/input";
 import {
   todayStr,
@@ -170,9 +171,16 @@ function habitRate(h: Habit, today: string): number {
 }
 
 function missedLast7(h: Habit, today: string): number {
-  const since = addDays(today, -6);
-  return (h.logs ?? []).filter((l) => l.date >= since && l.date <= today && l.status === "missed")
-    .length;
+  // Log berstatus "missed" tidak pernah ditulis server (server hanya menulis done atau
+  // menghapus log), jadi hitung turunan: hari terjadwal yang TIDAK done pada 6 hari terakhir
+  // (mirip logika sel kalender konsistensi yang menandai hari lampau tanpa log sebagai missed).
+  let missed = 0;
+  for (const ds of rangeDays(addDays(today, -6), addDays(today, -1))) {
+    if (!isScheduled(h, ds)) continue;
+    if (isDoneLog(h, logOn(h, ds))) continue;
+    missed++;
+  }
+  return missed;
 }
 
 function overallStreaks(habits: Habit[], today: string): { current: number; best: number } {
@@ -545,8 +553,10 @@ export default function HabitsScreen() {
                 h.unitTarget !== null &&
                 typeof vars.value === "number" &&
                 vars.value > 0 &&
-                (existing.value ?? 0) < vars.value
+                (existing.value ?? 0) !== vars.value
               ) {
+                // Habit terukur: value berbeda (naik ATAU turun) → perbarui nilai log.
+                // Progres parsial tidak boleh hilang hanya karena nilai dikurangi.
                 logs[idx] = { ...existing, value: vars.value, status: "done", note: null };
                 action = "upgraded";
               } else {
@@ -570,7 +580,9 @@ export default function HabitsScreen() {
               });
               action = "created";
             }
-            return { ...h, logs };
+            // Buang streak server (bisa stale pada cache optimistis) → UI fallback
+            // ke hitungan lokal dari logs optimistis.
+            return { ...h, logs, streak: undefined };
           }),
         };
       });
@@ -587,8 +599,7 @@ export default function HabitsScreen() {
       toast.error(e.message);
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["habits"] });
-      qc.invalidateQueries({ queryKey: ["home"] });
+      invalidateAfterMutation(qc, ["habits"]);
     },
   });
 
@@ -784,7 +795,7 @@ export default function HabitsScreen() {
             </Pill>
           </div>
           <MetricBar value={stageProgress} max={1} height={6} className="mt-2.5" />
-          <div className="mt-3 flex items-start">
+          <div className="mt-3 flex items-start overflow-x-auto no-scrollbar">
             {STAGES.map((s, i) => {
               const Icon = STAGE_ICONS[i] ?? Sprout;
               const isActive = i === stageIdx;
@@ -800,7 +811,7 @@ export default function HabitsScreen() {
                       aria-hidden="true"
                     />
                   )}
-                  <div className="flex w-[46px] shrink-0 flex-col items-center gap-1">
+                  <div className="flex w-10 shrink-0 flex-col items-center gap-1">
                     <span
                       className={cn(
                         "flex h-9 w-9 items-center justify-center rounded-full border-2 transition-colors",
@@ -813,7 +824,7 @@ export default function HabitsScreen() {
                     </span>
                     <span
                       className={cn(
-                        "text-center text-[10px] font-semibold leading-tight",
+                        "text-center text-[11px] font-semibold leading-tight",
                         isActive ? "text-garden-deep" : "text-muted-foreground/80"
                       )}
                     >
@@ -955,7 +966,7 @@ export default function HabitsScreen() {
             {calendar.weeks.map((wk, i) => (
               <div
                 key={wk.start}
-                className="flex-1 min-w-0 text-[10px] font-bold text-muted-foreground truncate"
+                className="flex-1 min-w-0 text-[11px] font-bold text-muted-foreground truncate"
                 title={formatDayMonth(wk.start)}
               >
                 {calendar.monthLabels[i]}
@@ -966,7 +977,7 @@ export default function HabitsScreen() {
           <div className="space-y-1">
             {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((dayName, r) => (
               <div key={dayName} className="flex items-center gap-1">
-                <span className="w-[32px] shrink-0 text-[10px] font-bold text-muted-foreground">{dayName}</span>
+                <span className="w-[32px] shrink-0 text-[11px] font-bold text-muted-foreground">{dayName}</span>
                 <div className="flex-1 flex gap-1">
                   {calendar.weeks.map((wk, wi) => {
                     const c = wk.cells[r];
@@ -1063,7 +1074,7 @@ export default function HabitsScreen() {
           </div>
 
           {/* Daftar habit */}
-          <div className="mt-3 max-h-[480px] overflow-y-auto overscroll-contain scroll-thin space-y-2 pr-0.5">
+          <div className="mt-3 max-h-[480px] overflow-y-auto scroll-thin space-y-2 pr-0.5">
             {visibleHabits.length === 0 ? (
               <EmptyState
                 icon={<Sprout className="h-6 w-6" />}
@@ -1095,7 +1106,7 @@ export default function HabitsScreen() {
                   onCheck={() => checkMutation.mutate({ id: h.id })}
                   onStep={() => {
                     const log = logOn(h, today);
-                    const next = (log?.value ?? 0) + (h.unitStep || 1);
+                    const next = Math.min(h.unitTarget ?? 0, (log?.value ?? 0) + (h.unitStep || 1));
                     checkMutation.mutate({ id: h.id, value: next });
                   }}
                 />
@@ -1182,7 +1193,7 @@ function HabitCard({
   const log = logOn(habit, today);
   const done = isDoneLog(habit, log);
   const isMeasured = habit.unitTarget !== null;
-  const streak = habitCurrentStreak(habit, today);
+  const streak = habit.streak?.current ?? habitCurrentStreak(habit, today);
   const wp = habitWeekProgress(habit, today);
 
   return (
@@ -1224,8 +1235,8 @@ function HabitCard({
           (isMeasured ? (
             <button
               onClick={onStep}
-              disabled={checking}
-              aria-label={`Tambah progres ${habit.name}`}
+              disabled={checking || done}
+              aria-label={done ? `${habit.name} target tercapai` : `Tambah progres ${habit.name}`}
               className={cn(
                 "press h-11 min-w-[44px] shrink-0 rounded-xl font-bold text-sm flex items-center justify-center disabled:opacity-60",
                 done ? "bg-garden text-white" : "bg-garden-soft text-garden-deep"
@@ -1298,8 +1309,7 @@ function HabitDetailDrawer({
     mutationFn: () => rutinaApi.updateHabit(habit!.id, { archived: !habit!.archived }),
     onSuccess: () => {
       toast.success(habit?.archived ? "Kebiasaan dipulihkan" : "Kebiasaan diarsipkan");
-      qc.invalidateQueries({ queryKey: ["habits"] });
-      qc.invalidateQueries({ queryKey: ["home"] });
+      invalidateAfterMutation(qc, ["habits"]);
       onClose();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -1309,8 +1319,7 @@ function HabitDetailDrawer({
     mutationFn: () => rutinaApi.deleteHabit(habit!.id),
     onSuccess: () => {
       toast.success("Kebiasaan dihapus");
-      qc.invalidateQueries({ queryKey: ["habits"] });
-      qc.invalidateQueries({ queryKey: ["home"] });
+      invalidateAfterMutation(qc, ["habits"]);
       onClose();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -1425,13 +1434,13 @@ function HabitDetailDrawer({
           <div className="grid grid-cols-2 gap-2">
             <StatTile
               label="Runtun saat ini"
-              value={`${habitCurrentStreak(habit, today)} hari`}
+              value={`${habit.streak?.current ?? habitCurrentStreak(habit, today)} hari`}
               icon={<Flame className="h-3.5 w-3.5" />}
               tone="gold"
             />
             <StatTile
               label="Runtun terbaik"
-              value={`${habitBestStreak(habit, today)} hari`}
+              value={`${habit.streak?.best ?? habitBestStreak(habit, today)} hari`}
               icon={<Trophy className="h-3.5 w-3.5" />}
               tone="gold"
             />
@@ -1450,7 +1459,17 @@ function HabitDetailDrawer({
               </div>
               <div className="flex items-center justify-between gap-2">
                 <button
-                  onClick={() => log && onCheck(habit.id, undefined, "Progres direset untuk hari ini")}
+                  onClick={() => {
+                    if (!log) return;
+                    const next = (log.value ?? 0) - (habit.unitStep || 1);
+                    if (next <= 0) {
+                      // Tanpa value → server toggle-off: sisa log dihapus utuh (bukan ditimpa 0)
+                      onCheck(habit.id, undefined, "Progres direset untuk hari ini");
+                    } else {
+                      // Kurangi progres parsial: kirim nilai baru, log tetap ada
+                      onCheck(habit.id, next, "Progres dikurangi");
+                    }
+                  }}
                   disabled={!log}
                   aria-label="Kurangi progres hari ini"
                   className="press h-11 w-11 rounded-xl bg-card border border-border flex items-center justify-center disabled:opacity-40"
@@ -1472,9 +1491,15 @@ function HabitDetailDrawer({
                   )}
                 </div>
                 <button
-                  onClick={() => onCheck(habit.id, (log?.value ?? 0) + (habit.unitStep || 1))}
-                  aria-label="Tambah progres hari ini"
-                  className="press h-11 w-11 rounded-xl bg-garden text-white flex items-center justify-center"
+                  onClick={() =>
+                    onCheck(
+                      habit.id,
+                      Math.min(habit.unitTarget ?? 0, (log?.value ?? 0) + (habit.unitStep || 1))
+                    )
+                  }
+                  disabled={doneToday}
+                  aria-label={doneToday ? "Target hari ini tercapai" : "Tambah progres hari ini"}
+                  className="press h-11 w-11 rounded-xl bg-garden text-white flex items-center justify-center disabled:opacity-40"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -1506,7 +1531,7 @@ function HabitDetailDrawer({
               {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d, i) => (
                 <span
                   key={`${d}-${i}`}
-                  className="flex-1 text-center text-[10px] font-bold text-muted-foreground"
+                  className="flex-1 text-center text-[11px] font-bold text-muted-foreground"
                 >
                   {d}
                 </span>
@@ -1518,7 +1543,7 @@ function HabitDetailDrawer({
               <LegendDot className="bg-garden" label="Target tercapai" />
             </div>
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-              Intensitas hijau menunjukkan seberapa dekat progres harianmu dengan target. Tahan sel untuk melihat detail.
+              Intensitas hijau menunjukkan seberapa dekat progres harianmu dengan target.
             </p>
           </div>
 
@@ -1558,8 +1583,9 @@ function HabitDetailDrawer({
             </div>
           </div>
 
-          {/* Aturan 2 menit */}
-          {!doneToday && !habit.archived && (
+          {/* Aturan 2 menit — disembunyikan untuk habit terukur yang sudah punya progres
+              parsial: server menghapus seluruh log bila dipanggil tanpa value */}
+          {!doneToday && !habit.archived && !(isMeasured && (log?.value ?? 0) > 0) && (
             <div className="space-y-1.5">
               <button
                 onClick={() => onCheck(habit.id, undefined, `${habit.name} tercatat (aturan 2 menit)`)}
@@ -1696,7 +1722,7 @@ function MiniStat({
 function HabitsSkeleton() {
   return (
     <div className="flex flex-col pb-2">
-      <div className="h-14 border-b border-border/60 bg-background/90 px-4 pt-4">
+      <div className="h-14 border-b border-border/60 bg-background/90 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="h-6 w-32 rounded-lg bg-secondary animate-pulse" />
         <div className="h-3 w-24 rounded bg-secondary animate-pulse mt-2" />
       </div>

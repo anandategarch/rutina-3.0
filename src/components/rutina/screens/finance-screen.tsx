@@ -34,6 +34,7 @@ import {
   AlertTriangle,
   Loader2,
   Search,
+  WifiOff,
   List,
   PieChart as PieChartIcon,
   Home,
@@ -72,7 +73,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -136,6 +138,12 @@ const GOAL_COLOR_VAR: Record<string, string> = {
   gold: "var(--gold)",
   studio: "var(--studio)",
   garden: "var(--garden)",
+  // Alias tone palet Field Notes yang ditulis API/seed (teal|amber|emerald|stone)
+  // → var tone UI setara, agar warna ring tujuan tetap konsisten.
+  teal: "var(--vault)",
+  amber: "var(--gold)",
+  emerald: "var(--garden)",
+  stone: "var(--studio)",
 };
 
 const DAY_SHORT = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -215,7 +223,8 @@ function NumberField({
   );
 }
 
-function DialogActions({
+// Baris tombol footer drawer: sticky di luar area scroll + safe-area bawah iOS
+function DrawerActions({
   onCancel,
   onConfirm,
   confirmLabel,
@@ -227,7 +236,7 @@ function DialogActions({
   pending?: boolean;
 }) {
   return (
-    <DialogFooter className="gap-2">
+    <div className="flex gap-2 border-t border-border/60 bg-background p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
       <Button type="button" variant="outline" onClick={onCancel} className="min-h-[44px] flex-1 rounded-xl">
         Batal
       </Button>
@@ -240,7 +249,7 @@ function DialogActions({
         {pending && <Loader2 className="h-4 w-4 animate-spin" />}
         {confirmLabel}
       </Button>
-    </DialogFooter>
+    </div>
   );
 }
 
@@ -249,24 +258,27 @@ function DialogActions({
 export default function FinanceScreen() {
   const qc = useQueryClient();
 
-  const invalidateFinance = React.useCallback(() => {
-    qc.invalidateQueries({ queryKey: ["transactions"] });
-    qc.invalidateQueries({ queryKey: ["wallets"] });
-    qc.invalidateQueries({ queryKey: ["budgets"] });
-    qc.invalidateQueries({ queryKey: ["goals"] });
-    qc.invalidateQueries({ queryKey: ["home"] });
-  }, [qc]);
-
   const qTx = useQuery({ queryKey: ["transactions"], queryFn: rutinaApi.transactions });
   const qWallets = useQuery({ queryKey: ["wallets"], queryFn: rutinaApi.wallets });
   const qBudgets = useQuery({ queryKey: ["budgets"], queryFn: rutinaApi.budgets });
   const qGoals = useQuery({ queryKey: ["goals"], queryFn: rutinaApi.goals });
 
-  const transactions = qTx.data?.transactions ?? [];
-  const wallets = qWallets.data?.wallets ?? [];
-  const budgets = qBudgets.data?.budgets ?? [];
-  const goals = qGoals.data?.goals ?? [];
+  // useMemo agar array stabil antar render (tidak menggunggung deps effect/memo lain)
+  const transactions = React.useMemo(() => qTx.data?.transactions ?? [], [qTx.data]);
+  const wallets = React.useMemo(() => qWallets.data?.wallets ?? [], [qWallets.data]);
+  const budgets = React.useMemo(() => qBudgets.data?.budgets ?? [], [qBudgets.data]);
+  const goals = React.useMemo(() => qGoals.data?.goals ?? [], [qGoals.data]);
   const loading = qTx.isLoading || qWallets.isLoading || qBudgets.isLoading || qGoals.isLoading;
+
+  // ---- Status gagal muat (ikuti pola layar Beranda) ----
+  const allFailed = qTx.isError && qWallets.isError && qBudgets.isError && qGoals.isError;
+  const anyFailed = qTx.isError || qWallets.isError || qBudgets.isError || qGoals.isError;
+  const retryFailed = () => {
+    if (qTx.isError) qTx.refetch();
+    if (qWallets.isError) qWallets.refetch();
+    if (qBudgets.isError) qBudgets.refetch();
+    if (qGoals.isError) qGoals.refetch();
+  };
 
   // ---- Dialog & form states ----
   const [walletOpen, setWalletOpen] = React.useState(false);
@@ -309,7 +321,7 @@ export default function FinanceScreen() {
     mutationFn: (body: Record<string, unknown>) => rutinaApi.createWallet(body),
     onSuccess: () => {
       toast.success("Dompet ditambahkan");
-      invalidateFinance();
+      invalidateAfterMutation(qc, ["wallets"]);
       setWalletOpen(false);
       setWName("");
       setWType("cash");
@@ -322,7 +334,7 @@ export default function FinanceScreen() {
     mutationFn: (id: string) => rutinaApi.deleteTransaction(id),
     onSuccess: () => {
       toast.success("Transaksi dihapus");
-      invalidateFinance();
+      invalidateAfterMutation(qc, ["transactions", "wallets"]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -331,18 +343,20 @@ export default function FinanceScreen() {
     mutationFn: ({ id, monthlyLimit }: { id: string; monthlyLimit: number }) => patchBudget(id, monthlyLimit),
     onSuccess: () => {
       toast.success("Limit anggaran diperbarui");
-      invalidateFinance();
+      invalidateAfterMutation(qc, ["budgets"]);
       setEditBudget(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Kontribusi dana memakai DELTA (server increment atomik) — dua ketukan cepat
+  // tidak lagi saling menimpa seperti read-modify-write dari cache.
   const contributeGoal = useMutation({
-    mutationFn: ({ id, currentAmount }: { id: string; currentAmount: number }) =>
-      rutinaApi.updateGoal(id, { currentAmount }),
+    mutationFn: ({ id, contribution }: { id: string; contribution: number }) =>
+      rutinaApi.contributeToGoal(id, contribution),
     onSuccess: () => {
       toast.success("Dana ditambahkan ke tujuan");
-      invalidateFinance();
+      invalidateAfterMutation(qc, ["goals"]);
       setContribGoal(null);
       setGAmount("");
     },
@@ -353,7 +367,7 @@ export default function FinanceScreen() {
     mutationFn: (body: Record<string, unknown>) => rutinaApi.createGoal(body),
     onSuccess: () => {
       toast.success("Tujuan tabungan dibuat");
-      invalidateFinance();
+      invalidateAfterMutation(qc, ["goals"]);
       setNewGoalOpen(false);
       setGName("");
       setGTarget("");
@@ -366,8 +380,7 @@ export default function FinanceScreen() {
     mutationFn: (id: string) => api.delete<{ ok: boolean }>(`/api/budgets/${id}`),
     onSuccess: () => {
       toast.success("Anggaran dihapus");
-      qc.invalidateQueries({ queryKey: ["budgets"] });
-      qc.invalidateQueries({ queryKey: ["stats"] });
+      invalidateAfterMutation(qc, ["budgets"]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -692,7 +705,7 @@ export default function FinanceScreen() {
     if (!contribGoal) return;
     const val = Number(gAmount);
     if (!Number.isFinite(val) || val <= 0) return toast.error("Nominal harus lebih dari 0");
-    contributeGoal.mutate({ id: contribGoal.id, currentAmount: contribGoal.currentAmount + val });
+    contributeGoal.mutate({ id: contribGoal.id, contribution: val });
   };
 
   const submitNewGoal = () => {
@@ -708,6 +721,29 @@ export default function FinanceScreen() {
     });
   };
 
+  if (allFailed) {
+    return (
+      <div className="flex flex-col min-h-full">
+        <ScreenHeader title="Keuangan" subtitle="Saldo, anggaran & tujuan tabunganmu" tone="vault" />
+        <div className="px-4 pt-16">
+          <EmptyState
+            icon={<WifiOff className="h-6 w-6" />}
+            title="Ada kendala memuat data"
+            description="Periksa koneksi internetmu lalu coba lagi."
+            action={
+              <button
+                onClick={retryFailed}
+                className="press min-h-[44px] rounded-xl bg-vault px-4 py-2.5 text-sm font-bold text-white"
+              >
+                Coba Lagi
+              </button>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-full">
@@ -720,6 +756,22 @@ export default function FinanceScreen() {
   return (
     <div className="flex flex-col min-h-full">
       <ScreenHeader title="Keuangan" subtitle="Saldo, anggaran & tujuan tabunganmu" tone="vault" />
+
+      {/* Banner gagal muat sebagian (query masih punya cache → tetap tampilkan data) */}
+      {anyFailed && (
+        <div className="mx-4 mt-3 flex items-center gap-3 rounded-xl border border-clay/40 bg-clay-soft p-3">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-clay" />
+          <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-clay-deep">
+            Sebagian data gagal dimuat — angka di bawah mungkin tidak lengkap.
+          </p>
+          <button
+            onClick={retryFailed}
+            className="press min-h-[44px] shrink-0 rounded-lg bg-clay px-3 text-xs font-bold text-white"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-4 px-4 pt-3 pb-6">
         {/* ============ Hero Total Saldo ============ */}
@@ -877,7 +929,7 @@ export default function FinanceScreen() {
                   thickness={16}
                   center={
                     <>
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Total keluar
                       </span>
                       <span className="text-sm font-bold tabular leading-tight">
@@ -973,7 +1025,7 @@ export default function FinanceScreen() {
               description="Buat anggaran per kategori untuk menjaga pengeluaran."
             />
           ) : (
-            <div className="max-h-[420px] space-y-4 overflow-y-auto overscroll-contain scroll-thin">
+            <div className="max-h-[420px] space-y-4 overflow-y-auto scroll-thin">
               {budgetRows.map((b) => {
                 const Icon = CATEGORY_ICON[b.category] ?? CircleDollarSign;
                 const sisa = b.monthlyLimit - (b.spent ?? 0);
@@ -1074,7 +1126,7 @@ export default function FinanceScreen() {
               }
             />
           ) : (
-            <div className="max-h-[480px] space-y-3 overflow-y-auto overscroll-contain scroll-thin">
+            <div className="max-h-[480px] space-y-3 overflow-y-auto scroll-thin">
               {goalRows.map((g) => {
                 const Icon = GOAL_ICON[g.icon] ?? CircleDollarSign;
                 const colorVar = GOAL_COLOR_VAR[g.color] ?? "var(--vault)";
@@ -1144,7 +1196,7 @@ export default function FinanceScreen() {
                 <span className="font-bold tabular text-clay">{formatRupiah(subscriptionMonthlyTotal)}</span>
               </div>
               <HBarList items={subscriptionBars} color={CLAY} height={8} />
-              <div className="max-h-[280px] space-y-2 overflow-y-auto overscroll-contain scroll-thin">
+              <div className="max-h-[280px] space-y-2 overflow-y-auto scroll-thin">
                 {subscriptions.map((s) => (
                   <div
                     key={s.id}
@@ -1242,7 +1294,7 @@ export default function FinanceScreen() {
               description="Coba ubah bulan, filter, atau kata kunci pencarian."
             />
           ) : (
-            <div className="max-h-[520px] overflow-y-auto overscroll-contain scroll-thin rounded-xl">
+            <div className="max-h-[520px] overflow-y-auto scroll-thin rounded-xl">
               {groups.map((g) => (
                 <div key={g.date}>
                   <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-card/95 px-1 py-2 backdrop-blur-sm">
@@ -1375,131 +1427,143 @@ export default function FinanceScreen() {
         </SectionCard>
       </div>
 
-      {/* ============ Dialog: Dompet Baru ============ */}
-      <Dialog open={walletOpen} onOpenChange={setWalletOpen}>
-        <DialogContent className="max-w-[360px]">
-          <DialogHeader>
-            <DialogTitle>Dompet Baru</DialogTitle>
-            <DialogDescription>Tambahkan sumber dana untuk mencatat transaksi.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="wallet-name">Nama dompet</Label>
-              <Input
-                id="wallet-name"
-                value={wName}
-                onChange={(e) => setWName(e.target.value)}
-                placeholder="cth. Mandiri, OVO, Dompet Kantor"
-                className="min-h-[44px]"
+      {/* ============ Drawer: Dompet Baru ============ */}
+      <Drawer open={walletOpen} onOpenChange={(o) => !o && setWalletOpen(false)}>
+        <DrawerContent className="flex flex-col h-auto max-h-[85dvh] rounded-t-2xl">
+          <DrawerHeader className="px-4 text-left">
+            <DrawerTitle>Dompet Baru</DrawerTitle>
+            <DrawerDescription>Tambahkan sumber dana untuk mencatat transaksi.</DrawerDescription>
+          </DrawerHeader>
+          <div className="flex flex-1 min-h-0 flex-col">
+            <div className="flex-1 min-h-0 space-y-3 overflow-y-auto scroll-thin px-4 pb-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="wallet-name">Nama dompet</Label>
+                <Input
+                  id="wallet-name"
+                  value={wName}
+                  onChange={(e) => setWName(e.target.value)}
+                  placeholder="cth. Mandiri, OVO, Dompet Kantor"
+                  className="min-h-[44px]"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="wallet-type">Tipe</Label>
+                <Select value={wType} onValueChange={setWType}>
+                  <SelectTrigger id="wallet-type" className="w-full min-h-[44px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Tunai</SelectItem>
+                    <SelectItem value="bank">Bank</SelectItem>
+                    <SelectItem value="ewallet">E-Wallet</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <NumberField
+                id="wallet-init"
+                label="Saldo awal"
+                value={wInit}
+                onChange={setWInit}
+                placeholder="0"
+                prefix
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="wallet-type">Tipe</Label>
-              <Select value={wType} onValueChange={setWType}>
-                <SelectTrigger id="wallet-type" className="w-full min-h-[44px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">Tunai</SelectItem>
-                  <SelectItem value="bank">Bank</SelectItem>
-                  <SelectItem value="ewallet">E-Wallet</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <NumberField
-              id="wallet-init"
-              label="Saldo awal"
-              value={wInit}
-              onChange={setWInit}
-              placeholder="0"
-              prefix
+            <DrawerActions
+              onCancel={() => setWalletOpen(false)}
+              onConfirm={submitWallet}
+              confirmLabel="Tambah"
+              pending={createWallet.isPending}
             />
           </div>
-          <DialogActions
-            onCancel={() => setWalletOpen(false)}
-            onConfirm={submitWallet}
-            confirmLabel="Tambah"
-            pending={createWallet.isPending}
-          />
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
 
-      {/* ============ Dialog: Edit Limit Anggaran ============ */}
-      <Dialog open={!!editBudget} onOpenChange={(o) => !o && setEditBudget(null)}>
-        <DialogContent className="max-w-[340px]">
-          <DialogHeader>
-            <DialogTitle>Limit {editBudget ? catLabel(editBudget.category) : ""}</DialogTitle>
-            <DialogDescription>Atur batas pengeluaran bulanan untuk kategori ini.</DialogDescription>
-          </DialogHeader>
-          <NumberField id="budget-limit" label="Limit bulanan" value={bLimit} onChange={setBLimit} prefix placeholder="0" />
-          <DialogActions
-            onCancel={() => setEditBudget(null)}
-            onConfirm={submitBudget}
-            confirmLabel="Simpan"
-            pending={updateBudget.isPending}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* ============ Drawer: Edit Limit Anggaran ============ */}
+      <Drawer open={!!editBudget} onOpenChange={(o) => !o && setEditBudget(null)}>
+        <DrawerContent className="flex flex-col h-auto max-h-[85dvh] rounded-t-2xl">
+          <DrawerHeader className="px-4 text-left">
+            <DrawerTitle>Limit {editBudget ? catLabel(editBudget.category) : ""}</DrawerTitle>
+            <DrawerDescription>Atur batas pengeluaran bulanan untuk kategori ini.</DrawerDescription>
+          </DrawerHeader>
+          <div className="flex flex-1 min-h-0 flex-col">
+            <div className="flex-1 min-h-0 overflow-y-auto scroll-thin px-4 pb-4">
+              <NumberField id="budget-limit" label="Limit bulanan" value={bLimit} onChange={setBLimit} prefix placeholder="0" />
+            </div>
+            <DrawerActions
+              onCancel={() => setEditBudget(null)}
+              onConfirm={submitBudget}
+              confirmLabel="Simpan"
+              pending={updateBudget.isPending}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
 
-      {/* ============ Dialog: Tambah Dana Tujuan ============ */}
-      <Dialog open={!!contribGoal} onOpenChange={(o) => !o && setContribGoal(null)}>
-        <DialogContent className="max-w-[340px]">
-          <DialogHeader>
-            <DialogTitle>Tambah Dana</DialogTitle>
-            <DialogDescription>
+      {/* ============ Drawer: Tambah Dana Tujuan ============ */}
+      <Drawer open={!!contribGoal} onOpenChange={(o) => !o && setContribGoal(null)}>
+        <DrawerContent className="flex flex-col h-auto max-h-[85dvh] rounded-t-2xl">
+          <DrawerHeader className="px-4 text-left">
+            <DrawerTitle>Tambah Dana</DrawerTitle>
+            <DrawerDescription>
               {contribGoal
                 ? `${contribGoal.name} — saat ini ${formatRupiah(contribGoal.currentAmount)} dari ${formatRupiah(contribGoal.targetAmount)}.`
                 : ""}
-            </DialogDescription>
-          </DialogHeader>
-          <NumberField id="goal-amount" label="Nominal dana" value={gAmount} onChange={setGAmount} prefix placeholder="0" />
-          <DialogActions
-            onCancel={() => setContribGoal(null)}
-            onConfirm={submitContribution}
-            confirmLabel="Tambah"
-            pending={contributeGoal.isPending}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* ============ Dialog: Tujuan Baru ============ */}
-      <Dialog open={newGoalOpen} onOpenChange={setNewGoalOpen}>
-        <DialogContent className="max-w-[360px]">
-          <DialogHeader>
-            <DialogTitle>Tujuan Baru</DialogTitle>
-            <DialogDescription>Rencanakan tabungan dengan target yang jelas.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="goal-name">Nama tujuan</Label>
-              <Input
-                id="goal-name"
-                value={gName}
-                onChange={(e) => setGName(e.target.value)}
-                placeholder="cth. DP Rumah, Kamera"
-                className="min-h-[44px]"
-              />
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="flex flex-1 min-h-0 flex-col">
+            <div className="flex-1 min-h-0 overflow-y-auto scroll-thin px-4 pb-4">
+              <NumberField id="goal-amount" label="Nominal dana" value={gAmount} onChange={setGAmount} prefix placeholder="0" />
             </div>
-            <NumberField id="goal-target" label="Target dana" value={gTarget} onChange={setGTarget} prefix placeholder="0" />
-            <div className="space-y-1.5">
-              <Label htmlFor="goal-deadline">Deadline (opsional)</Label>
-              <Input
-                id="goal-deadline"
-                type="date"
-                value={gDeadline}
-                onChange={(e) => setGDeadline(e.target.value)}
-                className="min-h-[44px] tabular"
-              />
-            </div>
+            <DrawerActions
+              onCancel={() => setContribGoal(null)}
+              onConfirm={submitContribution}
+              confirmLabel="Tambah"
+              pending={contributeGoal.isPending}
+            />
           </div>
-          <DialogActions
-            onCancel={() => setNewGoalOpen(false)}
-            onConfirm={submitNewGoal}
-            confirmLabel="Buat"
-            pending={createGoal.isPending}
-          />
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
+
+      {/* ============ Drawer: Tujuan Baru ============ */}
+      <Drawer open={newGoalOpen} onOpenChange={(o) => !o && setNewGoalOpen(false)}>
+        <DrawerContent className="flex flex-col h-auto max-h-[85dvh] rounded-t-2xl">
+          <DrawerHeader className="px-4 text-left">
+            <DrawerTitle>Tujuan Baru</DrawerTitle>
+            <DrawerDescription>Rencanakan tabungan dengan target yang jelas.</DrawerDescription>
+          </DrawerHeader>
+          <div className="flex flex-1 min-h-0 flex-col">
+            <div className="flex-1 min-h-0 space-y-3 overflow-y-auto scroll-thin px-4 pb-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="goal-name">Nama tujuan</Label>
+                <Input
+                  id="goal-name"
+                  value={gName}
+                  onChange={(e) => setGName(e.target.value)}
+                  placeholder="cth. DP Rumah, Kamera"
+                  className="min-h-[44px]"
+                />
+              </div>
+              <NumberField id="goal-target" label="Target dana" value={gTarget} onChange={setGTarget} prefix placeholder="0" />
+              <div className="space-y-1.5">
+                <Label htmlFor="goal-deadline">Deadline (opsional)</Label>
+                <Input
+                  id="goal-deadline"
+                  type="date"
+                  value={gDeadline}
+                  onChange={(e) => setGDeadline(e.target.value)}
+                  className="min-h-[44px] tabular"
+                />
+              </div>
+            </div>
+            <DrawerActions
+              onCancel={() => setNewGoalOpen(false)}
+              onConfirm={submitNewGoal}
+              confirmLabel="Buat"
+              pending={createGoal.isPending}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

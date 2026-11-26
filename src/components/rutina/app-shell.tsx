@@ -3,7 +3,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "next-themes";
+import { ThemeProvider, useTheme } from "next-themes";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import {
   Home,
@@ -159,7 +159,9 @@ function QuickActionHub() {
   return (
     <Drawer open={hubOpen} onOpenChange={setHubOpen}>
       <DrawerContent className="max-h-[85dvh]">
-        <div className="px-4 pt-1 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] overflow-y-auto scroll-thin">
+        {/* flex-1 min-h-0: konten selalu bisa menggulir di dalam drawer flex-col,
+            tidak peduli tinggi isinya melebihi max-h (drawer hygiene). */}
+        <div className="flex-1 min-h-0 px-4 pt-1 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] overflow-y-auto scroll-thin">
           <div className="flex items-center justify-between mb-1">
             <DrawerTitle className="text-base font-bold">Tindakan Cepat</DrawerTitle>
           </div>
@@ -243,6 +245,25 @@ function QuickActionSheets() {
   );
 }
 
+// ===== Sinkronisasi chrome browser/PWA dengan tema aktif =====
+// Meta theme-color statis di layout hanya mengikuti prefers-color-scheme OS.
+// Saat user memilih tema manual di Profil, warna address bar / status bar PWA
+// harus ikut berubah: metanya di-update langsung di sini.
+function ThemeChromeSync() {
+  const { resolvedTheme } = useTheme();
+  React.useEffect(() => {
+    if (!resolvedTheme) return; // belum ter-hidrasi — biarkan meta media-query bekerja
+    const color = resolvedTheme === "dark" ? "#171D19" : "#F4F3EE";
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+      // Lepas atribut media agar tag ini yang menang di semua skema OS
+      // (nilai token terverifikasi di globals.css --background & manifest.json).
+      meta.removeAttribute("media");
+      meta.setAttribute("content", color);
+    });
+  }, [resolvedTheme]);
+  return null;
+}
+
 function OverlayPages() {
   const page = useRutinaStore((s) => s.page);
   const isOverlay = page === "journal" || page === "stats" || page === "profile";
@@ -322,7 +343,10 @@ export function RutinaApp() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+      {/* defaultTheme system + enableSystem: pengguna OS dark mendapat tema
+          gelap sejak awal, toggle manual di Profil tetap berlaku (next-themes). */}
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeChromeSync />
         {/* Hormati prefers-reduced-motion untuk semua animasi framer-motion (ux #9) */}
         <MotionConfig reducedMotion="user">
         {/* Full-bleed app shell — fills the viewport edge-to-edge at every screen size.

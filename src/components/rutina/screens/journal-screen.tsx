@@ -167,7 +167,7 @@ function JournalFirstPage({ onBlank, onPrompt }: { onBlank: () => void; onPrompt
       <div className="mt-4 w-full max-w-[300px] rounded-xl border border-writer/30 bg-writer-soft/50 p-3.5 text-left">
         <div className="flex items-center gap-1.5">
           <Sparkles className="h-3.5 w-3.5 text-writer-deep" />
-          <p className="text-[10px] font-bold uppercase tracking-wide text-writer-deep">Prompt refleksi hari ini</p>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-writer-deep">Prompt refleksi hari ini</p>
         </div>
         <p className="text-sm font-semibold leading-snug mt-1.5">{prompt}</p>
         <button
@@ -462,6 +462,9 @@ export default function JournalScreen() {
                   title={`${formatDateID(d, true)}${
                     count > 0 ? ` · ${count} entri · ${formatNumber(words)} kata` : " · belum menulis"
                   }`}
+                  aria-label={`${formatDateID(d, true)}${
+                    count > 0 ? ` · ${count} entri · ${formatNumber(words)} kata` : " · belum menulis"
+                  }`}
                   className={cn(
                     "flex flex-col items-center justify-center rounded-lg py-1.5 min-h-[40px] tabular",
                     count > 0 ? "text-writer-deep font-bold" : "text-muted-foreground"
@@ -730,7 +733,7 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
             <div className="space-y-1.5">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Folder</p>
               <Select value={folder} onValueChange={setFolder}>
-                <SelectTrigger className="w-full" aria-label="Pilih folder catatan">
+                <SelectTrigger className="w-full min-h-[44px]" aria-label="Pilih folder catatan">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

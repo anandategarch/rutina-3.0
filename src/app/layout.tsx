@@ -29,7 +29,9 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    // black-translucent: konten menggambar hingga bawah status bar — aman karena
+    // header sudah memakai pt safe-area (ux-guidelines #6 PWA notch).
+    statusBarStyle: "black-translucent",
     title: "Rutina",
   },
   // Favicon & apple-touch-icon diinjeksi otomatis oleh konvensi file Next
@@ -57,7 +59,11 @@ export default function RootLayout({
         className={`${nunito.variable} ${dmSans.variable} ${caveat.variable} antialiased bg-background text-foreground`}
       >
         {children}
-        <Toaster position="top-center" />
+        {/* Offset toast memperhitungkan notch/safe-area agar tidak tertutup status bar */}
+        <Toaster
+          position="top-center"
+          offset={{ top: "calc(16px + env(safe-area-inset-top, 0px))" }}
+        />
       </body>
     </html>
   );

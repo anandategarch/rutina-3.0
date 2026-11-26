@@ -214,7 +214,7 @@ export default function StatsScreen() {
                   {axes.map((a) => (
                     <div key={a.label} className="text-center">
                       <p className="text-xs font-bold tabular">{Math.round(a.value * 100)}%</p>
-                      <p className="text-[10px] text-muted-foreground font-semibold truncate">{a.label}</p>
+                      <p className="text-[11px] text-muted-foreground font-semibold truncate">{a.label}</p>
                     </div>
                   ))}
                 </div>
@@ -260,7 +260,7 @@ export default function StatsScreen() {
                     <p className="text-lg font-extrabold tabular leading-none">
                       {stats.habitCategoryComposition.reduce((a, c) => a + c.count, 0)}
                     </p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">kebiasaan</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">kebiasaan</p>
                   </>
                 }
               />
@@ -334,7 +334,7 @@ export default function StatsScreen() {
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: NEUTRAL }} /> Energi
             </span>
-            <span className="ml-auto text-[10px] text-muted-foreground">skala 0–5 · kosong = tidak tercatat</span>
+            <span className="ml-auto text-[11px] text-muted-foreground">skala 0–5 · kosong = tidak tercatat</span>
           </div>
         </SectionCard>
 
@@ -494,7 +494,7 @@ function MonthlyMissionCalendar({ stats }: { stats: StatsPayload }) {
           {[0.3, 0.55, 0.8, 1].map((o) => (
             <span key={o} className="h-2.5 w-2.5 rounded-[3px]" style={{ background: "var(--primary)", opacity: o }} />
           ))}
-          <span className="text-[10px] text-muted-foreground ml-1">kosong → penuh</span>
+          <span className="text-[11px] text-muted-foreground ml-1">kosong → penuh</span>
         </div>
         <span className="text-xs text-muted-foreground tabular shrink-0">
           {todayStat && todayStat.missionsTotal > 0
@@ -722,11 +722,11 @@ function AchievementCard({ achievement }: { achievement: AchievementItem }) {
         {achievement.title}
       </p>
       {unlocked ? (
-        <Pill tone="garden" className="text-[10px] px-1.5 py-0.5">
+        <Pill tone="garden" className="text-[11px] px-1.5 py-0.5">
           {formatDateID(achievement.unlockedAt!)}
         </Pill>
       ) : (
-        <span className="text-[10px] text-muted-foreground leading-tight line-clamp-2">{achievement.description}</span>
+        <span className="text-[11px] text-muted-foreground leading-tight line-clamp-2">{achievement.description}</span>
       )}
     </div>
   );

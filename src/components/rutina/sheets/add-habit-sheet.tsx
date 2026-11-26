@@ -24,6 +24,7 @@ import {
 import { HABIT_CATEGORY_META, TIME_OF_DAY_META } from "@/components/rutina/primitives";
 import { HABIT_ICONS, habitIcon } from "@/components/rutina/habit-icons";
 import { rutinaApi } from "@/lib/rutina/api";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import { cn } from "@/lib/utils";
 import type { Habit } from "@/types/rutina";
 
@@ -119,19 +120,27 @@ export default function AddHabitSheet({
     } else {
       setForm(DEFAULT_FORM);
     }
+    // Deps sengaja hanya [open, habitId]: refetch latar bisa mengganti referensi objek
+    // `habit` dan menimpa editan yang sedang berjalan (lihat komentar prefill di atas).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, habitId]);
 
   const set = <K extends keyof HabitFormState>(key: K, value: HabitFormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  /** Enter pada input teks → fokus ke input berikutnya (rantai ketik mobile, tanpa submit). */
+  const enterFocusNext = (nextId: string) => (ev: React.KeyboardEvent<HTMLInputElement>) => {
+    if (ev.key !== "Enter") return;
+    ev.preventDefault();
+    document.getElementById(nextId)?.focus();
+  };
 
   const mutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
       isEdit && habit ? rutinaApi.updateHabit(habit.id, payload) : rutinaApi.createHabit(payload),
     onSuccess: () => {
       toast.success("Kebiasaan tersimpan");
-      qc.invalidateQueries({ queryKey: ["habits"] });
-      qc.invalidateQueries({ queryKey: ["home"] });
-      qc.invalidateQueries({ queryKey: ["stats"] });
+      invalidateAfterMutation(qc, ["habits"]);
       onClose();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -202,6 +211,7 @@ export default function AddHabitSheet({
                 placeholder="Contoh: Minum 8 gelas air"
                 className="h-11 rounded-xl"
                 enterKeyHint="next"
+                onKeyDown={enterFocusNext(form.measured ? "habit-unit" : "habit-reminder")}
               />
             </div>
 
@@ -380,6 +390,7 @@ export default function AddHabitSheet({
                       placeholder="gelas"
                       className="h-10 rounded-lg"
                       enterKeyHint="next"
+                      onKeyDown={enterFocusNext("habit-target")}
                     />
                   </div>
                   <div>
@@ -395,6 +406,8 @@ export default function AddHabitSheet({
                       value={form.unitTarget}
                       onChange={(e) => set("unitTarget", e.target.value)}
                       className="h-10 rounded-lg tabular"
+                      enterKeyHint="next"
+                      onKeyDown={enterFocusNext("habit-step")}
                     />
                   </div>
                   <div>
