@@ -5,6 +5,9 @@ export const dynamic = "force-dynamic";
 
 const WALLET_TYPES = ["cash", "bank", "ewallet"];
 
+// audit B3-B3: bulatkan nilai uang ke 2 desimal
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 function bad(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
 }
@@ -30,7 +33,8 @@ function computeBalance(
       if (t.toWalletId === walletId) balance += t.amount;
     }
   }
-  return balance;
+  // audit B3-B3: bulatkan saldo akhir ke 2 desimal (hindari drift float)
+  return round2(balance);
 }
 
 export async function GET() {
@@ -60,13 +64,15 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const type = typeof body.type === "string" ? body.type : "cash";
-    const initialBalance = Number(body.initialBalance ?? 0);
+    let initialBalance = Number(body.initialBalance ?? 0);
 
     if (!name) return bad("Nama dompet wajib diisi");
     if (name.length > 60) return bad("Nama dompet maksimal 60 karakter");
     if (!WALLET_TYPES.includes(type)) return bad("Tipe dompet tidak valid");
     if (!Number.isFinite(initialBalance) || initialBalance < 0)
       return bad("Saldo awal tidak valid");
+    // audit B3-B3: bulatkan saldo awal ke 2 desimal
+    initialBalance = round2(initialBalance);
 
     const wallet = await db.wallet.create({
       data: {

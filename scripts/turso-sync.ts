@@ -3,7 +3,8 @@
  *
  * Cara kerja:
  * 1. Generate SQL DDL dari prisma/schema.prisma (`prisma migrate diff --from-empty`).
- * 2. Terapkan statement-per-statement ke Turso via @libsql/client.
+ * 2. Terapkan DDL ke Turso via @libsql/client — SEKALI batch() atomik (audit B1-B4),
+ *    setelah objek yang "sudah ada" difilter dulu via sqlite_master.
  * 3. UNTUK TABEL LAMA: diff kolom via PRAGMA table_info lalu ALTER TABLE ADD COLUMN
  *    untuk kolom yang belum ada — tanpa langkah ini, kolom baru di schema diam-diam
  *    terlewat ("already exists") dan app error saat runtime di Turso.
@@ -104,19 +105,35 @@ async function syncMissingColumns(table: string): Promise<void> {
   }
 }
 
-for (const stmt of statements) {
-  const label = stmt.replace(/\s+/g, " ").slice(0, 64);
-  try {
-    await client.execute(stmt);
-    applied++;
-    console.log(`✓ ${label}…`);
-  } catch (err) {
-    const msg = (err as Error).message ?? String(err);
-    if (/already exists/i.test(msg)) {
+// audit B1-B4: batch() bersifat atomik — satu statement yang gagal membatalkan
+// seluruh batch, jadi statement yang akan gagal "already exists" HARUS difilter dulu
+// (bukan ditangkap per-statement seperti dulu) lewat daftar objek di sqlite_master.
+const existingObjects = new Set<string>();
+let masterOk = false;
+try {
+  const master = await client.execute(
+    `SELECT name FROM sqlite_master WHERE type IN ('table','index')`
+  );
+  for (const row of master.rows) {
+    const name = (row as Record<string, unknown>).name;
+    if (typeof name === "string") existingObjects.add(name);
+  }
+  masterOk = true;
+} catch (err) {
+  failed.push(`sqlite_master → ${(err as Error).message ?? String(err)}`);
+}
+
+const pending: string[] = [];
+if (masterOk) {
+  for (const stmt of statements) {
+    const label = stmt.replace(/\s+/g, " ").slice(0, 64);
+    const table = stmt.match(/CREATE TABLE\s+"?([A-Za-z_][A-Za-z0-9_]*)"?/i)?.[1];
+    // Nama index Prisma bisa memuat titik (mis. "Wallet.id_key")
+    const index = stmt.match(/CREATE (?:UNIQUE )?INDEX\s+"?([A-Za-z0-9_.]+)"?/i)?.[1];
+    if ((table && existingObjects.has(table)) || (index && existingObjects.has(index))) {
       skipped.push(label);
       console.log(`• (sudah ada) ${label}…`);
       // Tabel lama: cek kolom baru yang belum ada di Turso
-      const table = stmt.match(/CREATE TABLE\s+"?([A-Za-z_][A-Za-z0-9_]*)"?/i)?.[1];
       if (table) {
         try {
           await syncMissingColumns(table);
@@ -124,8 +141,22 @@ for (const stmt of statements) {
           failed.push(`PRAGMA ${table} → ${(err3 as Error).message ?? String(err3)}`);
         }
       }
-    } else {
-      failed.push(`${label}… → ${msg}`);
+      continue;
+    }
+    pending.push(stmt);
+  }
+
+  // audit B1-B4: seluruh DDL baru diterapkan SEKALIGUS via batch() — atomik;
+  // kegagalan satu statement mengembalikan seluruh batch (tidak ada schema setengah jadi).
+  if (pending.length > 0) {
+    try {
+      await client.batch(pending, "write");
+      applied = pending.length;
+      for (const stmt of pending) {
+        console.log(`✓ ${stmt.replace(/\s+/g, " ").slice(0, 64)}…`);
+      }
+    } catch (err) {
+      failed.push(`batch DDL → ${(err as Error).message ?? String(err)}`);
     }
   }
 }

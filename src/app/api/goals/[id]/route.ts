@@ -5,6 +5,9 @@ import { isValidDateStr } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
+// audit B3-B3: bulatkan nilai uang ke 2 desimal
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 /** PATCH: dipakai untuk kontribusi dana (kirim `contribution` — increment atomik, aman race),
  *  ubah dana langsung (currentAmount), nama/target/deadline. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -40,9 +43,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       data.targetAmount = targetAmount;
     }
     if (body.currentAmount !== undefined) {
-      const currentAmount = Number(body.currentAmount);
+      let currentAmount = Number(body.currentAmount);
       if (!Number.isFinite(currentAmount) || currentAmount < 0)
         return NextResponse.json({ error: "Dana terkumpul tidak valid" }, { status: 400 });
+      // audit B3-B3: bulatkan override dana terkumpul ke 2 desimal
+      currentAmount = round2(currentAmount);
       data.currentAmount = currentAmount;
     }
     if (body.deadline !== undefined) {

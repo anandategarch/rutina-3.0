@@ -25,6 +25,9 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const MOOD_ORDER = ["great", "good", "neutral", "tough", "low"];
 
+// audit B1-M: bulatkan agregasi uang ke 2 desimal — hindari artefak float di respons
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 function dowOf(dateStr: string): number {
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(y, m - 1, d).getDay();
@@ -49,7 +52,11 @@ export async function GET() {
         getXpData(),
         computeStreaks(),
         db.habit.findMany({ where: { archived: false }, orderBy: { createdAt: "asc" } }),
-        db.habitLog.findMany({ where: { date: { gte: addDays(today, -95) } } }),
+        // audit B2-M12: ambil hanya kolom yang dipakai agregasi misi (tanpa note/id dkk)
+        db.habitLog.findMany({
+          where: { date: { gte: addDays(today, -95) } },
+          select: { habitId: true, date: true, status: true, value: true },
+        }),
         db.workout.findMany({ where: { date: { gte: addDays(today, -60) } } }),
         db.bodyMetric.findMany({ orderBy: { date: "asc" } }),
         db.checkIn.findMany({ where: { date: { gte: addDays(today, -13) } } }),
@@ -65,10 +72,14 @@ export async function GET() {
       ]);
 
     const habitMap = new Map(habits.map((h) => [h.id, h]));
+    // audit B2-H1: habit belum dijadwalkan sebelum tanggal dibuatnya (yyyy-MM-dd WIB)
+    const createdDay = new Map(habits.map((h) => [h.id, jakartaDateStr(h.createdAt)]));
 
     const isScheduled = (habitId: string, dateStr: string) => {
       const h = habitMap.get(habitId);
       if (!h) return false;
+      // audit B2-H1: tanggal sebelum createdAt bukan misi — selaras dgn guard createdAt /api/home
+      if (dateStr < (createdDay.get(habitId) ?? "")) return false;
       return h.scheduleType === "daily" || h.daysOfWeek.split(",").map(Number).includes(dowOf(dateStr));
     };
 
@@ -78,10 +89,8 @@ export async function GET() {
       return h?.unitTarget != null && (log.value ?? 0) >= h.unitTarget;
     };
 
-    // Jumlah kebiasaan terjadwal untuk sebuah tanggal
-    const scheduledCountFor = (dateStr: string) =>
-      habits.filter((h) => h.scheduleType === "daily" || h.daysOfWeek.split(",").map(Number).includes(dowOf(dateStr)))
-        .length;
+    // Jumlah kebiasaan terjadwal untuk sebuah tanggal (ikut guard createdAt — audit B2-H1)
+    const scheduledCountFor = (dateStr: string) => habits.filter((h) => isScheduled(h.id, dateStr)).length;
 
     // Log per tanggal (hanya milik habit aktif, untuk perhitungan misi)
     const logsByDate = new Map<string, typeof allLogs>();
@@ -158,23 +167,30 @@ export async function GET() {
     });
 
     // ===== Keuangan =====
-    const income30d = transactions
-      .filter((t) => t.type === "income" && t.date >= d30)
-      .reduce((a, t) => a + t.amount, 0);
-    const expense30d = transactions
-      .filter((t) => t.type === "expense" && t.date >= d30)
-      .reduce((a, t) => a + t.amount, 0);
+    const income30d = round2(
+      transactions
+        .filter((t) => t.type === "income" && t.date >= d30)
+        .reduce((a, t) => a + t.amount, 0)
+    );
+    const expense30d = round2(
+      transactions
+        .filter((t) => t.type === "expense" && t.date >= d30)
+        .reduce((a, t) => a + t.amount, 0)
+    );
     const totalIncome = transactions.filter((t) => t.type === "income").reduce((a, t) => a + t.amount, 0);
     const totalExpense = transactions.filter((t) => t.type === "expense").reduce((a, t) => a + t.amount, 0);
     const initialBalances = wallets.reduce((a, w) => a + w.initialBalance, 0);
-    const netBalance = initialBalances + totalIncome - totalExpense;
+    // audit B1-M: saldo & arus kas dibulatkan ke 2 desimal
+    const netBalance = round2(initialBalances + totalIncome - totalExpense);
 
     const last84 = rangeDays(addDays(today, -83), today);
     const dailyExpenseHeat = last84.map((date) => ({
       date,
-      amount: transactions
-        .filter((t) => t.type === "expense" && t.date === date)
-        .reduce((a, t) => a + t.amount, 0),
+      amount: round2(
+        transactions
+          .filter((t) => t.type === "expense" && t.date === date)
+          .reduce((a, t) => a + t.amount, 0)
+      ),
     }));
 
     const categoryMap = new Map<string, number>();
@@ -184,7 +200,7 @@ export async function GET() {
       }
     }
     const categoryComposition = Array.from(categoryMap.entries())
-      .map(([category, amount]) => ({ category, amount }))
+      .map(([category, amount]) => ({ category, amount: round2(amount) }))
       .sort((a, b) => b.amount - a.amount);
 
     // ===== Jurnal =====

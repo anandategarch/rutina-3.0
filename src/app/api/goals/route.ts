@@ -8,6 +8,9 @@ function bad(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
 }
 
+// audit B3-B3: bulatkan nilai uang ke 2 desimal
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 export async function GET() {
   try {
     const goals = await db.savingsGoal.findMany({ orderBy: { createdAt: "asc" } });
@@ -23,8 +26,8 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
 
     const name = typeof body.name === "string" ? body.name.trim() : "";
-    const targetAmount = Number(body.targetAmount);
-    const currentAmount = body.currentAmount === undefined ? 0 : Number(body.currentAmount);
+    let targetAmount = Number(body.targetAmount);
+    let currentAmount = body.currentAmount === undefined ? 0 : Number(body.currentAmount);
 
     // Deadline opsional: kosong → null; diisi tapi tidak valid → 400
     let deadline: string | null = null;
@@ -34,10 +37,17 @@ export async function POST(req: Request) {
     }
 
     if (!name) return bad("Nama tujuan wajib diisi");
+    // audit B3-L2: batasi nama tujuan maksimal 120 karakter
+    if (name.length > 120) return bad("Nama tujuan maksimal 120 karakter");
     if (!Number.isFinite(targetAmount) || targetAmount <= 0)
       return bad("Target dana harus lebih dari 0");
+    // audit B3-B3: bulatkan ke 2 desimal, tolak target tidak wajar
+    targetAmount = round2(targetAmount);
+    if (targetAmount > 1e12) return bad("Target dana tidak wajar");
     if (!Number.isFinite(currentAmount) || currentAmount < 0)
       return bad("Dana terkumpul tidak valid");
+    // audit B3-B3: bulatkan dana terkumpul ke 2 desimal
+    currentAmount = round2(currentAmount);
 
     const goal = await db.savingsGoal.create({
       data: {

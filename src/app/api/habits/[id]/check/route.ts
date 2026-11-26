@@ -26,6 +26,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!date) {
       return NextResponse.json({ error: "Format tanggal tidak valid" }, { status: 400 });
     }
+    // audit B2-H3: log masa depan menggelembungkan streak/statistik — tolak
+    if (date > jakartaToday()) {
+      return NextResponse.json({ error: "Tanggal tidak boleh di masa depan" }, { status: 400 });
+    }
 
     const habit = await db.habit.findUnique({ where: { id } });
     if (!habit) return NextResponse.json({ error: "Kebiasaan tidak ditemukan" }, { status: 404 });

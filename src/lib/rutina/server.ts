@@ -40,9 +40,10 @@ export async function getXpData() {
 export async function computeStreaks() {
   // GroupBy per tanggal: cukup daftar tanggal unik, tanpa memuat seluruh baris log.
   // Log milik habit yang diarsipkan tidak dihitung.
+  // audit B2-H3: log bertanggal masa depan tidak boleh menggelembungkan streak
   const rows = await db.habitLog.groupBy({
     by: ["date"],
-    where: { status: "done", habit: { archived: false } },
+    where: { status: "done", habit: { archived: false }, date: { lte: jakartaToday() } },
   });
   const dates = rows.map((r) => r.date).sort();
   const dateSet = new Set(dates);
@@ -87,6 +88,8 @@ export async function computeHabitStreaks(): Promise<Record<string, { current: n
       select: { id: true, createdAt: true, scheduleType: true, daysOfWeek: true, unitTarget: true },
     }),
     db.habitLog.findMany({
+      // audit B2-H3: log masa depan tidak boleh ikut menghitung streak per-habit
+      where: { date: { lte: today } },
       select: { habitId: true, date: true, status: true, value: true },
     }),
   ]);

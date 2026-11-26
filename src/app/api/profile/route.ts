@@ -25,8 +25,13 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Body JSON tidak valid" }, { status: 400 });
     }
 
-    const current = await db.profile.findFirst();
-    if (!current) return NextResponse.json({ error: "Profil belum ada" }, { status: 404 });
+    // audit B2-M10: PATCH saat profil belum ada → buat default (mirror GET),
+    // bukan 404 yang memaksa user memuat GET dulu
+    const current = await db.profile.upsert({
+      where: { id: "main" },
+      update: {},
+      create: { id: "main" },
+    });
 
     const data: { name?: string; identityVoice?: string; dailyMissionTarget?: number } = {};
 

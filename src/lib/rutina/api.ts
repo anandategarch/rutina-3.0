@@ -65,7 +65,9 @@ import type {
 } from "@/types/rutina";
 
 export const rutinaApi = {
-  home: () => api.get<HomePayload>("/api/home"),
+  // audit B2-H2: ?date= opsional — beranda dapat dimuat untuk tanggal terpilih
+  home: (date?: string) =>
+    api.get<HomePayload>(`/api/home${date ? `?date=${encodeURI(date)}` : ""}`),
   profile: () => api.get<{ profile: Profile }>("/api/profile"),
   updateProfile: (body: Partial<Pick<Profile, "name" | "identityVoice" | "dailyMissionTarget">>) =>
     api.patch<{ profile: Profile }>("/api/profile", body),

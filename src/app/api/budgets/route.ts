@@ -9,6 +9,9 @@ function bad(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
 }
 
+// audit B3-B3: bulatkan nilai uang ke 2 desimal
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 function monthPrefix(): string {
   // Bulan berjalan menurut zona waktu pengguna (Asia/Jakarta)
   return jakartaToday().slice(0, 7);
@@ -35,7 +38,8 @@ export async function GET() {
 
     const result = budgets.map((b) => ({
       ...b,
-      spent: spentByCatLower.get(b.category.toLowerCase()) ?? 0,
+      // audit B3-B3: bulatkan spent ke 2 desimal
+      spent: round2(spentByCatLower.get(b.category.toLowerCase()) ?? 0),
     }));
 
     return NextResponse.json({ budgets: result });
@@ -51,14 +55,25 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
 
     const category = typeof body.category === "string" ? body.category.trim() : "";
-    const monthlyLimit = Number(body.monthlyLimit);
+    let monthlyLimit = Number(body.monthlyLimit);
 
     if (!category) return bad("Kategori wajib diisi");
     if (!Number.isFinite(monthlyLimit) || monthlyLimit <= 0)
       return bad("Limit bulanan harus lebih dari 0");
+    // audit B3-B3: bulatkan ke 2 desimal, tolak limit tidak wajar
+    monthlyLimit = round2(monthlyLimit);
+    if (monthlyLimit > 1e12) return bad("Limit bulanan tidak wajar");
 
     // Upsert manual agar status code akurat: 201 saat membuat, 200 saat memperbarui
     const existing = await db.budget.findUnique({ where: { category } });
+    if (!existing) {
+      // audit B3-M1: tolak duplikat tak peka huruf besar/kecil ("Makan" vs "makan")
+      const all = await db.budget.findMany({ select: { category: true } });
+      const norm = category.toLowerCase();
+      if (all.some((b) => b.category.trim().toLowerCase() === norm)) {
+        return bad("Anggaran untuk kategori ini sudah ada", 409);
+      }
+    }
     const budget = existing
       ? await db.budget.update({ where: { category }, data: { monthlyLimit } })
       : await db.budget.create({ data: { category, monthlyLimit } });

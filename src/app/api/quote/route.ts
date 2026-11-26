@@ -9,7 +9,8 @@ const QUOTE_EPOCH = "2024-01-01";
 
 export async function GET() {
   try {
-    const quotes = await db.quote.findMany();
+    // audit B2-M4: orderBy id — indeks kutipan harian deterministik atas urutan baris DB
+    const quotes = await db.quote.findMany({ orderBy: { id: "asc" } });
     let quote: (typeof quotes)[number] | null = null;
     if (quotes.length > 0) {
       const dayIndex =

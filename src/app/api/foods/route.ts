@@ -23,6 +23,7 @@ export async function GET() {
   try {
     const entries = await db.foodEntry.findMany({
       orderBy: [{ date: "desc" }, { createdAt: "asc" }],
+      take: 365, // audit B3-B4: batasi hasil query
     });
     return NextResponse.json({ entries });
   } catch (e) {

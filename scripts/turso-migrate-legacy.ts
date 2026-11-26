@@ -9,8 +9,14 @@
  *           SavingsGoal, CheckIn, BodyMetric, Workout, Profile) + evaluasi achievement.
  *
  * Perilaku:
- * - Idempoten: data sampling pada tabel target DIHAPUS dulu, lalu diimpor ulang.
+ * - GUARD DESTRUKTIF (audit B1-B4): bila salah satu tabel target sudah berisi data,
+ *   script MENOLAK jalan kecuali flag `--force` dipassed eksplisit — script ini
+ *   menghapus seluruh data saat dijalankan ulang.
+ * - Idempoten (dengan --force): data pada tabel target DIHAPUS dulu, lalu diimpor ulang.
  *   Menjalankan ulang selalu menghasilkan state yang sama.
+ * - Pra-filter FK orphan (audit B1-B4): baris legacy yang menunjuk wallet/habit yang
+ *   tidak ada DIBUANG & DIHITUNG sebelum transaksi (bukan gagal FK di tengah impor);
+ *   pasangan (habitId,date) duplikat pada log → keep-first, juga dihitung.
  * - ID legacy dipertahankan (cuid 'cmrb…' & 'tx-…') agar relasi wallet↔transaksi
  *   dan habit↔log tersambung sempurna.
  * - Tabel legacy TIDAK diubah sama sekali (read-only).
@@ -109,6 +115,38 @@ const walletType = (name: string): string =>
 const walletColor = (type: string): string =>
   type === "bank" ? "teal" : type === "cash" ? "emerald" : "amber";
 
+/* ---------------- 0. pengaman re-run destruktif (audit B1-B4) ----------------
+ * Script ini MENGHAPUS seluruh data di tabel target sebelum mengimpor legacy.
+ * Bila database target sudah berisi data, hentikan — kecuali operator
+ * benar-benar sengaja dengan flag `--force`.
+ */
+const FORCE_FLAG = process.argv.includes("--force");
+const targetRowCounts = await Promise.all([
+  db.wallet.count(),
+  db.habit.count(),
+  db.habitLog.count(),
+  db.transaction.count(),
+  db.budget.count(),
+  db.savingsGoal.count(),
+  db.journalEntry.count(),
+  db.checkIn.count(),
+  db.bodyMetric.count(),
+  db.foodEntry.count(),
+  db.workout.count(),
+]);
+const existingTargetRows = targetRowCounts.reduce((acc, n) => acc + n, 0);
+if (existingTargetRows > 0 && !FORCE_FLAG) {
+  console.error(
+    `✗ Database target sudah berisi ${existingTargetRows} baris data.\n` +
+      `  Script ini DESTRUKTIF: menjalankannya akan MENGHAPUS SEMUA data saat ini\n` +
+      `  lalu menggantinya dengan data legacy.\n` +
+      `  Bila benar-benar ingin melanjutkan, jalankan ulang dengan flag --force:\n` +
+      `    bun scripts/turso-migrate-legacy.ts --force`
+  );
+  await db.$disconnect();
+  process.exit(1);
+}
+
 /* ---------------- 1. baca legacy ---------------- */
 
 console.log("⏳ Membaca tabel legacy dari Turso…");
@@ -154,6 +192,89 @@ let fallbackWalletId: string | null =
 
 /* Profile: target misi harian dari pengaturan legacy (app.dailyGoal). */
 const dailyGoal = Number(setting("app.dailyGoal") ?? 4);
+
+/* ---------------- 2a. pra-filter FK orphan & duplikat (audit B1-B4) ----------------
+ * Baris yang menunjuk wallet/habit yang tidak ada di data legacy DIBUANG & DIHITUNG
+ * DI LUAR transaksi — tidak lagi menggantung kegagalan FK di tengah impor yang
+ * membatalkan seluruh migrasi. Pasangan (habitId,date) duplikat → keep-first.
+ */
+const validWalletIds = new Set<string>(legacyWallets.map((r) => String(val(r, 0))));
+// Dompet fallback yang akan dibuat di dalam transaksi juga dianggap valid.
+if (fallbackWalletId === null && needsFallback) validWalletIds.add("kas-fallback");
+const validHabitIds = new Set<string>(legacyHabits.map((r) => String(val(r, 0))));
+
+let droppedNoWallet = 0;
+let droppedWalletFk = 0;
+let droppedHabitFk = 0;
+let droppedLogDup = 0;
+
+// Transaksi: walletId/toWalletId menunjuk dompet yang hilang → dibuang (dihitung)
+const txRows = legacyTx
+  .map((r) => {
+    const dateStr = String(val(r, 5));
+    const recRaw = str(r, 8);
+    const walletId = str(r, 6) ?? fallbackWalletId;
+    const toWalletId = str(r, 7);
+    if (!walletId) {
+      droppedNoWallet++; // tanpa walletId & tanpa dompet fallback → dibuang
+      return null;
+    }
+    if (!validWalletIds.has(walletId) || (toWalletId !== null && !validWalletIds.has(toWalletId))) {
+      droppedWalletFk++;
+      return null;
+    }
+    return {
+      id: String(val(r, 0)),
+      type: TX_TYPE_MAP[String(val(r, 1))] ?? "expense",
+      amount: num(r, 3) ?? 0,
+      category: String(val(r, 2) ?? "lainnya"),
+      walletId,
+      toWalletId,
+      date: dateStr,
+      note: str(r, 4),
+      recurring: recRaw === "weekly" || recRaw === "monthly" ? recRaw : "none",
+      createdAt: dateAt(dateStr),
+    };
+  })
+  .filter((r): r is NonNullable<typeof r> => r !== null);
+
+// Habit log: habitId menunjuk habit yang hilang → dibuang (dihitung); duplikat keep-first
+const seenLogKeys = new Set<string>();
+const migratedLogs = legacyLogs
+  .map((r) => {
+    const habitId = String(val(r, 1));
+    const date = String(val(r, 2));
+    if (!validHabitIds.has(habitId)) {
+      droppedHabitFk++;
+      return null;
+    }
+    const key = `${habitId}|${date}`;
+    if (seenLogKeys.has(key)) {
+      droppedLogDup++;
+      return null;
+    }
+    seenLogKeys.add(key);
+    return {
+      id: String(val(r, 0)),
+      habitId,
+      date,
+      // Log legacy adalah check-in sederhana (tanpa nilai) → status "done".
+      status: "done",
+      value: num(r, 3),
+    };
+  })
+  .filter((r): r is NonNullable<typeof r> => r !== null);
+
+// Ringkasan baris yang dibuang — LOUD summary (audit B1-B4)
+if (droppedNoWallet + droppedWalletFk > 0) {
+  console.warn(`⚠️ ${droppedNoWallet + droppedWalletFk} baris dibuang: wallet hilang`);
+}
+if (droppedHabitFk > 0) {
+  console.warn(`⚠️ ${droppedHabitFk} baris dibuang: habit hilang`);
+}
+if (droppedLogDup > 0) {
+  console.warn(`⚠️ ${droppedLogDup} log kebiasaan dibuang: duplikat (habitId,date) — keep-first`);
+}
 
 await db.$transaction(
   async (tx) => {
@@ -236,44 +357,12 @@ await tx.habit.createMany({
 });
 
 console.log("📦 Mengimpor habit log…");
-await tx.habitLog.createMany({
-  data: legacyLogs.map((r) => ({
-    id: String(val(r, 0)),
-    habitId: String(val(r, 1)),
-    date: String(val(r, 2)),
-    // Log legacy adalah check-in sederhana (tanpa nilai) → status "done".
-    status: "done",
-    value: num(r, 3),
-  })),
-});
+// Baris FK-orphan & duplikat sudah difilter & dihitung sebelum transaksi (audit B1-B4)
+if (migratedLogs.length) await tx.habitLog.createMany({ data: migratedLogs });
 
 console.log("📦 Mengimpor transaksi…");
-// 2 transaksi legacy tidak punya dompet (walletId NULL — dompetnya sudah dihapus).
-// Agar tidak ada data hilang, sematkan ke dompet pertama (Kas).
-const txRows = legacyTx
-  .map((r) => {
-    const dateStr = String(val(r, 5));
-    const recRaw = str(r, 8);
-    const walletId = str(r, 6) ?? fallbackWalletId;
-    if (!walletId) return null; // tanpa dompet fallback → baris dilewati
-    return {
-      id: String(val(r, 0)),
-      type: TX_TYPE_MAP[String(val(r, 1))] ?? "expense",
-      amount: num(r, 3) ?? 0,
-      category: String(val(r, 2) ?? "lainnya"),
-      walletId,
-      toWalletId: str(r, 7),
-      date: dateStr,
-      note: str(r, 4),
-      recurring: recRaw === "weekly" || recRaw === "monthly" ? recRaw : "none",
-      createdAt: dateAt(dateStr),
-    };
-  })
-  .filter((r): r is NonNullable<typeof r> => r !== null);
-if (txRows.length < legacyTx.length) {
-  console.warn(`⚠️ ${legacyTx.length - txRows.length} transaksi dilewati (tanpa walletId & tidak ada dompet fallback)`);
-}
-await tx.transaction.createMany({ data: txRows });
+// Baris FK-orphan sudah difilter & dihitung sebelum transaksi (audit B1-B4)
+if (txRows.length) await tx.transaction.createMany({ data: txRows });
 
 console.log("📦 Mengimpor budget & target tabungan…");
 await tx.budget.createMany({

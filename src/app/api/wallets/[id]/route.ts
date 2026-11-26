@@ -6,6 +6,9 @@ export const dynamic = "force-dynamic";
 
 const WALLET_TYPES = ["cash", "bank", "ewallet"];
 
+// audit B3-B3: bulatkan nilai uang ke 2 desimal
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 /**
  * DELETE /api/wallets/[id]?force=true
  * Dompet dengan riwayat transaksi hanya boleh dihapus dengan force=true;
@@ -52,7 +55,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   }
 }
 
-/** PATCH /api/wallets/[id] — ubah nama/tipe/warna/ikon/status arsip dompet. */
+/** PATCH /api/wallets/[id] — ubah nama/tipe/saldo awal/warna/ikon/status arsip dompet. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -84,10 +87,30 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
       data.type = body.type;
     }
-    if (body.color !== undefined && typeof body.color === "string" && body.color) {
+    if (body.initialBalance !== undefined) {
+      // audit B3-M3: saldo awal boleh diubah via PATCH — aman karena balance selalu
+      // dihitung ulang dari transaksi (lihat computeBalance di GET /api/wallets)
+      const initialBalance = Number(body.initialBalance);
+      if (!Number.isFinite(initialBalance) || initialBalance < 0) {
+        return NextResponse.json({ error: "Saldo awal tidak valid" }, { status: 400 });
+      }
+      data.initialBalance = round2(initialBalance); // audit B3-B3
+    }
+    // audit B3-M2: color/icon lebih dari 40 karakter diabaikan
+    if (
+      body.color !== undefined &&
+      typeof body.color === "string" &&
+      body.color &&
+      body.color.length <= 40
+    ) {
       data.color = body.color;
     }
-    if (body.icon !== undefined && typeof body.icon === "string" && body.icon) {
+    if (
+      body.icon !== undefined &&
+      typeof body.icon === "string" &&
+      body.icon &&
+      body.icon.length <= 40
+    ) {
       data.icon = body.icon;
     }
     if (body.archived !== undefined) {

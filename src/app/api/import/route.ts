@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/rutina/server";
-import { isValidDateStr } from "@/lib/rutina/format";
+import { isValidDateStr, isValidTimeStr } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +11,11 @@ const MAX_PAYLOAD_CHARS = 10_000_000;
 /** Pra-cek byte: JSON ASCII ~1 byte/char; 15 MB memberi ruang aman utk multibyte. */
 const MAX_PAYLOAD_BYTES = 15_000_000;
 const TX_TYPES = ["income", "expense", "transfer"];
+
+// audit B1-B3: pembulatan uang di batas payload (2 desimal)
+const round2 = (n: number) => Math.round(n * 100) / 100;
+// audit B1-B3: batas nominal uang — baris yang melebihi ini dibuang (dihitung)
+const MONEY_CAP = 1e12;
 
 function str(v: unknown): string | undefined {
   return typeof v === "string" ? v : undefined;
@@ -31,20 +36,26 @@ function bool(v: unknown, fallback = false): boolean {
 }
 
 function pickHabit(r: Row) {
+  // audit B1-B3: caps meniru POST /api/habits — potong field, jangan tolak baris
+  const unitTarget = numOrNull(r.unitTarget);
+  const unitStep = num(r.unitStep);
+  const reminderTime = strOrNull(r.reminderTime);
   return {
     id: str(r.id),
-    name: str(r.name),
+    name: str(r.name)?.slice(0, 80),
     category: str(r.category),
-    icon: str(r.icon),
+    icon: str(r.icon)?.slice(0, 40),
     color: str(r.color),
     scheduleType: str(r.scheduleType),
     daysOfWeek: str(r.daysOfWeek),
     timeOfDay: str(r.timeOfDay),
-    unitLabel: strOrNull(r.unitLabel),
-    unitTarget: numOrNull(r.unitTarget),
-    unitStep: num(r.unitStep) ?? 1,
-    reminderTime: strOrNull(r.reminderTime),
-    stackAfter: strOrNull(r.stackAfter),
+    unitLabel: strOrNull(r.unitLabel)?.slice(0, 24) ?? null,
+    // audit B1-B3: unit <= 0 / tidak finite → undefined (habit jatuh ke check-only)
+    unitTarget: unitTarget != null && unitTarget > 0 ? unitTarget : undefined,
+    unitStep: unitStep != null && unitStep > 0 ? unitStep : undefined,
+    // audit B1-B3: reminderTime format salah → field dibuang (null), baris tetap dipulihkan
+    reminderTime: reminderTime && isValidTimeStr(reminderTime) ? reminderTime : null,
+    stackAfter: strOrNull(r.stackAfter)?.slice(0, 120) ?? null,
     archived: bool(r.archived),
   };
 }
@@ -64,14 +75,14 @@ function pickWorkout(r: Row) {
   return {
     id: str(r.id),
     type: str(r.type) ?? "run",
-    title: strOrNull(r.title),
+    title: strOrNull(r.title)?.slice(0, 120) ?? null, // audit B1-B3
     date: str(r.date) ?? "",
     startTime: strOrNull(r.startTime),
     durationMin: num(r.durationMin) ?? 0,
     distanceKm: numOrNull(r.distanceKm),
     calories: numOrNull(r.calories),
     paceMin: numOrNull(r.paceMin),
-    notes: strOrNull(r.notes),
+    notes: strOrNull(r.notes)?.slice(0, 500) ?? null, // audit B1-B3
     strength: strOrNull(r.strength),
   };
 }
@@ -79,8 +90,8 @@ function pickWorkout(r: Row) {
 function pickFoodEntry(r: Row) {
   return {
     id: str(r.id),
-    name: str(r.name) ?? "",
-    portion: strOrNull(r.portion),
+    name: (str(r.name) ?? "").slice(0, 120), // audit B1-B3
+    portion: strOrNull(r.portion)?.slice(0, 60) ?? null, // audit B1-B3
     calories: num(r.calories) ?? 0,
     protein: numOrNull(r.protein),
     carbs: numOrNull(r.carbs),
@@ -99,7 +110,7 @@ function pickCheckIn(r: Row) {
     soreness: numOrNull(r.soreness),
     stress: numOrNull(r.stress),
     sleepHours: numOrNull(r.sleepHours),
-    note: strOrNull(r.note),
+    note: strOrNull(r.note)?.slice(0, 500) ?? null, // audit B1-B3
   };
 }
 
@@ -115,9 +126,9 @@ function pickBodyMetric(r: Row) {
 function pickWallet(r: Row) {
   return {
     id: str(r.id),
-    name: str(r.name) ?? "",
+    name: (str(r.name) ?? "").slice(0, 60), // audit B1-B3
     type: str(r.type) ?? "cash",
-    initialBalance: num(r.initialBalance) ?? 0,
+    initialBalance: round2(num(r.initialBalance) ?? 0), // audit B1-B3
     color: str(r.color) ?? "teal",
     icon: str(r.icon) ?? "wallet",
     archived: bool(r.archived),
@@ -128,12 +139,12 @@ function pickTransaction(r: Row) {
   return {
     id: str(r.id),
     type: str(r.type) ?? "expense",
-    amount: num(r.amount) ?? 0,
-    category: str(r.category) ?? "lainnya",
+    amount: round2(num(r.amount) ?? 0), // audit B1-B3: bulatkan 2 desimal
+    category: (str(r.category) ?? "lainnya").slice(0, 60), // audit B1-B3
     walletId: str(r.walletId) ?? "",
     toWalletId: strOrNull(r.toWalletId),
     date: str(r.date) ?? "",
-    note: strOrNull(r.note),
+    note: strOrNull(r.note)?.slice(0, 500) ?? null, // audit B1-B3
     recurring: str(r.recurring) ?? "none",
   };
 }
@@ -141,17 +152,17 @@ function pickTransaction(r: Row) {
 function pickBudget(r: Row) {
   return {
     id: str(r.id),
-    category: str(r.category) ?? "lainnya",
-    monthlyLimit: num(r.monthlyLimit) ?? 0,
+    category: (str(r.category) ?? "lainnya").slice(0, 60), // audit B1-B3
+    monthlyLimit: round2(num(r.monthlyLimit) ?? 0), // audit B1-B3
   };
 }
 
 function pickSavingsGoal(r: Row) {
   return {
     id: str(r.id),
-    name: str(r.name) ?? "",
-    targetAmount: num(r.targetAmount) ?? 0,
-    currentAmount: num(r.currentAmount) ?? 0,
+    name: (str(r.name) ?? "").slice(0, 120), // audit B1-B3
+    targetAmount: round2(num(r.targetAmount) ?? 0), // audit B1-B3
+    currentAmount: round2(num(r.currentAmount) ?? 0), // audit B1-B3
     deadline: strOrNull(r.deadline),
     color: str(r.color) ?? "teal",
     icon: str(r.icon) ?? "piggy-bank",
@@ -161,8 +172,8 @@ function pickSavingsGoal(r: Row) {
 function pickJournalEntry(r: Row) {
   return {
     id: str(r.id),
-    title: str(r.title) ?? "",
-    content: str(r.content) ?? "",
+    title: (str(r.title) ?? "").slice(0, 200), // audit B1-B3
+    content: (str(r.content) ?? "").slice(0, 50_000), // audit B1-B3
     folder: str(r.folder) ?? "Umum",
     mood: strOrNull(r.mood),
     pinned: bool(r.pinned),
@@ -174,16 +185,6 @@ function pickJournalEntry(r: Row) {
 
 function asArray(v: unknown): Row[] {
   return Array.isArray(v) ? (v.filter((x) => x && typeof x === "object") as Row[]) : [];
-}
-
-function isSameOrigin(req: Request): boolean {
-  const origin = req.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === new URL(req.url).host;
-  } catch {
-    return false;
-  }
 }
 
 /** Parser tanggal aman: string ISO tidak bisa diparse → null (baris dilewati). */
@@ -207,19 +208,25 @@ function findDupId(rows: { id: unknown }[], label: string): string | null {
 
 /**
  * POST /api/import — pulihkan data dari payload /api/export?format=json.
+ * Wajib konfirmasi eksplisit `{ confirm: "PULIHKAN DATA" }` + field `exportedAt`
+ * (audit B1-A2) — endpoint ini menghapus seluruh tabel data.
  * Hapus lalu recreate seluruh tabel data dalam SATU transaksi; id asli dipertahankan
  * agar relasi tetap utuh. Payload divalidasi dulu: duplikat → 400, baris tidak valid
- * dibuang dan dihitung, FK-violating rows tidak pernah dimasukkan.
+ * dibuang dan dihitung, FK-violating rows dibuang & dihitung (bukan hard 400).
  */
 export async function POST(req: Request) {
   try {
-    if (!isSameOrigin(req)) {
-      return NextResponse.json({ error: "Permintaan dari origin tidak diizinkan" }, { status: 403 });
-    }
+    // (audit B1-Medium) cek same-origin lokal dihapus — middleware.ts sudah
+    // menegakkan CSRF same-origin untuk semua mutasi /api.
 
     // Pra-cek Content-Length SEBELUM membuffer body — mencegah body multi-GB
     // dibaca penuh ke memori hanya untuk ditolak belakangan.
-    const declaredBytes = Number(req.headers.get("content-length") ?? 0);
+    // (audit B1-Medium) header wajib ada — tanpa itu pra-cek ukuran tak bisa diandalkan
+    const contentLengthHeader = req.headers.get("content-length");
+    if (contentLengthHeader == null || contentLengthHeader.trim() === "") {
+      return NextResponse.json({ error: "Content-Length wajib ada" }, { status: 411 });
+    }
+    const declaredBytes = Number(contentLengthHeader);
     if (Number.isFinite(declaredBytes) && declaredBytes > MAX_PAYLOAD_BYTES) {
       return NextResponse.json(
         { error: "Payload terlalu besar (maksimal 10 juta karakter)" },
@@ -245,7 +252,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Body JSON tidak valid" }, { status: 400 });
     }
 
-    const wallets = asArray(body.wallets).map(pickWallet).filter((w) => w.id && w.name);
+    // audit B1-A2: gerbang konfirmasi eksplisit — import menghapus seluruh DB
+    if (body?.confirm !== "PULIHKAN DATA") {
+      return NextResponse.json(
+        { error: "Ketik PULIHKAN DATA untuk konfirmasi pemulihan" },
+        { status: 400 }
+      );
+    }
+    // audit B1-A2: sanity — berkas harus benar-benar berasal dari /api/export
+    if (typeof body.exportedAt !== "string" || !body.exportedAt) {
+      return NextResponse.json(
+        { error: "File bukan cadangan Rutina (exportedAt tidak ditemukan)" },
+        { status: 400 }
+      );
+    }
+
+    // ===== Baris tidak valid dibuang & dihitung (tidak pernah FK-violating) =====
+    const dropped: Record<string, number> = {};
+    const bump = (k: string) => {
+      dropped[k] = (dropped[k] ?? 0) + 1;
+    };
+
+    // audit B1-B3: filter pick ikut menjatuhkan baris dengan nominal tak masuk akal
+    const wallets = asArray(body.wallets)
+      .map(pickWallet)
+      .filter((w) => {
+        const ok = w.id && w.name && w.initialBalance <= MONEY_CAP;
+        if (!ok) bump("wallets");
+        return ok;
+      });
     const habits = asArray(body.habits).map(pickHabit).filter((h) => h.id && h.name);
     const habitLogs = asArray(body.habitLogs)
       .map(pickHabitLog)
@@ -254,14 +289,46 @@ export async function POST(req: Request) {
     const foodEntries = asArray(body.foodEntries).map(pickFoodEntry).filter((f) => f.id);
     const checkins = asArray(body.checkins).map(pickCheckIn).filter((c) => c.id && c.date);
     const bodyMetrics = asArray(body.bodyMetrics).map(pickBodyMetric).filter((m) => m.id && m.date);
-    const budgets = asArray(body.budgets).map(pickBudget).filter((b) => b.id);
-    const savingsGoals = asArray(body.savingsGoals).map(pickSavingsGoal).filter((g) => g.id && g.name);
+    const budgets = asArray(body.budgets)
+      .map(pickBudget)
+      .filter((b) => {
+        const ok = b.id && b.monthlyLimit <= MONEY_CAP; // audit B1-B3
+        if (!ok) bump("budgets");
+        return ok;
+      });
+    const savingsGoals = asArray(body.savingsGoals)
+      .map(pickSavingsGoal)
+      .filter((g) => {
+        const ok = g.id && g.name && g.targetAmount <= MONEY_CAP; // audit B1-B3
+        if (!ok) bump("savingsGoals");
+        return ok;
+      });
     const journalEntries = asArray(body.journalEntries)
       .map(pickJournalEntry)
       .filter((j) => j.id && j.content);
     const transactions = asArray(body.transactions)
       .map(pickTransaction)
       .filter((t) => t.id && t.date);
+
+    // audit B1-A2: seluruh koleksi kosong → tidak ada yang bisa dipulihkan
+    if (
+      wallets.length === 0 &&
+      habits.length === 0 &&
+      habitLogs.length === 0 &&
+      workouts.length === 0 &&
+      foodEntries.length === 0 &&
+      checkins.length === 0 &&
+      bodyMetrics.length === 0 &&
+      transactions.length === 0 &&
+      budgets.length === 0 &&
+      savingsGoals.length === 0 &&
+      journalEntries.length === 0
+    ) {
+      return NextResponse.json(
+        { error: "Cadangan kosong — tidak ada yang dipulihkan" },
+        { status: 400 }
+      );
+    }
 
     // ===== Pre-validasi: id duplikat → 400 =====
     const dupChecks: [{ id: unknown }[], string][] = [
@@ -330,12 +397,6 @@ export async function POST(req: Request) {
       seenBudgetCat.add(b.category);
     }
 
-    // ===== Baris tidak valid dibuang & dihitung (tidak pernah FK-violating) =====
-    const dropped: Record<string, number> = {};
-    const bump = (k: string) => {
-      dropped[k] = (dropped[k] ?? 0) + 1;
-    };
-
     const validWorkouts = workouts.filter((w) => {
       const ok = isValidDateStr(w.date) && w.durationMin > 0;
       if (!ok) bump("workouts");
@@ -373,7 +434,8 @@ export async function POST(req: Request) {
       const ok =
         isValidDateStr(m.date) &&
         (m.weightKg == null || m.weightKg > 0) &&
-        (m.hydrationGlasses == null || m.hydrationGlasses > 0);
+        // audit B1-Medium: hidrasi 0 gelas sah (selaras POST /api/body-metrics)
+        (m.hydrationGlasses == null || m.hydrationGlasses >= 0);
       if (!ok) bump("bodyMetrics");
       return ok;
     });
@@ -412,24 +474,22 @@ export async function POST(req: Request) {
     }
     const validTransactions: typeof transactions = [];
     for (const t of transactions) {
-      if (!TX_TYPES.includes(t.type) || !isValidDateStr(t.date) || !(t.amount > 0)) {
+      if (
+        !TX_TYPES.includes(t.type) ||
+        !isValidDateStr(t.date) ||
+        !(t.amount > 0) ||
+        t.amount > MONEY_CAP // audit B1-B3: nominal tak masuk akal → dibuang
+      ) {
         bump("transactions");
         continue;
       }
-      if (t.type === "transfer") {
-        // Transfer wajib merujuk DUA dompet yang ada di payload (integritas data dulu)
-        if (!t.toWalletId || !walletIds.has(t.walletId) || !walletIds.has(t.toWalletId)) {
-          return NextResponse.json(
-            {
-              error: `Transaksi transfer dengan id ${t.id} tidak valid: walletId dan toWalletId wajib merujuk dompet yang ada di payload`,
-            },
-            { status: 400 }
-          );
-        }
-        validTransactions.push(t);
+      // audit B1-Medium: FK gagal (wallet hilang) → baris dibuang & dihitung,
+      // kebijakan konsisten untuk income/expense maupun transfer (bukan hard 400)
+      if (!walletIds.has(t.walletId) || (t.toWalletId != null && !walletIds.has(t.toWalletId))) {
+        bump("transactions");
         continue;
       }
-      if (!walletIds.has(t.walletId) || (t.toWalletId != null && !walletIds.has(t.toWalletId))) {
+      if (t.type === "transfer" && !t.toWalletId) {
         bump("transactions");
         continue;
       }

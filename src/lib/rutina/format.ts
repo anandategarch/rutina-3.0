@@ -38,6 +38,13 @@ export function isValidDateStr(s: unknown): s is string {
   return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
 }
 
+/** HH:MM sungguhan (00-23 : 00-59) — bukan hanya bentuknya. Dipakai POST & PATCH habit. */
+export function isValidTimeStr(s: string): boolean {
+  if (!/^\d{2}:\d{2}$/.test(s)) return false;
+  const [h, m] = s.split(":").map(Number);
+  return h <= 23 && m <= 59;
+}
+
 export function addDays(s: string, delta: number): string {
   const d = parseDateStr(s);
   d.setDate(d.getDate() + delta);

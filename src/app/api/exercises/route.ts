@@ -8,6 +8,7 @@ export async function GET() {
   try {
     const exercises = await db.exercise.findMany({
       orderBy: [{ muscleGroup: "asc" }, { name: "asc" }],
+      take: 500, // audit B3-B4: batasi hasil query
     });
     return NextResponse.json({ exercises });
   } catch (e) {

@@ -17,13 +17,15 @@ function numOrNull(v: unknown): number | null | undefined {
   if (v === undefined) return undefined;
   if (v === null || v === "") return null;
   const n = Number(v);
-  return Number.isFinite(n) && n >= 0 ? n : undefined;
+  // audit B2-M6: jam tidur wajar hanya 0-24 (dipakai khusus sleepHours)
+  return Number.isFinite(n) && n >= 0 && n <= 24 ? n : undefined;
 }
 
 // GET /api/checkins → { checkins } urut date desc
 export async function GET() {
   try {
-    const checkins = await db.checkIn.findMany({ orderBy: { date: "desc" } });
+    // audit B2-M2: batasi 365 baris terbaru — payload tak membengkak tanpa batas
+    const checkins = await db.checkIn.findMany({ orderBy: { date: "desc" }, take: 365 });
     return NextResponse.json({ checkins });
   } catch (e) {
     console.error("checkins GET error", e);
@@ -34,7 +36,11 @@ export async function GET() {
 // POST /api/checkins — upsert by date (tanggal unik)
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
+    // audit B2-M6: body rusak/null tidak boleh diam-diam dianggap {}
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Body tidak valid" }, { status: 400 });
+    }
 
     const date =
       typeof body.date === "string" && body.date.trim() ? body.date.trim() : jakartaToday();
@@ -53,6 +59,10 @@ export async function POST(req: Request) {
         : typeof body.note === "string" && body.note.trim().length > 0
           ? body.note.trim()
           : null;
+    // audit B2-M2: catatan dibatasi 500 karakter — tolak, jangan potong teks user
+    if (note && note.length > 500) {
+      return NextResponse.json({ error: "Catatan maksimal 500 karakter" }, { status: 400 });
+    }
 
     if (mood === undefined && body.mood !== undefined) {
       return NextResponse.json({ error: "Nilai mood harus 1-5" }, { status: 400 });

@@ -37,12 +37,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       if (!content) {
         return NextResponse.json({ error: "Isi catatan tidak boleh kosong" }, { status: 400 });
       }
+      // audit B3-B1: cap konten selaras dengan POST
+      if (content.length > 50_000) {
+        return NextResponse.json(
+          { error: "Catatan terlalu panjang (maks 50.000 karakter)" },
+          { status: 400 }
+        );
+      }
       data.content = content;
       data.wordCount = countWords(content);
     }
     if (typeof body.folder === "string" && FOLDERS.includes(body.folder)) data.folder = body.folder;
-    if (body.mood === null) data.mood = null;
-    else if (typeof body.mood === "string" && MOODS.includes(body.mood)) data.mood = body.mood;
+    // audit B3-L4: mood tidak valid → null (selaras dengan POST), bukan diabaikan diam-diam
+    if (body.mood !== undefined) {
+      data.mood = typeof body.mood === "string" && MOODS.includes(body.mood) ? body.mood : null;
+    }
     if (typeof body.pinned === "boolean") data.pinned = body.pinned;
 
     const entry = await db.journalEntry.update({ where: { id }, data });

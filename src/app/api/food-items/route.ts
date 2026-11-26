@@ -5,11 +5,12 @@ export const dynamic = "force-dynamic";
 
 // GET /api/food-items?q= → { items } max 12
 // Dengan q: filter nama contains (SQLite `contains` case-insensitive untuk ASCII).
-// Tanpa q: 12 item acak sebagai saran populer.
+// Tanpa q: ambil id saja → acak di JS → ambil 12 baris penuh (tanpa memuat seluruh tabel).
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
+    // audit B3-M5: buang wildcard LIKE (% dan _) dari q
+    const q = (url.searchParams.get("q") ?? "").replace(/[%_]/g, "").trim().toLowerCase();
 
     let items;
     if (q.length > 0) {
@@ -20,8 +21,13 @@ export async function GET(req: Request) {
         take: 12,
       });
     } else {
-      const all = await db.foodItem.findMany({ orderBy: { name: "asc" } });
-      items = [...all].sort(() => Math.random() - 0.5).slice(0, 12);
+      // audit B3-L3: pilih 12 id acak dulu, baru ambil baris penuhnya — hemat memori
+      const rows = await db.foodItem.findMany({ select: { id: true } });
+      const ids = rows
+        .map((r) => r.id)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 12);
+      items = await db.foodItem.findMany({ where: { id: { in: ids } } });
     }
 
     return NextResponse.json({ items });

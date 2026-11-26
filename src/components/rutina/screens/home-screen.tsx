@@ -78,8 +78,9 @@ export default function HomeScreen() {
   }, [selectedDate]);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["home"],
-    queryFn: rutinaApi.home,
+    // audit B2-H2: tanggal terpilih masuk query key — ganti tanggal = refetch beranda
+    queryKey: ["home", selectedDate],
+    queryFn: () => rutinaApi.home(selectedDate),
   });
 
   // Data pendukung visual (cache dibagikan dengan layar Statistik/Keuangan)
@@ -91,10 +92,10 @@ export default function HomeScreen() {
     mutationFn: ({ id, value }: { id: string; value?: number }) =>
       rutinaApi.checkHabit(id, selectedDate, value),
     onMutate: async ({ id, value }) => {
-      await qc.cancelQueries({ queryKey: ["home"] });
-      const prev = qc.getQueryData<HomePayload>(["home"]);
+      await qc.cancelQueries({ queryKey: ["home", selectedDate] });
+      const prev = qc.getQueryData<HomePayload>(["home", selectedDate]);
       // Optimistic: toggle log pada tanggal yang dipilih di payload home
-      qc.setQueryData<HomePayload>(["home"], (old) => {
+      qc.setQueryData<HomePayload>(["home", selectedDate], (old) => {
         if (!old) return old;
         return {
           ...old,
@@ -143,7 +144,7 @@ export default function HomeScreen() {
       return { prev };
     },
     onError: (e: Error, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["home"], ctx.prev);
+      if (ctx?.prev) qc.setQueryData(["home", selectedDate], ctx.prev);
       toast.error(e.message);
     },
     onSettled: () => {

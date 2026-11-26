@@ -23,6 +23,7 @@ export async function GET() {
   try {
     const workouts = await db.workout.findMany({
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: 365, // audit B3-B4: batasi hasil query
     });
     return NextResponse.json({ workouts });
   } catch (e) {
@@ -45,22 +46,55 @@ export async function POST(req: Request) {
     if (durationMin === null || durationMin <= 0) {
       return NextResponse.json({ error: "Durasi wajib diisi (lebih dari 0 menit)" }, { status: 400 });
     }
+    // audit B3-B2: durasi maksimal 24 jam
+    if (durationMin > 1440) {
+      return NextResponse.json({ error: "Durasi maksimal 24 jam" }, { status: 400 });
+    }
 
     const date = str(body.date) ?? jakartaToday();
     if (!isValidDateStr(date)) {
       return NextResponse.json({ error: "Format tanggal tidak valid" }, { status: 400 });
     }
 
-    // startTime wajib berformat "HH:MM" bila diisi
-    const startTime = str(body.startTime);
-    if (startTime && !/^\d{2}:\d{2}$/.test(startTime)) {
-      return NextResponse.json({ error: "Format jam mulai tidak valid" }, { status: 400 });
-    }
+    // audit B3-B2: startTime harus "HH:MM" (00:00–23:59); selain itu dianggap tidak diisi
+    const rawStart = str(body.startTime);
+    const startTime =
+      rawStart !== null && /^([01]\d|2[0-3]):[0-5]\d$/.test(rawStart) ? rawStart : null;
 
     const distanceKm = num(body.distanceKm);
+    // audit B3-B2: jarak diisi → wajib angka > 0 dan ≤ 500
+    if (
+      body.distanceKm !== undefined &&
+      body.distanceKm !== null &&
+      String(body.distanceKm).trim() !== "" &&
+      (distanceKm === null || distanceKm <= 0 || distanceKm > 500)
+    ) {
+      return NextResponse.json({ error: "Jarak tidak valid" }, { status: 400 });
+    }
+
     let paceMin = num(body.paceMin);
+    // audit B3-B2: pace diisi → wajib angka ≥ 0 dan ≤ 600 (tidak pernah tersimpan negatif)
+    if (
+      body.paceMin !== undefined &&
+      body.paceMin !== null &&
+      String(body.paceMin).trim() !== "" &&
+      (paceMin === null || paceMin < 0 || paceMin > 600)
+    ) {
+      return NextResponse.json({ error: "Pace tidak valid" }, { status: 400 });
+    }
     if ((paceMin === null || paceMin <= 0) && distanceKm !== null && distanceKm > 0) {
       paceMin = Math.round((durationMin / distanceKm) * 100) / 100;
+    }
+
+    const calories = num(body.calories);
+    // audit B3-B2: kalori diisi → wajib angka ≥ 0 dan ≤ 10000
+    if (
+      body.calories !== undefined &&
+      body.calories !== null &&
+      String(body.calories).trim() !== "" &&
+      (calories === null || calories < 0 || calories > 10000)
+    ) {
+      return NextResponse.json({ error: "Kalori tidak valid" }, { status: 400 });
     }
 
     // Strength items → JSON string array
@@ -86,7 +120,7 @@ export async function POST(req: Request) {
         startTime,
         durationMin,
         distanceKm,
-        calories: num(body.calories),
+        calories,
         paceMin,
         notes: str(body.notes),
         strength: strengthJson,

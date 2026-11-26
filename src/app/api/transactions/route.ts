@@ -7,6 +7,9 @@ export const dynamic = "force-dynamic";
 const TX_TYPES = ["income", "expense", "transfer"];
 const RECURRING = ["none", "weekly", "monthly"];
 
+// audit B3-B3: bulatkan nilai uang ke 2 desimal
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 function bad(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
 }
@@ -16,6 +19,7 @@ export async function GET() {
     const transactions = await db.transaction.findMany({
       include: { wallet: true, toWallet: true },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: 1000, // audit B3-B4: batasi hasil query
     });
     return NextResponse.json({ transactions });
   } catch (e) {
@@ -31,8 +35,11 @@ export async function POST(req: Request) {
     const type = typeof body.type === "string" ? body.type : "";
     if (!TX_TYPES.includes(type)) return bad("Tipe transaksi tidak valid");
 
-    const amount = Number(body.amount);
+    let amount = Number(body.amount);
     if (!Number.isFinite(amount) || amount <= 0) return bad("Nominal harus lebih dari 0");
+    // audit B3-B3: bulatkan ke 2 desimal, tolak nominal tidak wajar
+    amount = round2(amount);
+    if (amount > 1e12) return bad("Nominal tidak wajar");
 
     const walletId = typeof body.walletId === "string" ? body.walletId : "";
     if (!walletId) return bad("Dompet sumber wajib dipilih");

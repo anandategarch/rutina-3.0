@@ -125,8 +125,13 @@ export default function ProfileScreen() {
   const [busyExport, setBusyExport] = React.useState<"json" | "csv" | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = React.useState<File | null>(null);
+  // audit B1-A2: frasa konfirmasi pulihkan + status berkas punya tanda cadangan Rutina
+  const [importConfirmText, setImportConfirmText] = React.useState("");
+  const [importBackupValid, setImportBackupValid] = React.useState(true);
   const [resetOpen, setResetOpen] = React.useState(false);
   const [resetStep, setResetStep] = React.useState<1 | 2>(1);
+  // audit B1-A1: frasa konfirmasi hapus seluruh data
+  const [resetConfirmText, setResetConfirmText] = React.useState("");
   const [faqOpen, setFaqOpen] = React.useState(false);
 
   const downloadExport = async (format: "json" | "csv") => {
@@ -156,12 +161,14 @@ export default function ProfileScreen() {
   const importMutation = useMutation({
     mutationFn: async (file: File) => {
       const text = await file.text();
-      let payload: unknown;
+      let parsed: Record<string, unknown>;
       try {
-        payload = JSON.parse(text);
+        parsed = JSON.parse(text) as Record<string, unknown>;
       } catch {
         throw new Error("Berkas bukan JSON yang valid");
       }
+      // audit B1-A2: server menuntut body.confirm === "PULIHKAN DATA" (kunci asing diabaikan)
+      const payload = { ...parsed, confirm: importConfirmText };
       const res = await fetch("/api/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -174,13 +181,15 @@ export default function ProfileScreen() {
     onSuccess: () => {
       qc.invalidateQueries();
       toast.success("Data berhasil dipulihkan dari cadangan");
+      setImportConfirmText("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   // Konfirmasi dulu sebelum benar-benar menimpa data dengan berkas pilihan
   const confirmImport = () => {
-    if (!pendingImport || importMutation.isPending) return;
+    // audit B1-A2: hanya lanjut bila frasa konfirmasi persis sama
+    if (!pendingImport || importMutation.isPending || importConfirmText !== "PULIHKAN DATA") return;
     importMutation.mutate(pendingImport, {
       onSettled: () => setPendingImport(null),
     });
@@ -188,15 +197,22 @@ export default function ProfileScreen() {
 
   const resetMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/danger/reset", { method: "POST" });
-      if (!res.ok) throw new Error("Gagal menghapus data");
-      return res.json();
+      // audit B1-A1: server menuntut body.confirm === "RESET RUTINA"
+      const res = await fetch("/api/danger/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: resetConfirmText }),
+      });
+      const b = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(b?.error ?? "Gagal menghapus data");
+      return b;
     },
     onSuccess: () => {
       qc.invalidateQueries();
-      toast.success("Seluruh data aktivitas telah dihapus");
+      toast.success("Semua data berhasil dihapus");
       setResetOpen(false);
       setResetStep(1);
+      setResetConfirmText("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -427,7 +443,19 @@ export default function ProfileScreen() {
             onChange={(e) => {
               const f = e.target.files?.[0];
               e.target.value = "";
-              if (f) setPendingImport(f);
+              if (!f) return;
+              setPendingImport(f);
+              // audit B1-A2: mulai bersih setiap berkas baru dipilih
+              setImportConfirmText("");
+              setImportBackupValid(true);
+              // audit B1-A2: cek tanda cadangan Rutina (exportedAt) untuk peringatan inline
+              void f
+                .text()
+                .then((t) => {
+                  const parsed = JSON.parse(t) as { exportedAt?: unknown } | null;
+                  setImportBackupValid(typeof parsed?.exportedAt === "string");
+                })
+                .catch(() => setImportBackupValid(false));
             }}
           />
         </SectionCard>
@@ -461,6 +489,7 @@ export default function ProfileScreen() {
           <button
             onClick={() => {
               setResetStep(1);
+              setResetConfirmText(""); // audit B1-A1: mulai kosong setiap kali dialog dibuka
               setResetOpen(true);
             }}
             className="press w-full min-h-[48px] rounded-xl border border-clay/50 text-clay-deep font-bold text-sm"
@@ -612,6 +641,21 @@ export default function ProfileScreen() {
                   Tindakan ini tidak dapat dibatalkan. Semua catatanmu akan hilang dan statistik kembali ke nol.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              {/* audit B1-A1: konfirmasi ketik manual sebelum hapus permanen */}
+              <div className="space-y-1.5">
+                <label htmlFor="reset-confirm" className="text-xs font-semibold text-muted-foreground">
+                  Ketik RESET RUTINA untuk konfirmasi
+                </label>
+                <Input
+                  id="reset-confirm"
+                  value={resetConfirmText}
+                  onChange={(e) => setResetConfirmText(e.target.value)}
+                  placeholder="RESET RUTINA"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  className="min-h-[44px]"
+                />
+              </div>
               <AlertDialogFooter>
                 <Button variant="outline" onClick={() => setResetOpen(false)}>
                   Batal
@@ -619,7 +663,7 @@ export default function ProfileScreen() {
                 <Button
                   variant="destructive"
                   onClick={() => resetMutation.mutate()}
-                  disabled={resetMutation.isPending}
+                  disabled={resetMutation.isPending || resetConfirmText !== "RESET RUTINA"}
                   className="flex items-center gap-1.5"
                 >
                   {resetMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -647,6 +691,28 @@ export default function ProfileScreen() {
               dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {/* audit B1-A2: peringatan bila berkas tak punya tanda cadangan Rutina */}
+          {!importBackupValid && (
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-clay-deep">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-clay" />
+              File mungkin bukan cadangan Rutina
+            </p>
+          )}
+          {/* audit B1-A2: konfirmasi ketik manual sebelum memulihkan */}
+          <div className="space-y-1.5">
+            <label htmlFor="import-confirm" className="text-xs font-semibold text-muted-foreground">
+              Ketik PULIHKAN DATA untuk konfirmasi
+            </label>
+            <Input
+              id="import-confirm"
+              value={importConfirmText}
+              onChange={(e) => setImportConfirmText(e.target.value)}
+              placeholder="PULIHKAN DATA"
+              autoCapitalize="none"
+              autoCorrect="off"
+              className="min-h-[44px]"
+            />
+          </div>
           <AlertDialogFooter>
             <Button variant="outline" onClick={() => setPendingImport(null)} disabled={importMutation.isPending}>
               Batal
@@ -654,7 +720,7 @@ export default function ProfileScreen() {
             <Button
               variant="destructive"
               onClick={confirmImport}
-              disabled={importMutation.isPending}
+              disabled={importMutation.isPending || importConfirmText !== "PULIHKAN DATA"}
               className="flex items-center gap-1.5"
             >
               {importMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}

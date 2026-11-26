@@ -21,6 +21,7 @@ export async function GET() {
   try {
     const entries = await db.journalEntry.findMany({
       orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
+      take: 200, // audit B3-B4: batasi jumlah entri yang dimuat
     });
     return NextResponse.json({ entries });
   } catch (e) {

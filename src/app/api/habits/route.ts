@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
 import { db, computeHabitStreaks } from "@/lib/rutina/server";
-import { addDays, jakartaToday } from "@/lib/rutina/format";
+import { addDays, jakartaToday, isValidTimeStr } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
 const TIME_OF_DAY = ["morning", "afternoon", "evening", "anytime"];
 const CATEGORIES = ["health", "productivity", "mind", "finance", "social", "learning"];
 const COLORS = ["emerald", "amber", "teal", "rose", "orange", "stone"];
-
-/** HH:MM sungguhan (00-23 : 00-59) — bukan hanya bentuknya. */
-function isValidTimeStr(s: string): boolean {
-  if (!/^\d{2}:\d{2}$/.test(s)) return false;
-  const [h, m] = s.split(":").map(Number);
-  return h <= 23 && m <= 59;
-}
+// isValidTimeStr kini helper bersama di lib/rutina/format (dipakai POST & PATCH)
 
 /**
  * GET /api/habits
@@ -29,7 +23,8 @@ export async function GET() {
       db.habit.findMany({
         include: {
           logs: {
-            where: { date: { gte: sinceStr } },
+            // audit B2-H3: log masa depan tidak boleh tampil di daftar kebiasaan
+            where: { date: { gte: sinceStr, lte: jakartaToday() } },
             orderBy: { date: "asc" },
           },
         },
@@ -107,11 +102,18 @@ export async function POST(req: Request) {
             ? body.unitLabel.trim().slice(0, 24)
             : null,
         unitTarget:
-          body.unitTarget !== undefined && body.unitTarget !== null && Number(body.unitTarget) > 0
+          body.unitTarget !== undefined &&
+          body.unitTarget !== null &&
+          // audit B2-M5: Infinity lolos dari `> 0` — wajib Number.isFinite
+          Number.isFinite(Number(body.unitTarget)) &&
+          Number(body.unitTarget) > 0
             ? Number(body.unitTarget)
             : null,
         unitStep:
-          body.unitStep !== undefined && body.unitStep !== null && Number(body.unitStep) > 0
+          body.unitStep !== undefined &&
+          body.unitStep !== null &&
+          Number.isFinite(Number(body.unitStep)) &&
+          Number(body.unitStep) > 0
             ? Number(body.unitStep)
             : 1,
         reminderTime,

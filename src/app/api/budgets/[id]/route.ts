@@ -4,14 +4,21 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// audit B3-B3: bulatkan nilai uang ke 2 desimal
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
 
-    const monthlyLimit = Number(body.monthlyLimit);
+    let monthlyLimit = Number(body.monthlyLimit);
     if (!Number.isFinite(monthlyLimit) || monthlyLimit <= 0)
       return NextResponse.json({ error: "Limit bulanan harus lebih dari 0" }, { status: 400 });
+    // audit B3-B3: bulatkan ke 2 desimal, tolak limit tidak wajar
+    monthlyLimit = round2(monthlyLimit);
+    if (monthlyLimit > 1e12)
+      return NextResponse.json({ error: "Limit bulanan tidak wajar" }, { status: 400 });
 
     const budget = await db.budget.update({ where: { id }, data: { monthlyLimit } });
 

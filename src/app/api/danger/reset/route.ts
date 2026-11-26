@@ -5,28 +5,16 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/danger/reset — hapus seluruh data aktivitas pengguna.
- * Wajib konfirmasi eksplisit `{ confirm: "RESET RUTINA" }` dan same-origin.
+ * Wajib konfirmasi eksplisit `{ confirm: "RESET RUTINA" }`.
+ * (audit B1-Medium) cek same-origin lokal dihapus — middleware.ts sudah menegakkan
+ * CSRF same-origin untuk semua mutasi /api.
  * Tabel konten sistem (Quote) dan referensi (Profile, Exercise, FoodItem) dipertahankan.
  * Piala (Achievement) dipertahankan definisinya, namun status unlock di-reset
  * agar konsisten dengan data yang baru dikosongkan.
  */
 
-function isSameOrigin(req: Request): boolean {
-  const origin = req.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === new URL(req.url).host;
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(req: Request) {
   try {
-    if (!isSameOrigin(req)) {
-      return NextResponse.json({ error: "Permintaan dari origin tidak diizinkan" }, { status: 403 });
-    }
-
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object" || body.confirm !== "RESET RUTINA") {
       return NextResponse.json(

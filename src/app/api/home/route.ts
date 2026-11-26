@@ -4,7 +4,9 @@ import {
   addDays,
   dayOfWeek,
   daysBetween,
+  jakartaDateStr,
   jakartaToday,
+  isValidDateStr,
   parseDateStr,
   rangeDays,
   startOfMonth,
@@ -16,31 +18,51 @@ export const dynamic = "force-dynamic";
 // Hari acuan untuk indeks kutipan harian (berganti tiap tengah malam WIB)
 const QUOTE_EPOCH = "2024-01-01";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const todayStr = jakartaToday();
-    const dow = dayOfWeek(todayStr);
+    // audit B2-H2: ?date= opsional — default hari ini WIB; tanggal sampah → 400
+    const dateParam = new URL(req.url).searchParams.get("date");
+    const reqDate =
+      dateParam === null ? todayStr : isValidDateStr(dateParam) ? dateParam : null;
+    if (!reqDate) {
+      return NextResponse.json({ error: "Format tanggal tidak valid" }, { status: 400 });
+    }
+    const dow = dayOfWeek(reqDate);
 
-    const profile = (await db.profile.findFirst()) ?? (await db.profile.create({ data: {} }));
+    // audit B2-M7: upsert — findFirst ?? create bisa balapan & membuat 2 baris profil
+    const profile = await db.profile.upsert({
+      where: { id: "main" },
+      update: {},
+      create: { id: "main" },
+    });
     const xpData = await getXpData();
 
-    // Habits + logs 40 hari terakhir
+    // audit B2-H2: jendela log diperlebar agar log tanggal yang diminta tetap termuat
+    // (buffer 7 hari di bawah batas lama), tanpa menggeser jendela rekap pekan/bulan
+    const existingStart = addDays(todayStr, -40);
+    const logsFrom = addDays(reqDate < existingStart ? reqDate : existingStart, -7);
+    // audit B2-H3: log masa depan tidak boleh masuk payload beranda
     const habits = await db.habit.findMany({
       where: { archived: false },
       include: {
-        logs: { where: { date: { gte: addDays(todayStr, -40) } } },
+        logs: { where: { date: { gte: logsFrom, lte: todayStr } } },
       },
       orderBy: { createdAt: "asc" },
     });
 
-    // Agenda hari ini
+    // Agenda untuk tanggal yang diminta (bukan selalu hari ini) — audit B2-H2
     const agenda = habits
-      .filter((h) => h.scheduleType === "daily" || h.daysOfWeek.split(",").map(Number).includes(dow))
       .map((h) => ({
         habit: h,
-        log: h.logs.find((l) => l.date === todayStr) ?? null,
-        scheduled: true,
-      }));
+        log: h.logs.find((l) => l.date === reqDate) ?? null,
+        // audit B2-H2: scheduled dihitung sungguhan — dow cocok && habit sudah ada
+        // sebelum tanggal tsb (bukan konstan true)
+        scheduled:
+          (h.scheduleType === "daily" || h.daysOfWeek.split(",").map(Number).includes(dow)) &&
+          jakartaDateStr(h.createdAt) <= reqDate,
+      }))
+      .filter((a) => a.scheduled);
 
     const doneToday = agenda.filter(
       (a) =>
@@ -66,7 +88,8 @@ export async function GET() {
     const habitsByDow = (ds: string) => {
       const d = dayOfWeek(ds);
       // Tanggal lampau: habit yang dibuat setelah tanggal tsb belum dijadwalkan saat itu
-      const createdBefore = ds < todayStr ? parseDateStr(ds) : null;
+      // audit B2-H2: acuan "sekarang" = tanggal yang diminta (?date=), bukan selalu hari ini
+      const createdBefore = ds < reqDate ? parseDateStr(ds) : null;
       return habits.filter((h) => {
         if (createdBefore && h.createdAt > createdBefore) return false;
         return h.scheduleType === "daily" || h.daysOfWeek.split(",").map(Number).includes(d);
@@ -122,7 +145,8 @@ export async function GET() {
         .forEach((t) => monthSpend.set(t.category, (monthSpend.get(t.category) ?? 0) + t.amount));
       const near = budgets
         .map((b) => ({ ...b, spent: monthSpend.get(b.category) ?? 0 }))
-        .filter((b) => b.spent >= b.monthlyLimit * 0.75)
+        // audit B2-M3: limit 0 → persentase tak bermakna (div/0), kategori dilewati
+        .filter((b) => b.monthlyLimit > 0 && b.spent >= b.monthlyLimit * 0.75)
         .sort((a, b) => b.spent / b.monthlyLimit - a.spent / a.monthlyLimit)[0];
       if (near) {
         highlight = {
@@ -133,7 +157,8 @@ export async function GET() {
         };
       } else {
         const goal = (await db.savingsGoal.findMany({ orderBy: { currentAmount: "desc" } }))[0];
-        if (goal) {
+        // audit B2-M3: target 0 → persentase tak terdefinisi, sorotan goal dilewati
+        if (goal && goal.targetAmount > 0) {
           highlight = {
             kind: "goal",
             title: `${goal.name}: ${Math.round((goal.currentAmount / goal.targetAmount) * 100)}% tercapai`,
@@ -145,7 +170,8 @@ export async function GET() {
     }
 
     // ============ Quote ============
-    const quotes = await db.quote.findMany();
+    // audit B2-M4: orderBy id — indeks harian deterministik atas urutan baris DB
+    const quotes = await db.quote.findMany({ orderBy: { id: "asc" } });
     let quote: (typeof quotes)[number] | null = null;
     if (quotes.length > 0) {
       // Indeks hari stabil mengikuti tanggal WIB, bukan timestamp UTC mentah

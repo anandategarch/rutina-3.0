@@ -58,6 +58,7 @@ export async function GET(req: Request) {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
           "Content-Disposition": 'attachment; filename="rutina-transactions.csv"',
+          "Cache-Control": "no-store", // audit B1-Medium: data pribadi — jangan di-cache
         },
       });
     }
@@ -99,6 +100,7 @@ export async function GET(req: Request) {
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         "Content-Disposition": 'attachment; filename="rutina-backup.json"',
+        "Cache-Control": "no-store", // audit B1-Medium: data pribadi — jangan di-cache
       },
     });
   } catch (e) {
