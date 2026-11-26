@@ -469,7 +469,12 @@ export default function HomeScreen() {
                     <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
                       {g.label}
                     </p>
-                    <div className="space-y-2">
+                    {/* motion rule stagger-rows (ux #7): rise-in tiap baris agenda.
+                        Collapsed ≤3 baris per kelompok (kuota 6 total) → di bawah
+                        cap 8 anak; baris ke-9+ saat "Lihat semua" render instan
+                        (nth-child(n+9)). Baris lama yang tetap ter-mount (key
+                        habit.id stabil) tidak mengulang animasi. */}
+                    <div className="space-y-2 stagger-rows">
                       {items.map((a) => {
                         const dayLog = dayLogOf(a);
                         return (
@@ -572,8 +577,15 @@ export default function HomeScreen() {
       </div>
 
       {/* ===== Sorotan Hari Ini ===== */}
+      {/* motion.csv #4: reveal halus kartu (fade + y 8px — terbaca fade, bukan
+          slide); aksen tunggal kartu, durasi 0.3s ease keluar-lembut. */}
       {d.highlight && (
-        <motion.div className="px-4 mt-4">
+        <motion.div
+          className="px-4 mt-4"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        >
           <div className="relative overflow-hidden rounded-xl bg-gold text-white dark:text-gold-soft p-4 shadow-lift">
             <div className="flex items-start gap-3 relative">
               <span className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
@@ -762,9 +774,24 @@ const AgendaRow = React.memo(function AgendaRow({
   // Baris tanggal lampau hanya dibaca: pencatatan hanya diizinkan untuk hari ini
   const locked = !isToday;
 
+  // motion rule check-pop (ux #119): aksen pop sekali per aksi sukses — check
+  // jadi done atau +step menaikkan nilai. Counter lokal pendek-umur di-increment
+  // di handler yang sama dengan mutasi; key pada span ikon ikut berubah →
+  // animasi CSS replay tanpa animationend. State internal baris → memo
+  // AgendaRow tetap aman; saat `checking` tombol disabled → guard dobel-ketuk
+  // mencegah pop terpicu lagi.
+  const [pop, setPop] = React.useState(0);
+
   const incr = () => {
+    setPop((p) => p + 1); // +step selalu menaikkan nilai → selalu pop
     const next = (log?.value ?? 0) + habit.unitStep;
     onCheck(next);
+  };
+
+  // Un-check (done → todo) bukan momen sukses → tanpa pop.
+  const toggleCheck = () => {
+    if (!done) setPop((p) => p + 1);
+    onCheck();
   };
 
   return (
@@ -802,11 +829,14 @@ const AgendaRow = React.memo(function AgendaRow({
           )}
           disabled={done || locked || checking}
         >
-          {done ? <Check className="h-5 w-5" /> : `+${habit.unitStep}`}
+          {/* motion rule check-pop: key=pop → remount span → pop sekali per aksi */}
+          <span key={pop} className={cn("inline-flex items-center justify-center", pop > 0 && "check-pop")}>
+            {done ? <Check className="h-5 w-5" /> : `+${habit.unitStep}`}
+          </span>
         </button>
       ) : (
         <button
-          onClick={() => onCheck()}
+          onClick={toggleCheck}
           aria-label={`Tandai ${habit.name} selesai`}
           className={cn(
             "press h-11 w-11 rounded-xl flex items-center justify-center border-2 transition-colors disabled:opacity-60",
@@ -815,7 +845,10 @@ const AgendaRow = React.memo(function AgendaRow({
           )}
           disabled={locked || checking}
         >
-          <Check className="h-5 w-5" strokeWidth={3} />
+          {/* motion rule check-pop: key=pop → remount span → pop sekali per aksi */}
+          <span key={pop} className={cn("inline-flex", pop > 0 && "check-pop")}>
+            <Check className="h-5 w-5" strokeWidth={3} />
+          </span>
         </button>
       )}
       {log?.status === "rest" && <Pill tone="gold">Jeda</Pill>}
@@ -826,17 +859,56 @@ const AgendaRow = React.memo(function AgendaRow({
 
 // ============ Skeleton ============
 
+// Skeleton beranda — meniru tata letak home asli (stacks/shadcn.csv #41:
+// skeleton matches content layout): header band, bento 2 kolom dengan satu
+// tile tinggi (row-span-3), kartu agenda 3 baris, strip kalender 7 pill,
+// kartu rekap pekan. skeleton-shimmer menggantikan animate-pulse
+// (reduced-motion → latar statis, tanpa sweep).
 function HomeSkeleton() {
   return (
-    <div className="flex flex-col gap-4 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] animate-pulse">
-      <div className="h-10 w-2/3 rounded-xl bg-secondary" />
-      <div className="grid grid-cols-2 gap-2">
-        <div className="h-16 rounded-xl bg-secondary" />
-        <div className="h-16 rounded-xl bg-secondary" />
+    <div className="flex flex-col pb-4">
+      {/* Header band + bento 2 kolom (tile hero row-span-3 + 3 tile 1×1) */}
+      <div className="bg-garden-soft/30 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-4">
+        <div className="h-3 w-40 rounded bg-secondary skeleton-shimmer" />
+        <div className="mt-2 h-7 w-2/3 rounded-xl bg-secondary skeleton-shimmer" />
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          <div className="row-span-3 rounded-xl bg-secondary skeleton-shimmer" />
+          <div className="h-14 rounded-xl bg-secondary skeleton-shimmer" />
+          <div className="h-14 rounded-xl bg-secondary skeleton-shimmer" />
+          <div className="h-14 rounded-xl bg-secondary skeleton-shimmer" />
+        </div>
       </div>
-      <div className="h-14 rounded-xl bg-secondary" />
-      <div className="h-64 rounded-xl bg-secondary" />
-      <div className="h-32 rounded-xl bg-secondary" />
+      {/* Kartu agenda: judul + 3 baris */}
+      <div className="px-4 mt-4">
+        <div className="rounded-xl bg-card border border-border/70 p-4">
+          <div className="h-4 w-36 rounded bg-secondary skeleton-shimmer" />
+          <div className="mt-3 space-y-2">
+            <div className="h-14 rounded-xl bg-secondary skeleton-shimmer" />
+            <div className="h-14 rounded-xl bg-secondary skeleton-shimmer" />
+            <div className="h-14 rounded-xl bg-secondary skeleton-shimmer" />
+          </div>
+        </div>
+      </div>
+      {/* Strip kalender: tombol prev/next + 7 pill */}
+      <div className="px-4 mt-4 flex items-center gap-1">
+        <div className="h-11 w-11 shrink-0 rounded-full bg-secondary skeleton-shimmer" />
+        <div className="grid flex-1 grid-cols-7 gap-1">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="h-[52px] rounded-xl bg-secondary skeleton-shimmer" />
+          ))}
+        </div>
+        <div className="h-11 w-11 shrink-0 rounded-full bg-secondary skeleton-shimmer" />
+      </div>
+      {/* Kartu rekap pekan */}
+      <div className="px-4 mt-4">
+        <div className="rounded-xl bg-card border border-border/70 p-4">
+          <div className="h-4 w-28 rounded bg-secondary skeleton-shimmer" />
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="h-20 rounded-xl bg-secondary skeleton-shimmer" />
+            <div className="h-20 rounded-xl bg-secondary skeleton-shimmer" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1109,7 +1109,10 @@ export default function HabitsScreen() {
 
           {/* Daftar habit */}
           {/* ux-guidelines #84: id "perpustakaan-list" jadi target aria-controls disclosure */}
-          <div id="perpustakaan-list" className="mt-3 max-h-[480px] overflow-y-auto scroll-thin space-y-2 pr-0.5">
+          {/* motion rule stagger-rows (ux #7): rise-in tiap kartu habit — collapsed
+              ≤8 baris (slice 8) → pas cap 8 anak; baris ke-9+ saat expanded render
+              instan (nth-child(n+9)). ShowAllToggle & aria tidak diubah. */}
+          <div id="perpustakaan-list" className="mt-3 max-h-[480px] overflow-y-auto scroll-thin space-y-2 pr-0.5 stagger-rows">
             {visibleHabits.length === 0 ? (
               <EmptyState
                 icon={<Sprout className="h-6 w-6" />}
@@ -1219,6 +1222,26 @@ export default function HabitsScreen() {
 }
 
 // =====================================================================
+// Pop wrapper — motion rule check-pop (ux #119): aksen sekali saat aksi
+// check/step sukses. `trigger` = counter lokal yang naik di handler aksi
+// yang sama dengan mutasi; perubahan key memaksa remount span → animasi
+// CSS replay tanpa animationend & tanpa state tambahan. Konten tombol
+// ditukar loader DI LUAR wrapper saat `checking` → pop tidak pernah main
+// saat guard dobel-ketuk berjalan.
+// =====================================================================
+
+function PopWrap({ trigger, children }: { trigger: number; children: React.ReactNode }) {
+  return (
+    <span
+      key={trigger}
+      className={cn("inline-flex items-center justify-center", trigger > 0 && "check-pop")}
+    >
+      {children}
+    </span>
+  );
+}
+
+// =====================================================================
 // Kartu habit (perpustakaan)
 // =====================================================================
 
@@ -1244,6 +1267,20 @@ function HabitCard({
   const isMeasured = habit.unitTarget !== null;
   const streak = habit.streak?.current ?? habitCurrentStreak(habit, today);
   const wp = habitWeekProgress(habit, today);
+
+  // motion rule check-pop (ux #119): counter lokal per kartu, naik di handler
+  // yang sama dengan mutasi. State internal kartu → props & guard `checking`
+  // (dari mutasi induk) tak tersentuh. Satu counter aman karena kartu hanya
+  // merender SATU tombol aksi (step ATAU check, lihat cabang isMeasured).
+  const [pop, setPop] = React.useState(0);
+  const handleCheck = () => {
+    if (!done) setPop((p) => p + 1); // un-check bukan momen sukses → tanpa pop
+    onCheck();
+  };
+  const handleStep = () => {
+    setPop((p) => p + 1); // +step selalu menaikkan nilai → selalu pop
+    onStep();
+  };
 
   return (
     <div className="rounded-xl border border-border/70 bg-card p-3">
@@ -1283,7 +1320,7 @@ function HabitCard({
         {!habit.archived &&
           (isMeasured ? (
             <button
-              onClick={onStep}
+              onClick={handleStep}
               disabled={checking || done}
               aria-label={done ? `${habit.name} target tercapai` : `Tambah progres ${habit.name}`}
               className={cn(
@@ -1293,15 +1330,20 @@ function HabitCard({
             >
               {checking ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
-              ) : done ? (
-                <Check className="h-5 w-5" strokeWidth={3} />
               ) : (
-                `+${formatNumber(habit.unitStep || 1, 1)}`
+                /* check-pop hanya saat tidak checking → pop = momen sukses saja */
+                <PopWrap trigger={pop}>
+                  {done ? (
+                    <Check className="h-5 w-5" strokeWidth={3} />
+                  ) : (
+                    `+${formatNumber(habit.unitStep || 1, 1)}`
+                  )}
+                </PopWrap>
               )}
             </button>
           ) : (
             <button
-              onClick={onCheck}
+              onClick={handleCheck}
               disabled={checking || done}
               aria-label={done ? `${habit.name} sudah selesai` : `Tandai ${habit.name} selesai`}
               className={cn(
@@ -1309,7 +1351,13 @@ function HabitCard({
                 done ? "bg-garden border-garden text-white" : "border-input text-muted-foreground"
               )}
             >
-              {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-5 w-5" strokeWidth={3} />}
+              {checking ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <PopWrap trigger={pop}>
+                  <Check className="h-5 w-5" strokeWidth={3} />
+                </PopWrap>
+              )}
             </button>
           ))}
       </div>
@@ -1357,6 +1405,19 @@ function HabitDetailDrawer({
   const qc = useQueryClient();
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = React.useState(false);
+
+  // motion rule check-pop (ux #119): pop aksi sukses di drawer. Counter terpisah
+  // untuk +step (popStep) & aturan 2 menit (popCheck) agar tak saling memicu;
+  // direset saat drawer tertutup supaya dibuka-ulang tidak memutar animasi
+  // tanpa sebab. Guard `checking` dari induk tetap mengatur disabled.
+  const [popStep, setPopStep] = React.useState(0);
+  const [popCheck, setPopCheck] = React.useState(0);
+  React.useEffect(() => {
+    if (!open) {
+      setPopStep(0);
+      setPopCheck(0);
+    }
+  }, [open]);
 
   const archiveMutation = useMutation({
     mutationFn: () => rutinaApi.updateHabit(habit!.id, { archived: !habit!.archived }),
@@ -1544,17 +1605,20 @@ function HabitDetailDrawer({
                   )}
                 </div>
                 <button
-                  onClick={() =>
+                  onClick={() => {
+                    setPopStep((p) => p + 1); // +step naik → pop (motion rule check-pop)
                     onCheck(
                       habit.id,
                       Math.min(habit.unitTarget ?? 0, (log?.value ?? 0) + (habit.unitStep || 1))
-                    )
-                  }
+                    );
+                  }}
                   disabled={doneToday || checking}
                   aria-label={doneToday ? "Target hari ini tercapai" : "Tambah progres hari ini"}
                   className="press h-11 w-11 rounded-xl bg-garden text-white flex items-center justify-center disabled:opacity-40"
                 >
-                  <Plus className="h-4 w-4" />
+                  <PopWrap trigger={popStep}>
+                    <Plus className="h-4 w-4" />
+                  </PopWrap>
                 </button>
               </div>
               <MetricBar
@@ -1641,11 +1705,20 @@ function HabitDetailDrawer({
           {!doneToday && !habit.archived && !(isMeasured && (log?.value ?? 0) > 0) && (
             <div className="space-y-1.5">
               <button
-                onClick={() => onCheck(habit.id, undefined, `${habit.name} tercatat (aturan 2 menit)`)}
+                onClick={() => {
+                  setPopCheck((p) => p + 1); // check sukses → pop (motion rule check-pop)
+                  onCheck(habit.id, undefined, `${habit.name} tercatat (aturan 2 menit)`);
+                }}
                 disabled={checking}
                 className="press w-full h-11 rounded-xl bg-gold text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                {checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Timer className="h-4 w-4" />}
+                {checking ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <PopWrap trigger={popCheck}>
+                    <Timer className="h-4 w-4" />
+                  </PopWrap>
+                )}
                 Tandai Selesai (aturan 2 menit)
               </button>
               <p className="text-xs text-muted-foreground">
@@ -1801,27 +1874,45 @@ function MiniStat({
 // Skeleton
 // =====================================================================
 
+// Skeleton layar Kebiasaan — mengikuti tata letak Perpustakaan asli
+// (stacks/shadcn.csv #41): header (judul + tombol Tambah), kartu Taman
+// (ilustrasi + progres), kartu Perpustakaan (pencarian, chips filter,
+// 3 baris habit). skeleton-shimmer menggantikan animate-pulse.
 function HabitsSkeleton() {
   return (
     <div className="flex flex-col pb-2">
-      <div className="h-14 border-b border-border/60 bg-background/90 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
-        <div className="h-6 w-32 rounded-lg bg-secondary animate-pulse" />
-        <div className="h-3 w-24 rounded bg-secondary animate-pulse mt-2" />
+      {/* Header: judul + subjudul + tombol Tambah */}
+      <div className="flex h-14 items-center justify-between gap-2 border-b border-border/60 bg-background/90 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="min-w-0">
+          <div className="h-6 w-32 rounded-lg bg-secondary skeleton-shimmer" />
+          <div className="mt-2 h-3 w-24 rounded bg-secondary skeleton-shimmer" />
+        </div>
+        <div className="h-11 w-24 shrink-0 rounded-xl bg-secondary skeleton-shimmer" />
       </div>
-      <div className="px-4 mt-4 space-y-4">
+      {/* Kartu Taman Pertumbuhan: ilustrasi + baris progres */}
+      <div className="px-4 mt-4">
         <div className="rounded-xl bg-card border border-border/70 p-4">
-          <div className="h-4 w-40 rounded bg-secondary animate-pulse" />
-          <div className="h-40 rounded-xl bg-secondary animate-pulse mt-3" />
-          <div className="h-3 w-48 rounded bg-secondary animate-pulse mt-3" />
+          <div className="h-4 w-40 rounded bg-secondary skeleton-shimmer" />
+          <div className="h-40 rounded-xl bg-secondary skeleton-shimmer mt-3" />
+          <div className="h-3 w-48 rounded bg-secondary skeleton-shimmer mt-3" />
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="h-20 rounded-xl bg-secondary animate-pulse" />
-          <div className="h-20 rounded-xl bg-secondary animate-pulse" />
-          <div className="h-20 rounded-xl bg-secondary animate-pulse" />
+      </div>
+      {/* Kartu Perpustakaan: pencarian + chips filter + baris habit */}
+      <div className="px-4 mt-4">
+        <div className="rounded-xl bg-card border border-border/70 p-4">
+          <div className="h-11 rounded-xl bg-secondary skeleton-shimmer" />
+          <div className="mt-3 flex gap-1.5">
+            <div className="h-9 w-20 rounded-full bg-secondary skeleton-shimmer" />
+            <div className="h-9 w-24 rounded-full bg-secondary skeleton-shimmer" />
+            <div className="h-9 w-28 rounded-full bg-secondary skeleton-shimmer" />
+            <div className="h-9 w-20 rounded-full bg-secondary skeleton-shimmer" />
+          </div>
+          <div className="mt-3 space-y-2">
+            <div className="h-[72px] rounded-xl bg-secondary skeleton-shimmer" />
+            <div className="h-[72px] rounded-xl bg-secondary skeleton-shimmer" />
+            <div className="h-[72px] rounded-xl bg-secondary skeleton-shimmer" />
+          </div>
         </div>
-        <div className="h-52 rounded-xl bg-secondary animate-pulse" />
-        <div className="h-40 rounded-xl bg-secondary animate-pulse" />
-        <div className="h-64 rounded-xl bg-secondary animate-pulse" />
       </div>
     </div>
   );

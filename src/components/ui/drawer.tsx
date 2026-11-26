@@ -5,10 +5,38 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
+// motion "springConfig" untuk SEMUA drawer/sheet (ui-reasoning #94: spring
+// bounce, gerak taktil). CATATAN API: vaul 1.1.2 tidak lagi menyediakan prop
+// `springConfig` — diverifikasi via node_modules/vaul/dist/index.d.ts (tidak
+// ada pada Root/Content) dan `rg "springConfig" node_modules/vaul` = 0 hasil;
+// animasi vaul kini CSS murni (0.5s cubic-bezier(0.32,0.72,0,1)). Maka spring
+// stiffness 320 / damping 34 (ζ ≈ 0.95, settle ±235ms) diadaptasi ke CSS:
+// durasi 0.34s (sedikit lebih snappy dari default vaul 0.5s) dengan kurva
+// khas vaul yang sama agar konsisten. Selector ber-spesifisitas lebih tinggi
+// + !important mengalahkan rule stylesheet & inline style saat release tanpa
+// merusak drag: `transition: none` inline vaul saat drag tetap menang pada
+// transition-property, jadi drawer tetap mengikuti jari.
+const DRAWER_SPRING_CSS = `
+[data-slot="drawer-content"][data-vaul-drawer],
+[data-slot="drawer-overlay"][data-vaul-overlay] {
+  animation-duration: 0.34s !important;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1) !important;
+  transition-duration: 0.34s !important;
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1) !important;
+}
+`
+
 function Drawer({
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />
+  return (
+    <DrawerPrimitive.Root data-slot="drawer" {...props}>
+      {/* React 19: <style href+precedence> di-hoist ke <head> & dideduplikasi
+          antar instance Drawer — semua sheet memakai timing spring yang sama. */}
+      <style href="rutina-drawer-spring" precedence="default">{DRAWER_SPRING_CSS}</style>
+      {props.children}
+    </DrawerPrimitive.Root>
+  )
 }
 
 function DrawerTrigger({

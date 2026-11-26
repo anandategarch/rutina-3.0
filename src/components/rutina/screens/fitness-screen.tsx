@@ -36,7 +36,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -183,9 +182,12 @@ export default function FitnessScreen() {
 function TabSkeleton() {
   return (
     <div className="space-y-3">
-      <Skeleton className="h-28 rounded-xl" />
-      <Skeleton className="h-36 rounded-xl" />
-      <Skeleton className="h-48 rounded-xl" />
+      {/* motion.csv #15: skeleton-shimmer menggantikan <Skeleton> shadcn
+          (ber-pulse) — ukuran & bentuk kartu dipertahankan persis;
+          src/components/ui/skeleton.tsx tidak diubah (dipakai sheet lain) */}
+      <div className="skeleton-shimmer h-28 rounded-xl" />
+      <div className="skeleton-shimmer h-36 rounded-xl" />
+      <div className="skeleton-shimmer h-48 rounded-xl" />
     </div>
   );
 }

@@ -118,7 +118,13 @@ function TabButton({
       className="press flex flex-col items-center gap-0.5 py-2 min-h-[56px] justify-center"
       aria-current={active ? "page" : undefined}
     >
+      {/* motion.csv #10 + quick-ref continuity/layoutId: pil aktif berpindah
+          halus antar tab via layoutId (aman terhadap crossfade di MainContent —
+          pil hidup di header persisten, bukan di subtree yang di-crossfade;
+          hanya SATU span aktif dalam satu waktu, jadi tepat satu layoutId).
+          Spring scale lama dipertahankan (ui-reasoning #94: spring bounce). */}
       <motion.span
+        layoutId="nav-pill"
         className={cn(
           "flex items-center justify-center h-8 w-14 rounded-full transition-colors",
           active ? "bg-garden-soft text-garden-deep" : "text-muted-foreground"
@@ -293,10 +299,29 @@ function MainContent() {
   const page = useRutinaStore((s) => s.page);
   return (
     <div className="flex-1 flex flex-col pb-[calc(84px+env(safe-area-inset-bottom,0px))]">
-      {page === "home" && <HomeScreen />}
-      {page === "fitness" && <FitnessScreen />}
-      {page === "finance" && <FinanceScreen />}
-      {page === "habits" && <HabitsScreen />}
+      {/* motion.csv #10: transisi halaman subtle — crossfade 180ms masuk /
+          120ms keluar (exit ±67% lebih cepat dari enter), TANPA y-offset
+          (ux #7: .rise-in per-section di dalam layar sudah menangani entrance,
+          maks 1-2 elemen kunci per view). mode="wait" dipilih, bukan popLayout:
+          parent-nya scroll container overflow-y-auto TANPA `relative`, sehingga
+          child popLayout yang dipop absolut akan anchor ke shell di luar dan
+          salah posisi saat halaman ter-scroll; dengan mode="wait" layar lama
+          dan baru selalu dalam alur normal (tanpa absolute inset-0), ditukar
+          dalam satu commit — tidak ada double-space maupun layout shift. */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={page}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] } }}
+          exit={{ opacity: 0, transition: { duration: 0.12 } }}
+          className="flex flex-1 flex-col"
+        >
+          {page === "home" && <HomeScreen />}
+          {page === "fitness" && <FitnessScreen />}
+          {page === "finance" && <FinanceScreen />}
+          {page === "habits" && <HabitsScreen />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

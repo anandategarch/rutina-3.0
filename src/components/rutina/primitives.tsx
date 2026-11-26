@@ -244,6 +244,17 @@ export function ProgressRing({
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const clamped = Math.min(1, Math.max(0, progress));
+  // Mount-fill (quick-ref state-transition): render pertama memakai offset
+  // penuh (ring kosong) lalu flip ke target lewat rAF agar transisi
+  // stroke-dashoffset berjalan sekali saat mount. Nilai role="progressbar"
+  // (aria-*) selalu final sejak render pertama — hanya path visual yang
+  // dianimasikan; flip pakai useEffect+rAF, bukan animationend (ux #119),
+  // sehingga reduced-motion tetap menampilkan nilai final segera.
+  const [filled, setFilled] = React.useState(false);
+  React.useEffect(() => {
+    const id = requestAnimationFrame(() => setFilled(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
   return (
     <div
       className="relative shrink-0"
@@ -264,9 +275,9 @@ export function ProgressRing({
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={c}
-          strokeDashoffset={c * (1 - clamped)}
+          strokeDashoffset={filled ? c * (1 - clamped) : c}
           style={{
-            transition: "stroke-dashoffset 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            transition: "stroke-dashoffset var(--motion-slow) var(--ease-spring)",
             filter: `drop-shadow(0 1px 2px ${color}40)`,
           }}
         />

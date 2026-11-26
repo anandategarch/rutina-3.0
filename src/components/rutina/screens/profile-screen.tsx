@@ -291,7 +291,8 @@ export default function ProfileScreen() {
               </button>
             </div>
           ) : (
-            <div className="h-32 rounded-xl bg-secondary animate-pulse" />
+            // motion.csv #15: skeleton-shimmer menggantikan pulse lama
+            <div className="h-32 rounded-xl bg-secondary skeleton-shimmer" />
           )}
         </SectionCard>
 
@@ -323,7 +324,8 @@ export default function ProfileScreen() {
               </button>
             </div>
           ) : (
-            <div className="h-16 rounded-xl bg-secondary animate-pulse" />
+            // motion.csv #15: skeleton-shimmer menggantikan pulse lama
+            <div className="h-16 rounded-xl bg-secondary skeleton-shimmer" />
           )}
         </SectionCard>
 

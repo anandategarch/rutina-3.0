@@ -3,7 +3,7 @@
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, ToasterProps } from "sonner"
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ toastOptions, ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
   return (
@@ -17,6 +17,17 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-border": "var(--border)",
         } as React.CSSProperties
       }
+      toastOptions={{
+        // Radius & elevasi toast mengikuti token app (shadow-lift punya varian
+        // .dark di globals.css; border via var(--border)). Per-key merge:
+        // pemanggil tetap bisa menimpa kelas per-slot via toastOptions.
+        ...toastOptions,
+        classNames: {
+          toast: "rounded-xl shadow-lift border-border",
+          description: "text-muted-foreground",
+          ...toastOptions?.classNames,
+        },
+      }}
       {...props}
     />
   )

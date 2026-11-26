@@ -166,6 +166,40 @@ export function MiniBars({
     .map((d) => `${d.label} ${fmtNum(d.value)}${showAlt ? ` / ${fmtNum(d.alt ?? 0)}` : ""}`)
     .join(", ");
   const seriesSuffix = showAlt && altLabel ? ` (dua seri: utama & ${altLabel})` : "";
+  // ux #13: tinggi final per batang hidup di wrapper (layout statis, rounded di
+  // wrapper); fill bottom-anchor dianimasikan lewat scaleY(origin bottom) —
+  // prop layout (height) tidak lagi masuk daftar transisi. Saat mount & saat
+  // data berubah, scale mulai dari rasio tinggi lama→baru lalu di-flip ke 1
+  // lewat rAF (bukan animationend — ux #119) sehingga batang tetap naik/morph
+  // mulus; reduced-motion dinetralkan clamp global globals.css sehingga data
+  // tetap terbaca segera (quick-ref animation-optional).
+  const barPct = data.map((d) => ({
+    main: d.value === 0 ? (2 / height) * 100 : Math.max(3, (d.value / max) * 100),
+    alt: (d.alt ?? 0) === 0 ? (2 / height) * 100 : Math.max(3, ((d.alt ?? 0) / max) * 100),
+  }));
+  const barSig = barPct.map((p) => `${p.main.toFixed(3)}/${p.alt.toFixed(3)}`).join(",");
+  // prev disimpan sebagai state (bukan ref) agar tidak dibaca saat render
+  // (react-hooks/refs); guard settledSig mencegah loop re-render.
+  const [prevBarPct, setPrevBarPct] = React.useState<{ main: number; alt: number }[] | null>(null);
+  const [barSettledSig, setBarSettledSig] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (barSettledSig === barSig) return;
+    const id = requestAnimationFrame(() => {
+      setPrevBarPct(barPct);
+      setBarSettledSig(barSig);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [barSig, barPct, barSettledSig]);
+  const barsSettled = barSettledSig === barSig;
+  const barScale = (i: number, key: "main" | "alt"): number => {
+    if (barsSettled) return 1;
+    const prev = prevBarPct?.[i]?.[key];
+    const cur = barPct[i]?.[key] ?? 0;
+    return prev == null || cur <= 0 ? 0 : Math.min(1, prev / cur);
+  };
+  const barTransition = barsSettled
+    ? "transform var(--motion-base) var(--ease-out), opacity var(--motion-base) var(--ease-out)"
+    : "none";
   return (
     <div className={cn("w-full", className)}>
       {showAlt && altLabel && (
@@ -186,25 +220,41 @@ export function MiniBars({
           return (
             <div key={i} className="flex-1 flex items-end justify-center gap-[2px] h-full" style={{ height }}>
               <div
-                className="rounded-t-[4px] w-full max-w-[14px] transition-[height,opacity] duration-300"
+                className="relative w-full max-w-[14px] overflow-hidden rounded-t-[4px]"
                 style={{
                   // Nilai nol = "tidak tercatat": slot dasar 2px samar, bukan stub penuh
-                  height: d.value === 0 ? 2 : `${Math.max(3, (d.value / max) * 100)}%`,
-                  background: color,
-                  opacity: hl ? 1 : d.value === 0 ? 0.18 : 0.75,
+                  height: d.value === 0 ? 2 : `${barPct[i].main}%`,
                 }}
                 title={d.label}
-              />
+              >
+                <div
+                  className="absolute inset-x-0 bottom-0 h-full rounded-t-[4px]"
+                  style={{
+                    background: color,
+                    opacity: hl ? 1 : d.value === 0 ? 0.18 : 0.75,
+                    transform: `scaleY(${barScale(i, "main")})`,
+                    transformOrigin: "bottom",
+                    transition: barTransition,
+                  }}
+                />
+              </div>
               {showAlt && (
                 <div
-                  className="rounded-t-[4px] w-full max-w-[14px] transition-[height,opacity] duration-300"
-                  style={{
-                    height: (d.alt ?? 0) === 0 ? 2 : `${Math.max(3, ((d.alt ?? 0) / max) * 100)}%`,
-                    background: altColor,
-                    opacity: hl ? 1 : (d.alt ?? 0) === 0 ? 0.18 : 0.75,
-                  }}
+                  className="relative w-full max-w-[14px] overflow-hidden rounded-t-[4px]"
+                  style={{ height: (d.alt ?? 0) === 0 ? 2 : `${barPct[i].alt}%` }}
                   title={d.label}
-                />
+                >
+                  <div
+                    className="absolute inset-x-0 bottom-0 h-full rounded-t-[4px]"
+                    style={{
+                      background: altColor,
+                      opacity: hl ? 1 : (d.alt ?? 0) === 0 ? 0.18 : 0.75,
+                      transform: `scaleY(${barScale(i, "alt")})`,
+                      transformOrigin: "bottom",
+                      transition: barTransition,
+                    }}
+                  />
+                </div>
               )}
             </div>
           );
@@ -302,6 +352,23 @@ export function StackBar({
   className?: string;
 }) {
   const total = segments.reduce((s, x) => s + Math.max(0, x.value), 0) || 1;
+  // ux #13: lebar final tiap segmen ada di wrapper (statis); fill-nya
+  // dianimasikan scaleX (origin kiri). transition-all diganti per-properti
+  // (transform + background-color) — prop layout tidak lagi ikut teranimasi.
+  const segPct = segments.map((s) => (Math.max(0, s.value) / total) * 100);
+  const segSig = segPct.map((p) => p.toFixed(3)).join(",");
+  // prev sebagai state, bukan ref — aman untuk render (react-hooks/refs).
+  const [prevSegPct, setPrevSegPct] = React.useState<number[] | null>(null);
+  const [segSettledSig, setSegSettledSig] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (segSettledSig === segSig) return;
+    const id = requestAnimationFrame(() => {
+      setPrevSegPct(segPct);
+      setSegSettledSig(segSig);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [segSig, segPct, segSettledSig]);
+  const segSettled = segSettledSig === segSig;
   return (
     <div
       className={cn("flex w-full overflow-hidden rounded-full bg-secondary", className)}
@@ -312,17 +379,33 @@ export function StackBar({
         .map((s) => `${s.label} ${Math.round((Math.max(0, s.value) / total) * 100)}%`)
         .join(", ") || "belum ada data"}`}
     >
-      {segments.map((s, i) => (
-        <div
-          key={i}
-          className="h-full transition-all duration-300"
-          style={{
-            width: `${(Math.max(0, s.value) / total) * 100}%`,
-            background: s.color ?? rampColor(i, segments.length),
-          }}
-          title={`${s.label}: ${((Math.max(0, s.value) / total) * 100).toFixed(0)}%`}
-        />
-      ))}
+      {segments.map((s, i) => {
+        const scale = segSettled
+          ? 1
+          : prevSegPct && segPct[i] > 0
+            ? Math.min(1, (prevSegPct[i] ?? 0) / segPct[i])
+            : 0;
+        return (
+          <div
+            key={i}
+            className="h-full"
+            style={{ width: `${segPct[i]}%` }}
+            title={`${s.label}: ${((Math.max(0, s.value) / total) * 100).toFixed(0)}%`}
+          >
+            <div
+              className="h-full w-full"
+              style={{
+                background: s.color ?? rampColor(i, segments.length),
+                transform: `scaleX(${scale})`,
+                transformOrigin: "left",
+                transition: segSettled
+                  ? "transform var(--motion-base) var(--ease-out), background-color var(--motion-base) var(--ease-out)"
+                  : "none",
+              }}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -341,25 +424,54 @@ export function HBarList({
   className?: string;
 }) {
   const max = Math.max(1, ...items.map((it) => it.max ?? it.value));
+  // ux #13: pola wrapper-final + fill scaleX (origin kiri), sama seperti
+  // MetricBar — transition-all (width layout) diganti per-properti.
+  const widths = items.map((it) => Math.min(100, (it.value / max) * 100));
+  const widthSig = widths.map((p) => p.toFixed(3)).join(",");
+  // prev sebagai state, bukan ref — aman untuk render (react-hooks/refs).
+  const [prevWidths, setPrevWidths] = React.useState<number[] | null>(null);
+  const [widthSettledSig, setWidthSettledSig] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (widthSettledSig === widthSig) return;
+    const id = requestAnimationFrame(() => {
+      setPrevWidths(widths);
+      setWidthSettledSig(widthSig);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [widthSig, widths, widthSettledSig]);
+  const widthsSettled = widthSettledSig === widthSig;
   return (
     <div className={cn("space-y-2.5", className)}>
-      {items.map((it, i) => (
-        <div key={i}>
-          <div className="flex items-baseline justify-between gap-2 mb-1">
-            <span className="text-xs font-medium text-foreground truncate">{it.label}</span>
-            <span className="text-xs text-muted-foreground tabular shrink-0">{it.caption ?? it.value}</span>
+      {items.map((it, i) => {
+        const scale = widthsSettled
+          ? 1
+          : prevWidths && widths[i] > 0
+            ? Math.min(1, (prevWidths[i] ?? 0) / widths[i])
+            : 0;
+        return (
+          <div key={i}>
+            <div className="flex items-baseline justify-between gap-2 mb-1">
+              <span className="text-xs font-medium text-foreground truncate">{it.label}</span>
+              <span className="text-xs text-muted-foreground tabular shrink-0">{it.caption ?? it.value}</span>
+            </div>
+            <div className="rounded-full bg-secondary overflow-hidden" style={{ height }}>
+              <div className="h-full" style={{ width: `${widths[i]}%` }}>
+                <div
+                  className="h-full w-full rounded-full"
+                  style={{
+                    background: it.color ?? color,
+                    transform: `scaleX(${scale})`,
+                    transformOrigin: "left",
+                    transition: widthsSettled
+                      ? "transform var(--motion-slow) var(--ease-out), background-color var(--motion-base) var(--ease-out)"
+                      : "none",
+                  }}
+                />
+              </div>
+            </div>
           </div>
-          <div className="rounded-full bg-secondary overflow-hidden" style={{ height }}>
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${Math.min(100, (it.value / max) * 100)}%`,
-                background: it.color ?? color,
-              }}
-            />
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -504,6 +616,36 @@ export function HeatGrid({
   );
 }
 
+/**
+ * Skala fill 0→1 untuk pola wrapper-ukuran-final + fill-scaleX (ux #13:
+ * width/height adalah prop layout — yang dianimasikan hanya transform). Saat
+ * mount & saat ukuran berubah, scale mulai dari rasio lama→baru lalu di-flip
+ * ke 1 lewat rAF — bukan animationend (ux #119) — sehingga transisi transform
+ * berjalan mulus. Reduced-motion: clamp global globals.css meringankan durasi,
+ * flip tetap terjadi sehingga nilai final tetap ter-render segera.
+ */
+function useFillScale(current: number): { scale: number; settled: boolean } {
+  // prev sebagai state, bukan ref — aman untuk render (react-hooks/refs);
+  // guard settledFor mencegah loop re-render.
+  const [prev, setPrev] = React.useState<number | null>(null);
+  const [settledFor, setSettledFor] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    if (settledFor === current) return;
+    const id = requestAnimationFrame(() => {
+      setPrev(current);
+      setSettledFor(current);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [current, settledFor]);
+  const settled = settledFor === current;
+  const scale = settled
+    ? 1
+    : prev == null || current <= 0
+      ? 0
+      : Math.min(1, prev / current);
+  return { scale, settled };
+}
+
 /* ============ MetricBar — labeled progress toward a limit ============ */
 
 export function MetricBar({
@@ -526,6 +668,10 @@ export function MetricBar({
 }) {
   const frac = max > 0 ? value / max : 0;
   const over = frac > 1;
+  // ux #13: wrapper memegang lebar final (statis); fill di dalamnya
+  // dianimasikan scaleX (origin kiri) dengan spring — width tidak dianimasikan.
+  const widthPct = Math.min(100, Math.max(0, frac * 100));
+  const { scale: fillScale, settled: fillSettled } = useFillScale(widthPct);
   return (
     <div
       className={cn("w-full rounded-full overflow-hidden bg-secondary", className)}
@@ -536,17 +682,20 @@ export function MetricBar({
       aria-valuenow={Math.round(value)}
       aria-label={label ?? "Progres"}
     >
-      <div
-        className="h-full rounded-full"
-        style={{
-          width: `${Math.min(100, Math.max(0, frac * 100))}%`,
-          background: over
-            ? overColor
-            : `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 72%, white) 130%)`,
-          boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 25%, transparent) inset`,
-          transition: "width 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)",
-        }}
-      />
+      <div className="h-full" style={{ width: `${widthPct}%` }}>
+        <div
+          className="h-full w-full rounded-full"
+          style={{
+            background: over
+              ? overColor
+              : `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 72%, white) 130%)`,
+            boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 25%, transparent) inset`,
+            transform: `scaleX(${fillScale})`,
+            transformOrigin: "left",
+            transition: fillSettled ? "transform 0.7s var(--ease-spring)" : "none",
+          }}
+        />
+      </div>
       {/* "Limit terlampaui" tidak boleh disampaikan lewat warna bar saja */}
       {over && <span className="sr-only">Melebihi batas</span>}
     </div>
@@ -614,6 +763,16 @@ export function RingStat({
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const clamped = Math.min(1, Math.max(0, progress));
+  // Mount-fill (quick-ref state-transition): render pertama memakai offset
+  // penuh (ring kosong) lalu flip ke target lewat rAF agar transisi
+  // stroke-dashoffset berjalan sekali saat mount. aria-valuenow selalu final
+  // sejak render pertama; flip pakai useEffect+rAF, bukan animationend
+  // (ux #119) — reduced-motion pun nilai final langsung ter-render.
+  const [filled, setFilled] = React.useState(false);
+  React.useEffect(() => {
+    const id = requestAnimationFrame(() => setFilled(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
   return (
     <div
       className={cn("flex flex-col items-center gap-1.5", className)}
@@ -635,9 +794,9 @@ export function RingStat({
             strokeWidth={stroke}
             strokeLinecap="round"
             strokeDasharray={c}
-            strokeDashoffset={c * (1 - clamped)}
+            strokeDashoffset={filled ? c * (1 - clamped) : c}
             style={{
-              transition: "stroke-dashoffset 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)",
+              transition: "stroke-dashoffset var(--motion-slow) var(--ease-spring)",
               filter: `drop-shadow(0 1px 2px ${color}40)`,
             }}
           />
@@ -698,7 +857,7 @@ export function ActivityRings({
                 strokeDasharray={c}
                 strokeDashoffset={c * (1 - clamped)}
                 opacity={0.55 + (i / Math.max(1, n - 1)) * 0.45}
-                style={{ transition: "stroke-dashoffset 0.7s ease-out" }}
+                style={{ transition: "stroke-dashoffset var(--motion-slow) var(--ease-out)" }}
               />
             </g>
           );
@@ -754,7 +913,7 @@ export function RadarChart({
           return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="var(--border)" strokeWidth={1} opacity={0.8} />;
         })}
         {/* value polygon */}
-        <polygon points={poly} fill={`url(#radar-${id})`} stroke={color} strokeWidth={2.5} strokeLinejoin="round" style={{ transition: "all 0.5s ease-out" }} />
+        <polygon points={poly} fill={`url(#radar-${id})`} stroke={color} strokeWidth={2.5} strokeLinejoin="round" style={{ transition: "all var(--motion-slow) var(--ease-out)" }} />
         <defs>
           <linearGradient id={`radar-${id}`} x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.35} />

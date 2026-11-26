@@ -619,8 +619,9 @@ export default function JournalScreen() {
             />
           ) : isLoading ? (
             <div className="space-y-3">
+              {/* motion.csv #15: skeleton-shimmer menggantikan pulse lama */}
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="rounded-xl bg-secondary/70 h-24 animate-pulse" />
+                <div key={i} className="rounded-xl bg-secondary/70 h-24 skeleton-shimmer" />
               ))}
             </div>
           ) : filtered.length === 0 ? (

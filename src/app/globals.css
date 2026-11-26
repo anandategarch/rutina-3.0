@@ -149,6 +149,16 @@
   --gold-deep: #695127;
   --gold-soft: #f1ecdf;
   --cream: #f4f3ee;
+  /* Motion tokens — ui-ux-pro-max motion.csv + quick-ref §7 motion-consistency:
+     enter = decelerate, exit 60-70% of enter, spring untuk momen taktil */
+  --motion-fast: 150ms;
+  --motion-base: 250ms;
+  --motion-slow: 350ms;
+  --motion-exit: 150ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-linear: linear;
 }
 
 .dark {
@@ -318,10 +328,10 @@
 }
 
 /* Spring press feedback — skill: "Spring bounce + Soft press 200ms"
-   (ease-spring cubic-bezier(0.34, 1.56, 0.64, 1) on release) */
+   (ease-spring via token var(--ease-spring), kurva identik 0.28s) */
 .press {
   transition:
-    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.28s var(--ease-spring),
     box-shadow 0.2s ease-out,
     background-color 0.15s ease-out;
   cursor: pointer;
@@ -335,7 +345,7 @@
 }
 /* Deeper squish for the FAB */
 .press-squish {
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease-out;
+  transition: transform 0.3s var(--ease-spring), box-shadow 0.2s ease-out;
   cursor: pointer;
   /* Touch hygiene: tekanan lama tidak memicu seleksi teks / zoom dobel */
   user-select: none;
@@ -379,7 +389,7 @@
    ============================================================ */
 .bento-tile {
   transition:
-    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.28s var(--ease-spring),
     box-shadow 0.2s ease-out;
 }
 /* Hover scale hanya di pointer presisi & jika user tidak
@@ -441,7 +451,7 @@
   }
 }
 .rise-in {
-  animation: rise-in 0.35s ease-out both;
+  animation: rise-in var(--motion-slow) var(--ease-out) both;
 }
 .rise-in-1 {
   animation-delay: 0.03s;
@@ -456,6 +466,45 @@
   animation-delay: 0.14s;
 }
 
+/* Momen sukses cek habit — pop sekali lalu kembali (scale-feedback); state
+   tetap diset langsung oleh mutasi, animasi hanya aksen (ux #119) */
+@keyframes check-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+.check-pop { animation: check-pop var(--motion-base) var(--ease-spring); }
+
+/* Stagger entrance utk list pendek (maks 8 anak; baris baru yang muncul
+   lewat "Lihat semua" tampil langsung tanpa animasi) */
+.stagger-rows > * { animation: rise-in var(--motion-slow) var(--ease-out) both; }
+.stagger-rows > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-rows > *:nth-child(2) { animation-delay: 40ms; }
+.stagger-rows > *:nth-child(3) { animation-delay: 80ms; }
+.stagger-rows > *:nth-child(4) { animation-delay: 120ms; }
+.stagger-rows > *:nth-child(5) { animation-delay: 160ms; }
+.stagger-rows > *:nth-child(6) { animation-delay: 200ms; }
+.stagger-rows > *:nth-child(7) { animation-delay: 240ms; }
+.stagger-rows > *:nth-child(8) { animation-delay: 280ms; }
+.stagger-rows > *:nth-child(n + 9) { animation: none; }
+
+/* Skeleton shimmer — sweep gradien, bukan pulse opacity (motion.csv #15);
+   satu loop per grup skeleton */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--secondary) 25%,
+    color-mix(in srgb, var(--card) 60%, var(--secondary)) 50%,
+    var(--secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s var(--ease-linear) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rise-in,
   .press,
@@ -467,6 +516,11 @@
   .bento-tile:hover {
     transform: none !important;
   }
+  /* Final state untuk utilitas motion baru (ux #9/#99): tanpa animasi,
+     skeleton tampil sebagai track statis --secondary */
+  .check-pop { animation: none !important; }
+  .stagger-rows > * { animation: none !important; }
+  .skeleton-shimmer { animation: none !important; background: var(--secondary); }
   /* Clamp global (ux-guidelines #9 reduced motion): transisi inline pada
      komponen chart (width/dashoffset/height — diatur via style prop) tidak
      terjangkau selector kelas, jadi semua transisi/animasi CSS dipatukkan.

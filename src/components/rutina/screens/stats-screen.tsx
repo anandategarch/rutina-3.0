@@ -673,7 +673,8 @@ function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: S
             <div className="rounded-xl bg-studio-soft p-3">
               <span className="text-xs font-bold text-studio-deep uppercase tracking-wide">Latihan</span>
               {isLoading ? (
-                <div className="h-4 w-24 rounded bg-secondary animate-pulse mt-1" />
+                // motion.csv #15: skeleton-shimmer, bukan pulse lama
+                <div className="h-4 w-24 rounded bg-secondary skeleton-shimmer mt-1" />
               ) : (
                 <>
                   <p className="text-sm font-bold tabular text-studio-deep mt-1">
@@ -690,7 +691,8 @@ function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: S
             <div className="rounded-xl bg-writer-soft p-3">
               <span className="text-xs font-bold text-writer-deep uppercase tracking-wide">Jurnal</span>
               {isLoading ? (
-                <div className="h-4 w-24 rounded bg-secondary animate-pulse mt-1" />
+                // motion.csv #15: skeleton-shimmer, bukan pulse lama
+                <div className="h-4 w-24 rounded bg-secondary skeleton-shimmer mt-1" />
               ) : (
                 <>
                   <p className="text-sm font-bold tabular text-writer-deep mt-1">
@@ -754,14 +756,15 @@ function StatsSkeleton() {
     <div className="flex flex-col min-h-full">
       <ScreenHeader title="Statistik" subtitle="Pola & tren semua modulmu" onBack={() => setPage("home")} />
       <div className="p-4 space-y-4">
-        <div className="h-36 rounded-xl bg-secondary animate-pulse" />
-        <div className="h-48 rounded-xl bg-secondary animate-pulse" />
+        {/* motion.csv #15: sweep gradien skeleton-shimmer menggantikan pulse lama */}
+        <div className="h-36 rounded-xl bg-secondary skeleton-shimmer" />
+        <div className="h-48 rounded-xl bg-secondary skeleton-shimmer" />
         <div className="grid grid-cols-2 gap-2.5">
-          <div className="h-20 rounded-xl bg-secondary animate-pulse" />
-          <div className="h-20 rounded-xl bg-secondary animate-pulse" />
+          <div className="h-20 rounded-xl bg-secondary skeleton-shimmer" />
+          <div className="h-20 rounded-xl bg-secondary skeleton-shimmer" />
         </div>
-        <div className="h-40 rounded-xl bg-secondary animate-pulse" />
-        <div className="h-56 rounded-xl bg-secondary animate-pulse" />
+        <div className="h-40 rounded-xl bg-secondary skeleton-shimmer" />
+        <div className="h-56 rounded-xl bg-secondary skeleton-shimmer" />
       </div>
     </div>
   );
