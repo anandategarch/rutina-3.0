@@ -228,7 +228,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                               aria-label={`Energi: ${scale.labels[n - 1]} (${n})`}
                               className={cn(
                                 "press flex-1 rounded-lg border flex items-center justify-center transition-all",
-                                active ? "border-gold bg-gold text-white shadow-soft" : filled ? "border-gold/50 bg-gold-soft text-gold" : "border-border/70 bg-background text-muted-foreground/50"
+                                active ? "border-gold bg-gold text-white shadow-soft" : filled ? "border-gold/50 bg-gold-soft text-gold" : "border-border/70 bg-background text-muted-foreground"
                               )}
                               style={{ height: 26 + n * 5 }}
                             >

@@ -238,6 +238,24 @@
   textarea {
     font-family: inherit;
   }
+  /* ============================================================
+     IMPECCABLE (pbakaus/impeccable) — craft-floor "browser surfaces":
+     "the parts you did not draw still carry the design. Text selection,
+     the caret, custom scrollbars ... all ship with browser defaults that
+     belong to no design system. Theme them from the palette."
+     ============================================================ */
+  ::selection {
+    background: var(--garden);
+    color: #ffffff;
+  }
+  .dark ::selection {
+    background: var(--garden);
+    color: var(--garden-soft);
+  }
+  input,
+  textarea {
+    caret-color: var(--garden);
+  }
 }
 
 /* Viewport height fallback for browsers without dvh support (iOS Safari < 15.4).
@@ -327,6 +345,26 @@
   outline-offset: 2px;
 }
 
+/* ============================================================
+   Bento grid tiles — ui-ux-pro-max-skill style #39 "Bento Box Grid"
+   (active): modular cards, asymmetric grid, varied sizes (1x1, 2x1,
+   2x2 / row-span), Apple-style dashboard tiles, negative space.
+   Spec tokens: gap 10–16px, radius 16–24px (rounded-xl = 24px di
+   theme ini), shadow halus, hover scale 1.02 untuk tile interaktif.
+   ============================================================ */
+.bento-tile {
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease-out;
+}
+/* Hover scale hanya di pointer presisi & jika user tidak
+   meminta reduced-motion (impeccable motion floor). */
+@media (hover: hover) and (pointer: fine) {
+  .bento-tile:hover {
+    transform: scale(1.02);
+  }
+}
+
 /* Safe area helpers */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -396,8 +434,12 @@
 @media (prefers-reduced-motion: reduce) {
   .rise-in,
   .press,
-  .press-squish {
+  .press-squish,
+  .bento-tile {
     animation: none !important;
     transition: none !important;
+  }
+  .bento-tile:hover {
+    transform: none !important;
   }
 }

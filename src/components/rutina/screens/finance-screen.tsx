@@ -726,11 +726,11 @@ export default function FinanceScreen() {
         <section className="rise-in relative overflow-hidden rounded-xl bg-vault p-5 text-white shadow-soft">
           <div className="relative flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-white/75">Total Saldo</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-white/95">Total Saldo</p>
               <p className="mt-1 min-w-0 truncate text-2xl font-bold tabular leading-tight sm:text-3xl">
                 {formatRupiah(totalBalance)}
               </p>
-              <p className="mt-1 text-xs text-white/70">{wallets.length} dompet aktif</p>
+              <p className="mt-1 text-xs text-white/95">{wallets.length} dompet aktif</p>
             </div>
             <button
               onClick={() => setWalletOpen(true)}
@@ -748,7 +748,7 @@ export default function FinanceScreen() {
               {balanceTrend.deltaPct !== null && (
                 <DeltaBadge delta={balanceTrend.deltaPct} suffix="%" className="bg-white/15 text-white" />
               )}
-              <span className="text-xs text-white/70">Tren saldo bersih 30 hari</span>
+              <span className="text-xs text-white/95">Tren saldo bersih 30 hari</span>
             </div>
           </div>
           {/* Proporsi saldo per dompet */}
@@ -770,7 +770,7 @@ export default function FinanceScreen() {
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: w.color }} aria-hidden />
                   {w.name}
                   {walletRows.length > 1 && w.share > 0 && (
-                    <span className="font-bold tabular text-white/80">{Math.round(w.share * 100)}%</span>
+                    <span className="font-bold tabular text-white/95">{Math.round(w.share * 100)}%</span>
                   )}
                   <span className="tabular font-bold">{formatRupiah(w.balance, { compact: true })}</span>
                 </span>
@@ -787,6 +787,7 @@ export default function FinanceScreen() {
             sub="Bulan ini"
             icon={<TrendingUp className="h-3.5 w-3.5" />}
             tone="vault"
+            valueClassName="text-lg"
             chart={<MiniBars data={last7IncomeBars} height={26} showLabels={false} color={SAGE} highlightIndex={6} />}
           />
           <StatTile
@@ -795,6 +796,7 @@ export default function FinanceScreen() {
             sub="Bulan ini"
             icon={<TrendingDown className="h-3.5 w-3.5" />}
             tone="vault"
+            valueClassName="text-lg"
             chart={<MiniBars data={last7ExpenseBars} height={26} showLabels={false} color={CLAY} highlightIndex={6} />}
           />
           <StatTile
@@ -803,6 +805,7 @@ export default function FinanceScreen() {
             sub="Masuk − Keluar"
             icon={<Scale className="h-3.5 w-3.5" />}
             tone="vault"
+            valueClassName="text-lg"
             chart={<MiniBars data={last7NetBars} height={26} showLabels={false} color={SAGE_DEEP} highlightIndex={6} />}
           />
         </div>

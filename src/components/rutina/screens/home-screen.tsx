@@ -269,68 +269,74 @@ export default function HomeScreen() {
           </div>
         </div>
 
-        {/* Progress: ring utama + baris streak & level */}
-        <div className="mt-4 space-y-2">
+        {/* Progress: papan BENTO GRID (ui-ux-pro-max skill #39 "Bento Box Grid",
+            status active) — kartu modular dengan span bervariasi: hero ring
+            menempati 1 kolom × 2 baris, streak & level sebagai tile 1×1.
+            Gap 10px, radius rounded-xl (24px), shadow halus, hover scale 1.02. */}
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          {/* Hero tile — 1 kolom × 2 baris */}
           <button
             onClick={() => setPage("habits")}
             aria-label="Lihat misi hari ini"
-            className="press w-full bg-card rounded-xl border border-border/70 shadow-soft p-4 flex flex-col items-center"
+            className="press bento-tile row-span-2 bg-card rounded-xl border border-border/70 shadow-soft p-4 flex flex-col items-center justify-center"
           >
             <RingStat
               progress={agendaForSelected.length ? doneForSelected / agendaForSelected.length : 0}
               value={`${doneForSelected}/${agendaForSelected.length}`}
               caption="misi hari ini"
-              size={96}
+              size={104}
               stroke={10}
               color="var(--garden)"
             />
           </button>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-card rounded-xl border border-border/70 shadow-soft p-4 flex flex-col justify-between gap-1.5">
-              <div className="flex items-center gap-2">
-                <div className="h-9 w-9 rounded-full bg-gold-soft flex items-center justify-center shrink-0">
-                  <Flame className="h-5 w-5 text-gold" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground">Streak</p>
-                  <p className="text-sm font-extrabold tabular">{d.streak.current} hari</p>
-                </div>
+          {/* Streak — tile 1×1 */}
+          <div className="bento-tile bg-card rounded-xl border border-border/70 shadow-soft p-3.5 flex flex-col justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="h-8 w-8 rounded-full bg-gold-soft flex items-center justify-center shrink-0">
+                <Flame className="h-4 w-4 text-gold" />
               </div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Streak</p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-xl font-extrabold tabular leading-none">
+                {d.streak.current} <span className="text-xs font-bold text-muted-foreground">hari</span>
+              </p>
               {statsQuery.data && (
-                <div>
-                  <Sparkline data={streakSpark} height={26} strokeWidth={2} />
-                  <p className="text-[10px] text-muted-foreground mt-0.5">misi per hari · 7 hari terakhir</p>
+                <div className="mt-1.5">
+                  <Sparkline data={streakSpark} height={22} strokeWidth={2} />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">misi per hari · 7 hari</p>
                 </div>
               )}
               {statsQuery.isError && (
                 <button
                   onClick={() => statsQuery.refetch()}
-                  className="press mt-1 text-left text-xs font-semibold text-muted-foreground underline underline-offset-2"
+                  className="press mt-1 text-left text-[10px] font-semibold text-muted-foreground underline underline-offset-2"
                 >
                   Grafik streak gagal dimuat — ketuk untuk coba lagi
                 </button>
               )}
             </div>
-            <button
-              onClick={() => setPage("stats")}
-              aria-label="Buka statistik level"
-              className="press w-full bg-card rounded-xl border border-border/70 shadow-soft p-4 text-left flex flex-col justify-between gap-1.5"
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <p className="text-xs font-semibold uppercase text-muted-foreground">
-                  Level <span className="font-bold text-foreground">{d.level}</span>
-                </p>
-                <p className="text-sm font-bold tabular">{d.xp.toLocaleString("id-ID")} XP</p>
-              </div>
-              <div>
-                <MetricBar value={d.levelProgress * 100} max={100} height={8} />
-                <p className="text-xs text-muted-foreground mt-1.5 tabular">
-                  <span className="font-bold text-primary">{xpToNextLevel.toLocaleString("id-ID")} XP</span> ke Level{" "}
-                  {d.level + 1}
-                </p>
-              </div>
-            </button>
           </div>
+          {/* Level — tile 1×1 interaktif */}
+          <button
+            onClick={() => setPage("stats")}
+            aria-label="Buka statistik level"
+            className="press bento-tile bg-card rounded-xl border border-border/70 shadow-soft p-3.5 text-left flex flex-col justify-between gap-2"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+              Level <span className="font-extrabold text-foreground">{d.level}</span>
+            </p>
+            <div className="min-w-0">
+              <p className="text-xl font-extrabold tabular leading-none">
+                {d.xp.toLocaleString("id-ID")} <span className="text-xs font-bold text-muted-foreground">XP</span>
+              </p>
+              <MetricBar value={d.levelProgress * 100} max={100} height={7} className="mt-2" />
+              <p className="text-[11px] text-muted-foreground mt-1 tabular">
+                <span className="font-bold text-primary">{xpToNextLevel.toLocaleString("id-ID")} XP</span> ke Level{" "}
+                {d.level + 1}
+              </p>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -577,14 +583,14 @@ export default function HomeScreen() {
         <div className="px-4 mt-4">
           <div className="relative rounded-xl bg-writer-soft border border-writer/15 p-4 overflow-hidden">
             <QuoteIcon className="absolute -top-2 -right-2 h-16 w-16 text-writer/10" />
-            <p className="text-xs font-bold uppercase tracking-widest text-writer-deep/70 mb-1">
+            <p className="text-xs font-bold uppercase tracking-widest text-writer-deep/85 mb-1">
               Refleksi hari ini
             </p>
             <p className="font-script text-xl leading-snug text-writer-deep">
               “{d.quote.text}”
             </p>
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs font-semibold text-writer-deep/70">— {d.quote.author}</span>
+              <span className="text-xs font-semibold text-writer-deep/85">— {d.quote.author}</span>
               <button
                 onClick={() => saveQuoteMutation.mutate({ text: d.quote!.text, author: d.quote!.author })}
                 disabled={saveQuoteMutation.isPending}

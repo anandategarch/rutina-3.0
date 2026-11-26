@@ -173,7 +173,7 @@ function QuickActionHub() {
                 <button
                   key={a.key}
                   onClick={() => setQuickAction(a.key)}
-                  className="press flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-left shadow-clay min-h-[64px]"
+                  className="press bento-tile flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-left shadow-clay min-h-[64px]"
                 >
                   <span className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-soft", a.tone)}>
                     <Icon className="h-5 w-5" />
@@ -319,7 +319,7 @@ export function RutinaApp() {
         {/* Full-bleed app shell — fills the viewport edge-to-edge at every screen size.
             Content is centered with a max-width column so wide screens stay readable. */}
         <div className="relative h-dvh w-full bg-background flex flex-col overflow-hidden">
-          <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain mx-auto w-full max-w-[512px]">
+          <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain scroll-thin mx-auto w-full max-w-[512px]">
             <MainContent />
           </div>
           <BottomNav />

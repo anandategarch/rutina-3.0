@@ -204,7 +204,7 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
                   placeholder="0"
                   aria-label="Nominal transaksi"
                   enterKeyHint="next"
-                  className="w-full bg-transparent text-2xl font-bold tabular outline-none placeholder:text-muted-foreground/50"
+                  className="w-full bg-transparent text-2xl font-bold tabular outline-none placeholder:text-muted-foreground"
                 />
               </div>
             </div>

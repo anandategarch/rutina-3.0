@@ -848,7 +848,7 @@ export default function HabitsScreen() {
               aria-hidden="true"
             >
               <Flame
-                className={cn("h-9 w-9 transition-colors", streaks.current > 0 ? "text-gold" : "text-muted-foreground/50")}
+                className={cn("h-9 w-9 transition-colors", streaks.current > 0 ? "text-gold" : "text-muted-foreground/80")}
                 strokeWidth={1.8}
                 fill={streaks.current > 0 ? "currentColor" : "none"}
                 fillOpacity={0.25}

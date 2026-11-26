@@ -121,6 +121,57 @@ Untuk review selera/interaksi (di luar jangkauan heuristik), gunakan 7 fase
 design-review: interaksi & alur → responsif (375/768/1024/1440/1920) → polish visual
 → WCAG 2.1 AA → edge case → console/kesehatan.
 
+## 4a. Adopsi skill "Impeccable" (pbakaus/impeccable, Apache-2.0)
+
+Skill desain dari Paul Bakaus — "design vocabulary for your coding agent":
+24 playbook (`critique`, `audit`, `polish`, `layout`, `colorize`, dll.) + detektor
+slop deterministik. Diadopsi 26 Nov 2026. Yang mengikat di Rutina:
+
+**a. Craft floor (kualitas minimum, ban absolut)** — diverifikasi saat setiap
+perubahan UI:
+- Kontras: teks body & placeholder ≥ 4.5:1, teks besar ≥ 3:1, ikon/kontrol ≥ 3:1.
+  Pada permukaan berwarna, teks sekunder diturunkan dari warna hue tersebut
+  (bukan abu-abu generik). Alpha `/70` ke bawah pada teks kecil dihapus
+  (ditemukan & diperbaiki: kutipan jurnal, hero saldo, ikon streak kosong).
+- Kedalaman: shadow wajib punya offset + blur; halo warna offset-nol dilarang.
+- `::selection`, caret, scrollbar, fokus keyboard, dan angka tabular **ditheme
+  dari palet** (browser surfaces — bagian termurah yang paling sering dilupakan).
+- Motion: satu momen otentik per layar, guard `prefers-reduced-motion` wajib
+  (`.rise-in`, `.press`, `.press-squish`, `.bento-tile` semuanya ter-guard).
+- State: hover, disabled, loading, error, empty selalu ada (sudah lengkap).
+- Ban yang sudah diaudit sejak commit 198dbdd: tanpa gradient text, tanpa
+  glassmorphism default, tanpa side-stripe border, tanpa kartu nested,
+  tanpa eyebrow/kicker di atas heading, tanpa hero-metric template,
+  tanpa emoji/glyph sebagai sistem ikon (hanya Lucide).
+
+**b. Playbook yang dipakai rutin** (vokabel review):
+`critique` (skor heuristik UX) → `audit` (kualitas teknis P0–P3) →
+`layout` (ritme & grouping) → `colorize` (role token, bukan tumpukan swatch) →
+`polish` (pass terakhir). Mode Rutina: **Operate** (aplikasi tugas harian) —
+scanability, konsistensi, dan ekspektasi native mengungguli ekspresi;
+identitas hidup di detail presisi.
+
+## 4b. Layout "Bento Box Grid" (ui-ux-pro-max style #39, status: active)
+
+Skill bento grid terverifikasi ADA di ui-ux-pro-max-skill
+(`data/styles.csv` baris #39, slug `bento-box-grid`; varian legacy #53
+dideprekasi dan menunjuk ke #39). Spesifikasi yang diadopsi:
+
+| Token bento | Nilai di Rutina |
+|---|---|
+| `--grid-gap` | 10px (`gap-2.5`) di papan ringkas; 12–16px antar section |
+| `--card-radius` | 24px (`rounded-xl` pada theme ini) — konsisten semua tile |
+| `--card-bg` | `--card` (#ffffff) |
+| `--page-bg` | `--background` (krem `#faf6ea`) |
+| `--shadow` | `shadow-soft` (halus, ada offset+blur — bukan halo) |
+| `--hover-scale` | 1.02 via `.bento-tile` (hanya tile interaktif, pointer presisi, hormati reduced-motion) |
+
+Checklist skill #39 yang dipatuhi: grid responsif (2 kolom mobile →
+1 kolom layar sempit), span kartu bervariasi (hero ring 1 kolom × 2 baris;
+streak & level 1×1), sudut konsisten, shadow halus, konten muat di kartu,
+hover scale 1.02. Papan bento pertama: ringkasan Beranda
+(`src/components/rutina/screens/home-screen.tsx`).
+
 ## 5. Backlog prioritas (temuan audit yang belum diperbaiki)
 
 1. **ux#55** — error validasi inline per-field (`aria-invalid` + `aria-describedby`)
@@ -140,3 +191,8 @@ Standar & tool audit diadaptasi dari ui-ux-pro-max-skill (MIT License,
 © NextLevelBuilder) — `scripts/design-audit.mjs` dan `.github/workflows/design-review.yml`
 memuat header atribusi. Data aturan asli tidak disalin ke repo ini; lihat repo sumber
 untuk `ux-guidelines.csv`, `stacks/nextjs.csv`, `react-performance.csv`.
+
+Prinsip craft-floor, playbook review, dan aturan browser-surface diadaptasi dari
+[impeccable](https://github.com/pbakaus/impeccable) (Apache-2.0, © Paul Bakaus) —
+vokabel desain untuk coding agent. Ketentuan asli tidak disalin utuh ke repo ini;
+lihat `skill/reference/craft-floor.md` di repo sumber.

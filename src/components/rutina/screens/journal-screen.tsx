@@ -350,7 +350,7 @@ export default function JournalScreen() {
                   }`}
                   className={cn(
                     "flex flex-col items-center justify-center rounded-lg py-1.5 min-h-[40px] tabular",
-                    count > 0 ? "text-writer-deep font-bold" : "text-muted-foreground/70"
+                    count > 0 ? "text-writer-deep font-bold" : "text-muted-foreground"
                   )}
                   style={{
                     background:

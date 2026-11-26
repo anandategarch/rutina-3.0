@@ -112,6 +112,7 @@ export function StatTile({
   tone = "stone",
   className,
   chart,
+  valueClassName,
 }: {
   label: string;
   value: React.ReactNode;
@@ -121,6 +122,8 @@ export function StatTile({
   className?: string;
   /** Visual mini (grafik/bars) ditampilkan di bawah nilai. */
   chart?: React.ReactNode;
+  /** Override ukuran teks nilai (mis. `text-lg` untuk grid 3 kolom agar nilai uang tak terpotong). */
+  valueClassName?: string;
 }) {
   const t = toneMap[tone];
   return (
@@ -129,7 +132,9 @@ export function StatTile({
         {icon && <span className={t.fg}>{icon}</span>}
         <span className={cn("text-xs font-semibold uppercase tracking-wide leading-tight", t.fg)}>{label}</span>
       </div>
-      <div className={cn("text-xl font-extrabold tabular leading-tight truncate", t.fg)}>{value}</div>
+      {/* break-words bukan truncate (bento #39 "content fits cards"): nilai
+          uang 3-kolom boleh lipat ke baris kedua alih-alih terpotong "…" */}
+      <div className={cn("text-xl font-extrabold tabular leading-tight break-words", valueClassName, t.fg)}>{value}</div>
       {sub && <div className="text-xs text-muted-foreground mt-0.5 truncate">{sub}</div>}
       {chart && <div className="mt-2 -mx-0.5">{chart}</div>}
     </div>
