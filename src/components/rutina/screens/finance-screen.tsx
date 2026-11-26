@@ -104,12 +104,12 @@ const CATEGORY_ICON: Record<string, React.ElementType> = {
   lainnya: CircleDollarSign,
 };
 
-const CATEGORY_TONE: Record<string, "stone" | "garden" | "studio" | "vault" | "writer" | "gold"> = {
+const CATEGORY_TONE: Record<string, "stone" | "garden" | "studio" | "vault" | "clay" | "gold"> = {
   makan: "studio",
   transport: "studio",
   tagihan: "gold",
-  belanja: "writer",
-  hiburan: "writer",
+  belanja: "clay",
+  hiburan: "gold",
   kesehatan: "garden",
   edukasi: "vault",
   gaji: "garden",
@@ -136,7 +136,6 @@ const GOAL_COLOR_VAR: Record<string, string> = {
   gold: "var(--gold)",
   studio: "var(--studio)",
   garden: "var(--garden)",
-  writer: "var(--writer)",
 };
 
 const DAY_SHORT = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -160,16 +159,16 @@ function patchBudget(id: string, monthlyLimit: number) {
 function FinanceSkeleton() {
   return (
     <div className="flex flex-col gap-4 px-4 pt-3 pb-6">
-      <Skeleton className="h-44 rounded-2xl" />
+      <Skeleton className="h-44 rounded-xl" />
       <div className="grid grid-cols-3 gap-3">
-        <Skeleton className="h-24 rounded-2xl" />
-        <Skeleton className="h-24 rounded-2xl" />
-        <Skeleton className="h-24 rounded-2xl" />
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-24 rounded-xl" />
       </div>
-      <Skeleton className="h-64 rounded-2xl" />
-      <Skeleton className="h-64 rounded-2xl" />
-      <Skeleton className="h-40 rounded-2xl" />
-      <Skeleton className="h-56 rounded-2xl" />
+      <Skeleton className="h-64 rounded-xl" />
+      <Skeleton className="h-64 rounded-xl" />
+      <Skeleton className="h-40 rounded-xl" />
+      <Skeleton className="h-56 rounded-xl" />
     </div>
   );
 }
@@ -712,7 +711,7 @@ export default function FinanceScreen() {
   if (loading) {
     return (
       <div className="flex flex-col min-h-full">
-        <ScreenHeader title="Keuangan" subtitle="The Vault" tone="vault" />
+        <ScreenHeader title="Keuangan" subtitle="Saldo, anggaran & tujuan tabunganmu" tone="vault" />
         <FinanceSkeleton />
       </div>
     );
@@ -720,24 +719,22 @@ export default function FinanceScreen() {
 
   return (
     <div className="flex flex-col min-h-full">
-      <ScreenHeader title="Keuangan" subtitle="The Vault" tone="vault" />
+      <ScreenHeader title="Keuangan" subtitle="Saldo, anggaran & tujuan tabunganmu" tone="vault" />
 
       <div className="flex flex-col gap-4 px-4 pt-3 pb-6">
         {/* ============ Hero Total Saldo ============ */}
-        <section className="rise-in relative overflow-hidden rounded-2xl bg-gradient-to-br from-vault to-vault-deep p-5 text-white shadow-soft">
-          <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10" aria-hidden />
-          <div className="pointer-events-none absolute -left-14 -bottom-16 h-40 w-40 rounded-full bg-white/10" aria-hidden />
+        <section className="rise-in relative overflow-hidden rounded-xl bg-vault p-5 text-white shadow-soft">
           <div className="relative flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-white/75">Total Saldo</p>
               <p className="mt-1 min-w-0 truncate text-2xl font-bold tabular leading-tight sm:text-3xl">
                 {formatRupiah(totalBalance)}
               </p>
-              <p className="mt-1 text-[11px] text-white/70">{wallets.length} dompet aktif</p>
+              <p className="mt-1 text-xs text-white/70">{wallets.length} dompet aktif</p>
             </div>
             <button
               onClick={() => setWalletOpen(true)}
-              className="press flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3.5 text-xs font-bold text-white"
+              className="press flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-4 text-xs font-bold text-white"
               aria-label="Tambah dompet"
             >
               <Plus className="h-4 w-4" />
@@ -751,7 +748,7 @@ export default function FinanceScreen() {
               {balanceTrend.deltaPct !== null && (
                 <DeltaBadge delta={balanceTrend.deltaPct} suffix="%" className="bg-white/15 text-white" />
               )}
-              <span className="text-[11px] text-white/70">Tren saldo bersih 30 hari</span>
+              <span className="text-xs text-white/70">Tren saldo bersih 30 hari</span>
             </div>
           </div>
           {/* Proporsi saldo per dompet */}
@@ -768,14 +765,12 @@ export default function FinanceScreen() {
               {walletRows.map((w) => (
                 <span
                   key={w.id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white/95"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white/95"
                 >
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: w.color }} aria-hidden />
                   {w.name}
                   {walletRows.length > 1 && w.share > 0 && (
-                    <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[9px] font-bold tabular text-white/80">
-                      {Math.round(w.share * 100)}%
-                    </span>
+                    <span className="font-bold tabular text-white/80">{Math.round(w.share * 100)}%</span>
                   )}
                   <span className="tabular font-bold">{formatRupiah(w.balance, { compact: true })}</span>
                 </span>
@@ -811,7 +806,7 @@ export default function FinanceScreen() {
             chart={<MiniBars data={last7NetBars} height={26} showLabels={false} color={SAGE_DEEP} highlightIndex={6} />}
           />
         </div>
-        <p className="-mt-2 px-1 text-[10px] text-muted-foreground rise-in rise-in-1">
+        <p className="-mt-2 px-1 text-xs text-muted-foreground rise-in rise-in-1">
           Batang mini: 7 hari terakhir · <span className="text-vault-deep">masuk</span> /{" "}
           <span className="text-clay">keluar</span> /{" "}
           <span className="text-foreground">selisih</span>
@@ -837,7 +832,7 @@ export default function FinanceScreen() {
             labelEvery={6}
             highlightIndex={cashflow.length - 1}
           />
-          <div className="mt-2 flex items-center justify-center gap-4 text-[11px] text-muted-foreground">
+          <div className="mt-2 flex items-center justify-center gap-4 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-4 rounded-full" style={{ background: SAGE }} /> Masuk
             </span>
@@ -845,7 +840,7 @@ export default function FinanceScreen() {
               <span className="h-2 w-4 rounded-full" style={{ background: CLAY }} /> Keluar
             </span>
           </div>
-          <div className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
+          <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
             <span>Arus kas bersih 30 hari</span>
             <span className="inline-flex items-center gap-1.5">
               <span className="font-bold tabular text-foreground">{formatRupiah(net30)}</span>
@@ -879,7 +874,7 @@ export default function FinanceScreen() {
                   thickness={16}
                   center={
                     <>
-                      <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Total keluar
                       </span>
                       <span className="text-sm font-bold tabular leading-tight">
@@ -920,7 +915,7 @@ export default function FinanceScreen() {
           <div className="grid gap-1" style={{ gridTemplateColumns: "auto repeat(12, minmax(0, 1fr))" }}>
             {DAY_SHORT.map((label, row) => (
               <React.Fragment key={label}>
-                <div className="flex items-center pr-1 text-[10px] font-semibold text-muted-foreground">{label}</div>
+                <div className="flex items-center pr-1 text-xs font-semibold text-muted-foreground">{label}</div>
                 {heat.weeks.map((week, wi) => {
                   const date = week[row];
                   const amount = heat.byDate.get(date) ?? 0;
@@ -945,7 +940,7 @@ export default function FinanceScreen() {
               </React.Fragment>
             ))}
           </div>
-          <div className="mt-2.5 flex items-center justify-between text-[11px] text-muted-foreground">
+          <div className="mt-2.5 flex items-center justify-between text-xs text-muted-foreground">
             <span>12 pekan terakhir</span>
             <span className="inline-flex items-center gap-1">
               Sedikit
@@ -975,7 +970,7 @@ export default function FinanceScreen() {
               description="Buat anggaran per kategori untuk menjaga pengeluaran."
             />
           ) : (
-            <div className="max-h-[420px] space-y-3.5 overflow-y-auto overscroll-contain scroll-thin">
+            <div className="max-h-[420px] space-y-4 overflow-y-auto overscroll-contain scroll-thin">
               {budgetRows.map((b) => {
                 const Icon = CATEGORY_ICON[b.category] ?? CircleDollarSign;
                 const sisa = b.monthlyLimit - (b.spent ?? 0);
@@ -986,7 +981,7 @@ export default function FinanceScreen() {
                         <Icon className="h-3.5 w-3.5" />
                       </span>
                       <span className="min-w-0 flex-1 truncate text-sm font-bold">{catLabel(b.category)}</span>
-                      {b.pct > 1 && <Pill tone="writer">Melebihi batas</Pill>}
+                      {b.pct > 1 && <Pill tone="clay">Melebihi batas</Pill>}
                       {b.pct >= 0.75 && b.pct <= 1 && <Pill tone="gold">Hampir habis</Pill>}
                       <button
                         onClick={() => {
@@ -1028,7 +1023,7 @@ export default function FinanceScreen() {
                       </AlertDialog>
                     </div>
                     <div className="pl-9">
-                      <div className="mb-1 flex items-baseline justify-between gap-2 text-[11px] tabular text-muted-foreground">
+                      <div className="mb-1 flex items-baseline justify-between gap-2 text-xs tabular text-muted-foreground">
                         <span>
                           {formatRupiah(b.spent ?? 0)} <span className="opacity-60">/ {formatRupiah(b.monthlyLimit)}</span>
                         </span>
@@ -1091,7 +1086,7 @@ export default function FinanceScreen() {
                       stroke={7}
                       color={colorVar}
                       value={
-                        <span className="text-[11px] font-bold tabular text-vault-deep">{Math.round(g.pct * 100)}%</span>
+                        <span className="text-xs font-bold tabular text-vault-deep">{Math.round(g.pct * 100)}%</span>
                       }
                     />
                     <div className="min-w-0 flex-1">
@@ -1103,7 +1098,7 @@ export default function FinanceScreen() {
                         {formatRupiah(g.currentAmount)} <span className="opacity-60">/ {formatRupiah(g.targetAmount)}</span>
                       </div>
                       {g.deadline && (
-                        <div className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                           <CalendarDays className="h-3 w-3" />
                           Target {formatDayMonth(g.deadline)}
                         </div>
@@ -1157,7 +1152,7 @@ export default function FinanceScreen() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-bold">{s.note ?? catLabel(s.category)}</div>
-                      <div className="text-[11px] tabular text-muted-foreground">{formatDayMonth(s.date)}</div>
+                      <div className="text-xs tabular text-muted-foreground">{formatDayMonth(s.date)}</div>
                     </div>
                     <Pill tone={s.recurring === "monthly" ? "vault" : "gold"}>
                       {s.recurring === "monthly" ? "Bulanan" : "Mingguan"}
@@ -1252,7 +1247,7 @@ export default function FinanceScreen() {
                       {dayName(g.date)}, {formatDayMonth(g.date)}
                     </span>
                     {g.expense > 0 && (
-                      <span className="text-[11px] font-bold tabular text-clay">
+                      <span className="text-xs font-bold tabular text-clay">
                         −{formatRupiah(g.expense, { compact: true })}
                       </span>
                     )}
@@ -1262,6 +1257,7 @@ export default function FinanceScreen() {
                       const Icon = CATEGORY_ICON[t.category] ?? CircleDollarSign;
                       const isIncome = t.type === "income";
                       const isTransfer = t.type === "transfer";
+                      const catTone = CATEGORY_TONE[t.category] ?? "stone";
                       return (
                         <div key={t.id} className="flex items-center gap-3 py-2.5">
                           <span
@@ -1281,9 +1277,9 @@ export default function FinanceScreen() {
                               <span className="truncate text-sm font-semibold">{t.note ?? catLabel(t.category)}</span>
                               {t.recurring !== "none" && <Repeat className="h-3 w-3 shrink-0 text-muted-foreground" />}
                             </div>
-                            <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                               {!isTransfer && (
-                                <Pill tone={CATEGORY_TONE[t.category] ?? "stone"} className="px-1.5 py-0.5 text-[10px]">
+                                <Pill tone={catTone} className="px-1.5 py-0.5">
                                   {catLabel(t.category)}
                                 </Pill>
                               )}

@@ -163,22 +163,22 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
           <div className="overflow-y-auto scroll-thin px-4 pb-4 space-y-4">
             {checkinsQuery.isLoading ? (
               <div className="space-y-3">
-                <Skeleton className="h-20 rounded-2xl" />
-                <Skeleton className="h-20 rounded-2xl" />
+                <Skeleton className="h-20 rounded-xl" />
+                <Skeleton className="h-20 rounded-xl" />
               </div>
             ) : (
               SCALES.map((scale) => {
                 const Icon = scale.icon;
                 const value = scales[scale.key];
                 return (
-                  <div key={scale.key} className="rounded-2xl border border-border/70 bg-card p-3">
+                  <div key={scale.key} className="rounded-xl border border-border/70 bg-card p-3">
                     <div className="flex items-center gap-2 mb-2.5">
                       <span className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 bg-sage-soft text-sage-deep">
                         <Icon className="h-4 w-4" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold leading-tight">{scale.label}</p>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {value !== null ? scale.labels[value - 1] : "Ketuk salah satu tingkat"}
                         </p>
                       </div>
@@ -208,7 +208,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                               )}
                             >
                               <FaceIcon className="h-6 w-6" strokeWidth={active ? 2.2 : 1.8} />
-                              <span className="text-[8.5px] font-bold leading-none">{scale.labels[i]}</span>
+                              <span className="text-[10px] font-bold leading-none">{scale.labels[i]}</span>
                             </button>
                           );
                         })}
@@ -282,7 +282,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                       aria-pressed={active}
                       aria-label={`Set tidur ${n} jam`}
                       className={cn(
-                        "press flex min-h-[36px] flex-1 min-w-[44px] items-center justify-center gap-1 rounded-xl border text-xs font-bold tabular",
+                        "press flex min-h-[44px] flex-1 min-w-[44px] items-center justify-center gap-1 rounded-xl border text-xs font-bold tabular",
                         n === 8 && !active && "border-dashed border-sage/50 text-sage-deep bg-sage-soft/40",
                         active
                           ? "bg-studio text-white border-studio shadow-soft"
@@ -330,7 +330,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
             <Button
               type="submit"
               disabled={!canSubmit}
-              className="press w-full h-12 rounded-2xl text-sm font-bold bg-studio text-white hover:bg-studio-deep min-h-[44px]"
+              className="press w-full h-12 rounded-xl text-sm font-bold bg-studio text-white hover:bg-studio-deep min-h-[44px]"
             >
               {mutation.isPending ? (
                 <>
@@ -343,7 +343,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
               )}
             </Button>
             {!Object.values(scales).some((v) => v !== null) && (
-              <p className="text-[11px] text-muted-foreground mt-2 text-center">Isi minimal satu skala.</p>
+              <p className="text-xs text-muted-foreground mt-2 text-center">Isi minimal satu skala.</p>
             )}
           </div>
         </form>

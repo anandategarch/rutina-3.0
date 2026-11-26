@@ -39,7 +39,7 @@ export function ScreenHeader({
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className={cn("text-lg font-bold leading-tight truncate", toneText[tone])}>{title}</h1>
+          <h1 className={cn("text-xl font-bold leading-tight truncate", toneText[tone])}>{title}</h1>
           {subtitle && <p className="text-xs text-muted-foreground truncate mt-0.5">{subtitle}</p>}
         </div>
         {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
@@ -63,7 +63,7 @@ export function SectionCard({
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
-  tone?: "stone" | "garden" | "studio" | "vault" | "writer" | "gold";
+  tone?: "stone" | "garden" | "studio" | "vault" | "writer" | "gold" | "clay";
 }) {
   const toneText: Record<string, string> = {
     stone: "text-foreground",
@@ -72,9 +72,10 @@ export function SectionCard({
     vault: "text-vault-deep",
     writer: "text-writer-deep",
     gold: "text-gold",
+    clay: "text-clay-deep",
   };
   return (
-    <section className={cn("bg-card rounded-3xl border border-border/70 shadow-clay p-4", className)}>
+    <section className={cn("bg-card rounded-xl border border-border/70 shadow-clay p-4", className)}>
       {(title || action) && (
         <div className="flex items-center gap-2 mb-3">
           {icon}
@@ -100,6 +101,7 @@ const toneMap: Record<string, { bg: string; fg: string }> = {
   vault: { bg: "bg-vault-soft", fg: "text-vault-deep" },
   writer: { bg: "bg-writer-soft", fg: "text-writer-deep" },
   gold: { bg: "bg-gold-soft", fg: "text-gold" },
+  clay: { bg: "bg-clay-soft", fg: "text-clay-deep" },
 };
 
 export function StatTile({
@@ -122,13 +124,13 @@ export function StatTile({
 }) {
   const t = toneMap[tone];
   return (
-    <div className={cn("rounded-2xl p-3.5 min-w-0 shadow-soft", t.bg, className)}>
+    <div className={cn("rounded-xl p-4 min-w-0 shadow-soft", t.bg, className)}>
       <div className="flex items-center gap-1.5 mb-1">
         {icon && <span className={t.fg}>{icon}</span>}
-        <span className={cn("text-[11px] font-semibold uppercase tracking-wide leading-tight", t.fg)}>{label}</span>
+        <span className={cn("text-xs font-semibold uppercase tracking-wide leading-tight", t.fg)}>{label}</span>
       </div>
       <div className={cn("text-xl font-extrabold tabular leading-tight truncate", t.fg)}>{value}</div>
-      {sub && <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
+      {sub && <div className="text-xs text-muted-foreground mt-0.5 truncate">{sub}</div>}
       {chart && <div className="mt-2 -mx-0.5">{chart}</div>}
     </div>
   );
@@ -149,7 +151,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center text-center py-8 px-4">
-      <div className="h-14 w-14 rounded-3xl bg-secondary flex items-center justify-center text-muted-foreground mb-3 shadow-soft">
+      <div className="h-14 w-14 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground mb-3 shadow-soft">
         {icon}
       </div>
       <p className="font-semibold text-foreground text-sm">{title}</p>
@@ -219,7 +221,7 @@ export function Pill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
         t.bg,
         t.fg,
         className
@@ -250,14 +252,6 @@ export const TIME_OF_DAY_META: Record<string, { label: string }> = {
   afternoon: { label: "Siang" },
   evening: { label: "Malam" },
   anytime: { label: "Kapan saja" },
-};
-
-export const MOOD_META: Record<string, { label: string; emoji: string }> = {
-  great: { label: "Luar biasa", emoji: "😄" },
-  good: { label: "Baik", emoji: "🙂" },
-  neutral: { label: "Biasa", emoji: "😐" },
-  tough: { label: "Berat", emoji: "😔" },
-  low: { label: "Buruk", emoji: "😢" },
 };
 
 // avoid unused import warnings in some bundlers

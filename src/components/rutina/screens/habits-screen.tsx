@@ -240,7 +240,7 @@ function Flower({ x, y }: { x: number; y: number }) {
           cx={4.2 * Math.cos((deg * Math.PI) / 180)}
           cy={4.2 * Math.sin((deg * Math.PI) / 180)}
           r="2.6"
-          fill="var(--writer)"
+          fill="var(--garden)"
           opacity="0.9"
         />
       ))}
@@ -442,7 +442,7 @@ function GardenIllustration({ stage }: { stage: number }) {
               <Flower x={160} y={66} />
               <Flower x={186} y={94} />
               <Flower x={137} y={102} />
-              <g fill="var(--writer)" opacity="0.5">
+              <g fill="var(--garden)" opacity="0.5">
                 <ellipse cx="118" cy="118" rx="2.5" ry="1.6" transform="rotate(-30 118 118)" />
                 <ellipse cx="204" cy="112" rx="2.5" ry="1.6" transform="rotate(25 204 112)" />
                 <ellipse cx="132" cy="142" rx="2.2" ry="1.4" transform="rotate(15 132 142)" />
@@ -606,6 +606,7 @@ export default function HabitsScreen() {
 
   const streaks = React.useMemo(() => overallStreaks(habits, today), [habits, today]);
   const nextMilestone = nextStreakMilestone(streaks.current);
+  const milestonesDone = MILESTONES.filter((m) => streaks.current >= m).length;
 
   const doneThisWeek = React.useMemo(() => {
     const ws = weekStart(today);
@@ -755,7 +756,7 @@ export default function HabitsScreen() {
         actions={
           <button
             onClick={() => setQuickAction("habit")}
-            className="press h-11 min-w-[44px] px-3 rounded-full bg-garden text-white flex items-center gap-1.5 text-xs font-bold shadow-soft"
+            className="press h-11 min-w-[44px] px-3 rounded-xl bg-garden text-white flex items-center gap-1.5 text-xs font-bold shadow-soft"
           >
             <Plus className="h-4 w-4" />
             Tambah
@@ -793,7 +794,7 @@ export default function HabitsScreen() {
                   {i > 0 && (
                     <span
                       className={cn(
-                        "mt-[17px] h-[2px] flex-1 rounded-full",
+                        "mt-4 h-[2px] flex-1 rounded-full",
                         isPast ? "bg-garden/50" : "bg-border"
                       )}
                       aria-hidden="true"
@@ -812,7 +813,7 @@ export default function HabitsScreen() {
                     </span>
                     <span
                       className={cn(
-                        "text-center text-[9px] font-semibold leading-tight",
+                        "text-center text-[10px] font-semibold leading-tight",
                         isActive ? "text-garden-deep" : "text-muted-foreground/80"
                       )}
                     >
@@ -833,7 +834,7 @@ export default function HabitsScreen() {
           tone="gold"
           icon={<Flame className="h-4 w-4 text-gold" />}
           action={
-            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-1 text-[10px] font-bold text-gold">
+            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2.5 py-1 text-xs font-bold text-gold">
               <Trophy className="h-3 w-3" /> Terbaik {formatNumber(streaks.best)} hari
             </span>
           }
@@ -841,7 +842,7 @@ export default function HabitsScreen() {
           <div className="flex items-center gap-4">
             <div
               className={cn(
-                "relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl",
+                "relative flex h-16 w-16 shrink-0 items-center justify-center rounded-xl",
                 streaks.current > 0 ? "bg-gold-soft" : "bg-secondary"
               )}
               aria-hidden="true"
@@ -859,33 +860,19 @@ export default function HabitsScreen() {
                 <span className="ml-1 text-xs font-semibold text-muted-foreground">hari beruntun</span>
               </p>
               {nextMilestone ? (
-                <>
-                  <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                    {MILESTONES.map((m) => (
-                      <span
-                        key={m}
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[9px] font-bold tabular",
-                          streaks.current >= m
-                            ? "bg-gold text-white"
-                            : m === nextMilestone
-                              ? "border border-dashed border-gold text-gold"
-                              : "bg-secondary text-muted-foreground"
-                        )}
-                      >
-                        {m}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-2">
-                    <MetricBar value={streaks.current} max={nextMilestone} color="var(--gold)" height={7} />
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      <span className="font-bold text-gold tabular">{nextMilestone - streaks.current} hari</span> lagi ke milestone {nextMilestone}
-                    </p>
-                  </div>
-                </>
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Progres milestone {milestonesDone}/{MILESTONES.length} · berikutnya {nextMilestone} hari
+                  </p>
+                  <MetricBar value={streaks.current} max={nextMilestone} color="var(--gold)" height={7} className="mt-1.5" />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    <span className="font-bold text-gold tabular">{nextMilestone - streaks.current} hari</span> lagi ke milestone {nextMilestone}
+                  </p>
+                </div>
               ) : (
-                <p className="mt-2 text-[11px] font-semibold text-gold">Semua milestone terlampaui — luar biasa!</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Semua {MILESTONES.length} milestone terlampaui — pertahankan.
+                </p>
               )}
             </div>
           </div>
@@ -898,7 +885,7 @@ export default function HabitsScreen() {
           title="Ritme Kebiasaan"
           tone="garden"
           icon={<CalendarCheck className="h-4 w-4 text-garden-deep" />}
-          action={<span className="text-[11px] text-muted-foreground font-semibold">7 hari terakhir</span>}
+          action={<span className="text-xs text-muted-foreground font-semibold">7 hari terakhir</span>}
         >
           <div className="flex items-center gap-4">
             <RingStat
@@ -916,17 +903,17 @@ export default function HabitsScreen() {
                   / {formatNumber(scheduledThisWeek)} misi
                 </span>
               </p>
-              <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 Ring menunjukkan proporsi misi kebiasaan yang sudah dijalankan sejak Senin.
               </p>
             </div>
           </div>
           <div className="mt-3">
             <div className="flex items-baseline justify-between gap-2 mb-1">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                 Penyelesaian harian
               </p>
-              <span className="text-[11px] text-muted-foreground tabular">
+              <span className="text-xs text-muted-foreground tabular">
                 {formatNumber(last7Total)} check-in
               </span>
             </div>
@@ -941,7 +928,7 @@ export default function HabitsScreen() {
           title="Tren Penyelesaian"
           tone="garden"
           icon={<TrendingUp className="h-4 w-4 text-garden-deep" />}
-          action={<span className="text-[11px] text-muted-foreground font-semibold">7 pekan terakhir</span>}
+          action={<span className="text-xs text-muted-foreground font-semibold">7 pekan terakhir</span>}
         >
           <MiniBars
             data={weeklyData}
@@ -949,7 +936,7 @@ export default function HabitsScreen() {
             color={SAGE}
             highlightIndex={weeklyData.length - 1}
           />
-          <p className="text-[11px] text-muted-foreground mt-2 text-center">
+          <p className="text-xs text-muted-foreground mt-2 text-center">
             Persentase misi kebiasaan yang diselesaikan tiap pekan (Sen–Min).
           </p>
         </SectionCard>
@@ -961,14 +948,14 @@ export default function HabitsScreen() {
           title="Kalender Konsistensi"
           tone="garden"
           icon={<CalendarDays className="h-4 w-4 text-garden-deep" />}
-          action={<span className="text-[11px] text-muted-foreground font-semibold">12 pekan terakhir</span>}
+          action={<span className="text-xs text-muted-foreground font-semibold">12 pekan terakhir</span>}
         >
           {/* Label bulan per kolom pekan */}
-          <div className="flex gap-[3px] mb-1.5 pl-[36px]">
+          <div className="flex gap-1 mb-1.5 pl-[36px]">
             {calendar.weeks.map((wk, i) => (
               <div
                 key={wk.start}
-                className="flex-1 min-w-0 text-[9px] font-bold text-muted-foreground truncate"
+                className="flex-1 min-w-0 text-[10px] font-bold text-muted-foreground truncate"
                 title={formatDayMonth(wk.start)}
               >
                 {calendar.monthLabels[i]}
@@ -976,11 +963,11 @@ export default function HabitsScreen() {
             ))}
           </div>
           {/* Grid: baris = hari (Sen–Min), kolom = pekan */}
-          <div className="space-y-[3px]">
+          <div className="space-y-1">
             {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((dayName, r) => (
               <div key={dayName} className="flex items-center gap-1">
-                <span className="w-[32px] shrink-0 text-[9px] font-bold text-muted-foreground">{dayName}</span>
-                <div className="flex-1 flex gap-[3px]">
+                <span className="w-[32px] shrink-0 text-[10px] font-bold text-muted-foreground">{dayName}</span>
+                <div className="flex-1 flex gap-1">
                   {calendar.weeks.map((wk, wi) => {
                     const c = wk.cells[r];
                     return (
@@ -1005,7 +992,7 @@ export default function HabitsScreen() {
               </div>
             ))}
           </div>
-          <div className="mt-3 flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground">
+          <div className="mt-3 flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
             <LegendDot className="bg-garden" label="Selesai" />
             <LegendDot className="bg-clay/25" label="Meleset" />
             <LegendDot className="border border-border bg-card" label="Jeda" />
@@ -1123,7 +1110,7 @@ export default function HabitsScreen() {
         <SectionCard
           title="Coach Kebiasaan"
           tone="garden"
-          icon={<Lightbulb className="h-4 w-4 text-sage-deep" />}
+          icon={<Lightbulb className="h-4 w-4 text-garden-deep" />}
         >
           {suggestions.length === 0 ? (
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -1136,10 +1123,10 @@ export default function HabitsScreen() {
                 return (
                   <li
                     key={i}
-                    className="flex items-start gap-2.5 rounded-xl bg-sage-soft p-3"
+                    className="flex items-start gap-2.5 rounded-xl bg-garden-soft p-3"
                   >
-                    <Icon className="h-4 w-4 text-sage-deep mt-0.5 shrink-0" />
-                    <p className="text-xs font-semibold text-sage-deep leading-relaxed">{s.text}</p>
+                    <Icon className="h-4 w-4 text-garden-deep mt-0.5 shrink-0" />
+                    <p className="text-xs font-semibold text-garden-deep leading-relaxed">{s.text}</p>
                   </li>
                 );
               })}
@@ -1199,7 +1186,7 @@ function HabitCard({
   const wp = habitWeekProgress(habit, today);
 
   return (
-    <div className="rounded-2xl border border-border/70 bg-card p-3">
+    <div className="rounded-xl border border-border/70 bg-card p-3">
       <div className="flex items-center gap-2">
         <button
           onClick={onOpen}
@@ -1214,18 +1201,12 @@ function HabitCard({
             <span className="mt-1 flex items-center gap-1.5 flex-wrap">
               <Pill tone={catMeta.tone}>{catMeta.label}</Pill>
               {isMeasured && log && (
-                <span className="text-[11px] text-muted-foreground tabular">
+                <span className="text-xs text-muted-foreground tabular">
                   {formatNumber(log.value ?? 0, 1)}/{formatNumber(habit.unitTarget ?? 0, 1)} {habit.unitLabel}
                 </span>
               )}
-              {isMeasured && !done && !habit.archived && (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-secondary px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
-                  <Timer className="h-2.5 w-2.5" />
-                  Versi 2 Menit
-                </span>
-              )}
             </span>
-            <span className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1">
                 <Flame className="h-3 w-3 text-gold" />
                 <span className="tabular">{streak}</span> hari
@@ -1273,14 +1254,9 @@ function HabitCard({
           ))}
       </div>
 
-      {(isMeasured || wp.scheduled > 0) && (
-        <div className="mt-2.5 space-y-1.5">
-          {isMeasured && (
-            <MetricBar value={log?.value ?? 0} max={habit.unitTarget ?? 1} color="var(--primary)" overColor="var(--primary)" height={4} />
-          )}
-          {wp.scheduled > 0 && (
-            <MetricBar value={wp.done} max={wp.scheduled} height={3} />
-          )}
+      {wp.scheduled > 0 && (
+        <div className="mt-2.5">
+          <MetricBar value={wp.done} max={wp.scheduled} height={3} />
         </div>
       )}
     </div>
@@ -1290,7 +1266,7 @@ function HabitCard({
 function LegendDot({ className, label }: { className: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={cn("h-2.5 w-2.5 rounded-sm", className)} />
+      <span className={cn("h-2.5 w-2.5 rounded-full", className)} />
       {label}
     </span>
   );
@@ -1403,17 +1379,18 @@ function HabitDetailDrawer({
   return (
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
       <DrawerContent className="max-h-[85dvh]">
-        <DrawerHeader className="px-5 text-left pb-2">
+        <DrawerHeader className="px-4 text-left pb-2">
           <div className="flex items-center gap-3">
-            <span className={cn("flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl", color.soft)}>
+            <span className={cn("flex h-14 w-14 shrink-0 items-center justify-center rounded-xl", color.soft)}>
               {React.createElement(habitIcon(habit.icon), { className: cn("h-7 w-7", color.deep) })}
             </span>
             <div className="min-w-0 flex-1">
               <DrawerTitle className="text-lg font-bold leading-tight truncate">{habit.name}</DrawerTitle>
               <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                <Pill tone={catMeta.tone}>{catMeta.label}</Pill>
-                <Pill tone="stone">{timeMeta.label}</Pill>
-                {habit.archived && <Pill tone="gold">Diarsipkan</Pill>}
+                <span className="text-xs text-muted-foreground">
+                  {catMeta.label} · {timeMeta.label}
+                </span>
+                {habit.archived && <Pill tone="stone">Diarsipkan</Pill>}
               </div>
             </div>
           </div>
@@ -1422,7 +1399,7 @@ function HabitDetailDrawer({
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="overflow-y-auto scroll-thin px-5 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] space-y-4">
+        <div className="overflow-y-auto scroll-thin px-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] space-y-4">
           {/* Info jadwal */}
           <div className="rounded-xl border border-border/70 divide-y divide-border/60">
             <InfoRow icon={<CalendarDays className="h-4 w-4" />} label="Jadwal" value={scheduleText} />
@@ -1435,7 +1412,7 @@ function HabitDetailDrawer({
               <div className="flex items-start gap-2.5 p-3 bg-gold-soft/60">
                 <Link2 className="h-4 w-4 text-gold mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Habit stacking</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Habit stacking</p>
                   <p className="font-script text-lg leading-snug text-gold">
                     Setelah {habit.stackAfter}, saya akan {habit.name}.
                   </p>
@@ -1489,7 +1466,7 @@ function HabitDetailDrawer({
                     </span>
                   </p>
                   {doneToday && (
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-garden-deep mt-1">
+                    <p className="text-xs font-bold uppercase tracking-wide text-garden-deep mt-1">
                       Target tercapai
                     </p>
                   )}
@@ -1520,7 +1497,7 @@ function HabitDetailDrawer({
                 Riwayat 30 hari
               </p>
               {isMeasured && (
-                <span className="text-[10px] text-muted-foreground tabular">
+                <span className="text-xs text-muted-foreground tabular">
                   target {formatNumber(habit.unitTarget ?? 0, 1)} {habit.unitLabel}/hari
                 </span>
               )}
@@ -1529,18 +1506,18 @@ function HabitDetailDrawer({
               {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d, i) => (
                 <span
                   key={`${d}-${i}`}
-                  className="flex-1 text-center text-[9px] font-bold text-muted-foreground"
+                  className="flex-1 text-center text-[10px] font-bold text-muted-foreground"
                 >
                   {d}
                 </span>
               ))}
             </div>
             <HeatGrid cells={historyCells} columns={7} max={historyMax} />
-            <div className="mt-2 flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground">
+            <div className="mt-2 flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
               <LegendDot className="border border-border bg-secondary" label="Tanpa progres" />
               <LegendDot className="bg-garden" label="Target tercapai" />
             </div>
-            <p className="mt-1.5 text-[10px] text-muted-foreground leading-relaxed">
+            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
               Intensitas hijau menunjukkan seberapa dekat progres harianmu dengan target. Tahan sel untuk melihat detail.
             </p>
           </div>
@@ -1552,13 +1529,13 @@ function HabitDetailDrawer({
             </p>
             <div className="rounded-xl bg-secondary/50 p-3">
               <div className="flex items-baseline justify-between gap-2 mb-1.5">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                   Tingkat keberhasilan
                 </p>
                 <span className="text-sm font-bold tabular text-garden-deep">{statRate}%</span>
               </div>
               <MetricBar value={statRate} max={100} height={6} />
-              <p className="mt-1.5 text-[10px] text-muted-foreground">
+              <p className="mt-1.5 text-xs text-muted-foreground">
                 {statDone} selesai dari {statScheduled} hari terjadwal
               </p>
             </div>
@@ -1574,22 +1551,27 @@ function HabitDetailDrawer({
                 </>
               ) : (
                 <>
-                  <MiniStat label="Meleset" value={`${statMissed}x`} tone="gold" />
+                  <MiniStat label="Meleset" value={`${statMissed}x`} tone="clay" />
                   <MiniStat label="Jeda" value={`${statRest}x`} tone="stone" />
                 </>
               )}
             </div>
           </div>
 
-          {/* Versi 2 Menit */}
+          {/* Aturan 2 menit */}
           {!doneToday && !habit.archived && (
-            <button
-              onClick={() => onCheck(habit.id, undefined, `${habit.name} tercatat (Versi 2 Menit)`)}
-              className="press w-full h-11 rounded-xl bg-gold text-white text-sm font-bold flex items-center justify-center gap-2"
-            >
-              <Timer className="h-4 w-4" />
-              Tandai Selesai — Versi 2 Menit
-            </button>
+            <div className="space-y-1.5">
+              <button
+                onClick={() => onCheck(habit.id, undefined, `${habit.name} tercatat (aturan 2 menit)`)}
+                className="press w-full h-11 rounded-xl bg-gold text-white text-sm font-bold flex items-center justify-center gap-2"
+              >
+                <Timer className="h-4 w-4" />
+                Tandai Selesai (aturan 2 menit)
+              </button>
+              <p className="text-xs text-muted-foreground">
+                Belum siap penuh? Tandai versi 2 menitnya agar runtun tetap hidup.
+              </p>
+            </div>
           )}
 
           {/* Aksi */}
@@ -1675,7 +1657,7 @@ function InfoRow({
     <div className="flex items-center gap-2.5 p-3">
       <span className="text-muted-foreground shrink-0">{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
         <p className="text-sm font-semibold truncate">{value}</p>
       </div>
     </div>
@@ -1689,19 +1671,19 @@ function MiniStat({
 }: {
   label: string;
   value: string;
-  tone: "garden" | "gold" | "studio" | "vault" | "writer" | "stone";
+  tone: "garden" | "gold" | "studio" | "vault" | "stone" | "clay";
 }) {
   const tones: Record<string, string> = {
     garden: "bg-garden-soft text-garden-deep",
     gold: "bg-gold-soft text-gold",
     studio: "bg-studio-soft text-studio-deep",
     vault: "bg-vault-soft text-vault-deep",
-    writer: "bg-writer-soft text-writer-deep",
     stone: "bg-secondary text-foreground",
+    clay: "bg-clay-soft text-clay-deep",
   };
   return (
     <div className={cn("rounded-xl p-3", tones[tone])}>
-      <p className="text-[10px] font-bold uppercase tracking-wide opacity-80 truncate">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wide opacity-80 truncate">{label}</p>
       <p className="text-lg font-bold tabular mt-0.5">{value}</p>
     </div>
   );
@@ -1719,19 +1701,19 @@ function HabitsSkeleton() {
         <div className="h-3 w-24 rounded bg-secondary animate-pulse mt-2" />
       </div>
       <div className="px-4 mt-4 space-y-4">
-        <div className="rounded-2xl bg-card border border-border/70 p-4">
+        <div className="rounded-xl bg-card border border-border/70 p-4">
           <div className="h-4 w-40 rounded bg-secondary animate-pulse" />
           <div className="h-40 rounded-xl bg-secondary animate-pulse mt-3" />
           <div className="h-3 w-48 rounded bg-secondary animate-pulse mt-3" />
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <div className="h-20 rounded-2xl bg-secondary animate-pulse" />
-          <div className="h-20 rounded-2xl bg-secondary animate-pulse" />
-          <div className="h-20 rounded-2xl bg-secondary animate-pulse" />
+          <div className="h-20 rounded-xl bg-secondary animate-pulse" />
+          <div className="h-20 rounded-xl bg-secondary animate-pulse" />
+          <div className="h-20 rounded-xl bg-secondary animate-pulse" />
         </div>
-        <div className="h-52 rounded-2xl bg-secondary animate-pulse" />
-        <div className="h-40 rounded-2xl bg-secondary animate-pulse" />
-        <div className="h-64 rounded-2xl bg-secondary animate-pulse" />
+        <div className="h-52 rounded-xl bg-secondary animate-pulse" />
+        <div className="h-40 rounded-xl bg-secondary animate-pulse" />
+        <div className="h-64 rounded-xl bg-secondary animate-pulse" />
       </div>
     </div>
   );

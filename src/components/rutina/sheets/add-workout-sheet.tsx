@@ -209,14 +209,14 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                       onClick={() => setType(t)}
                       aria-pressed={active}
                       className={cn(
-                        "press flex flex-col items-center justify-center gap-1 rounded-2xl border min-h-[64px] py-2 px-1",
+                        "press flex flex-col items-center justify-center gap-1 rounded-xl border min-h-[64px] py-2 px-1",
                         active
                           ? "bg-studio-soft border-studio/60 text-studio-deep shadow-soft"
                           : "bg-card border-border/70 text-muted-foreground"
                       )}
                     >
                       <Icon className="h-5 w-5" />
-                      <span className="text-[10px] font-semibold leading-tight text-center">{meta.label}</span>
+                      <span className="text-xs font-semibold leading-tight text-center">{meta.label}</span>
                     </button>
                   );
                 })}
@@ -266,7 +266,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                   className="h-11 tabular"
                 />
                 {pace !== null && pace > 0 && (
-                  <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Clock3 className="h-3.5 w-3.5" />
                     Pace otomatis: <span className="font-semibold text-studio-deep tabular">{formatPace(pace)}</span>
                   </p>
@@ -293,7 +293,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
 
             {/* Strength builder */}
             {type === "strength" && (
-              <div className="rounded-2xl border border-border/70 bg-studio-soft/50 p-3 space-y-3">
+              <div className="rounded-xl border border-border/70 bg-studio-soft/50 p-3 space-y-3">
                 <p className="text-xs font-bold uppercase tracking-wide text-studio-deep">Gerakan Beban</p>
 
                 {/* Pencarian library */}
@@ -314,7 +314,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                     type="button"
                     onClick={() => setMuscleFilter(null)}
                     className={cn(
-                      "press rounded-full px-3 py-1.5 text-[11px] font-semibold min-h-[32px]",
+                      "press rounded-full px-3 py-1.5 text-xs font-semibold min-h-[44px]",
                       muscleFilter === null ? "bg-studio text-white" : "bg-card text-muted-foreground border border-border/70"
                     )}
                   >
@@ -326,7 +326,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                       type="button"
                       onClick={() => setMuscleFilter(g.key)}
                       className={cn(
-                        "press rounded-full px-3 py-1.5 text-[11px] font-semibold min-h-[32px]",
+                        "press rounded-full px-3 py-1.5 text-xs font-semibold min-h-[44px]",
                         muscleFilter === g.key ? "bg-studio text-white" : "bg-card text-muted-foreground border border-border/70"
                       )}
                     >
@@ -353,7 +353,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                       >
                         <span className="min-w-0">
                           <span className="block text-sm font-semibold truncate">{e.name}</span>
-                          <span className="block text-[11px] text-muted-foreground">
+                          <span className="block text-xs text-muted-foreground">
                             {MUSCLE_LABEL[e.muscleGroup] ?? e.muscleGroup}
                             {e.equipment ? ` · ${e.equipment}` : ""}
                           </span>
@@ -372,7 +372,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                         <div className="flex items-center gap-2 mb-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold truncate">{it.exercise}</p>
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               {MUSCLE_LABEL[it.muscleGroup] ?? it.muscleGroup}
                             </p>
                           </div>
@@ -380,14 +380,14 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                             type="button"
                             onClick={() => removeItem(idx)}
                             aria-label={`Hapus ${it.exercise}`}
-                            className="press h-11 w-11 rounded-full bg-writer-soft text-writer-deep flex items-center justify-center shrink-0"
+                            className="press h-11 w-11 rounded-full bg-clay-soft text-clay flex items-center justify-center shrink-0"
                           >
                             <X className="h-4 w-4" />
                           </button>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           <div>
-                            <label className="text-[10px] font-semibold text-muted-foreground block mb-1">kg</label>
+                            <label className="text-xs font-semibold text-muted-foreground block mb-1">kg</label>
                             <Input
                               type="number"
                               inputMode="decimal"
@@ -400,7 +400,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] font-semibold text-muted-foreground block mb-1">reps</label>
+                            <label className="text-xs font-semibold text-muted-foreground block mb-1">reps</label>
                             <Input
                               type="number"
                               inputMode="numeric"
@@ -412,7 +412,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] font-semibold text-muted-foreground block mb-1">sets</label>
+                            <label className="text-xs font-semibold text-muted-foreground block mb-1">sets</label>
                             <Input
                               type="number"
                               inputMode="numeric"
@@ -429,7 +429,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                   </div>
                 )}
                 {items.length === 0 && (
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Tambahkan minimal satu gerakan dari library di atas.
                   </p>
                 )}
@@ -469,7 +469,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
             <Button
               type="submit"
               disabled={!canSubmit}
-              className="press w-full h-12 rounded-2xl text-sm font-bold bg-studio text-white hover:bg-studio-deep min-h-[44px]"
+              className="press w-full h-12 rounded-xl text-sm font-bold bg-studio text-white hover:bg-studio-deep min-h-[44px]"
             >
               {mutation.isPending ? (
                 <>
@@ -480,7 +480,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
               )}
             </Button>
             {type === "strength" && items.length > 0 && !itemsValid && (
-              <p className="text-[11px] text-writer-deep mt-2 text-center">
+              <p className="text-xs text-clay mt-2 text-center">
                 Lengkapi bobot, reps, dan sets setiap gerakan.
               </p>
             )}

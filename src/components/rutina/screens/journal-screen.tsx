@@ -180,18 +180,9 @@ export default function JournalScreen() {
     <div className="flex flex-col min-h-full">
       <ScreenHeader
         title="Jurnal"
-        subtitle="Writing Room"
+        subtitle="Refleksi & arsip tulisanmu"
         tone="writer"
         onBack={() => setPage("home")}
-        actions={
-          <button
-            onClick={() => openQuickAction("journal")}
-            className="press inline-flex items-center gap-1.5 rounded-full bg-writer-deep text-white px-4 min-h-[40px] text-xs font-bold shadow-soft"
-          >
-            <PenLine className="h-4 w-4" />
-            Tulis
-          </button>
-        }
       />
 
       <div className="p-4 space-y-4">
@@ -215,7 +206,7 @@ export default function JournalScreen() {
                 onClick={() => setFolder(f)}
                 aria-pressed={folder === f}
                 className={cn(
-                  "press shrink-0 rounded-full px-3.5 min-h-[36px] text-xs font-bold border transition-colors",
+                  "press shrink-0 rounded-full px-4 min-h-[44px] text-xs font-bold border transition-colors",
                   folder === f
                     ? "bg-writer-deep text-white border-writer-deep"
                     : "bg-card text-muted-foreground border-border/70"
@@ -251,7 +242,7 @@ export default function JournalScreen() {
               onClick={() => setPinnedOnly(!pinnedOnly)}
               aria-pressed={pinnedOnly}
               className={cn(
-                "press inline-flex items-center gap-1.5 rounded-full px-3.5 min-h-[44px] text-xs font-bold border transition-colors ml-auto",
+                "press inline-flex items-center gap-1.5 rounded-full px-4 min-h-[44px] text-xs font-bold border transition-colors ml-auto",
                 pinnedOnly
                   ? "bg-gold-soft border-gold/40 text-gold"
                   : "bg-card text-muted-foreground border-border/70"
@@ -267,19 +258,19 @@ export default function JournalScreen() {
         {lastEntry && (
           <button
             onClick={() => setActiveEntry(lastEntry)}
-            className="press w-full text-left rounded-2xl border border-writer/30 bg-writer-soft p-3.5 flex items-center gap-3 shadow-soft"
+            className="press w-full text-left rounded-xl border border-writer/30 bg-writer-soft p-4 flex items-center gap-3 shadow-soft"
           >
             <span className="h-10 w-10 rounded-xl bg-card text-writer-deep flex items-center justify-center shrink-0">
               <PenLine className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-writer-deep">
+              <span className="block text-xs font-bold uppercase tracking-widest text-writer-deep">
                 Lanjutkan Menulis
               </span>
               <span className="block text-sm font-bold leading-tight truncate mt-0.5">
                 {lastEntry.title || "Tanpa judul"}
               </span>
-              <span className="block text-[11px] text-muted-foreground truncate mt-0.5">
+              <span className="block text-xs text-muted-foreground truncate mt-0.5">
                 {relativeDate(dayOf(lastEntry.updatedAt))} · {lastEntry.wordCount} kata · {lastEntry.folder}
               </span>
             </span>
@@ -301,24 +292,24 @@ export default function JournalScreen() {
           icon={<NotebookText className="h-4 w-4 text-writer-deep" />}
         >
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="rounded-xl bg-writer-soft px-3.5 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-writer-deep">Total Catatan</p>
+            <div className="rounded-xl bg-writer-soft px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-writer-deep">Total Catatan</p>
               <p className="text-2xl font-extrabold tabular text-foreground mt-0.5">{formatNumber(entries.length)}</p>
-              <p className="text-[11px] text-muted-foreground">entri terarsip</p>
+              <p className="text-xs text-muted-foreground">entri terarsip</p>
             </div>
-            <div className="rounded-xl bg-writer-soft px-3.5 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-writer-deep">Total Kata</p>
+            <div className="rounded-xl bg-writer-soft px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-writer-deep">Total Kata</p>
               <p className="text-2xl font-extrabold tabular text-foreground mt-0.5">{formatNumber(totalWords)}</p>
-              <p className="text-[11px] text-muted-foreground">seluruh Writing Room</p>
+              <p className="text-xs text-muted-foreground">semua catatanmu</p>
             </div>
           </div>
           {entries.length > 0 && (
             <div className="mt-3">
               <div className="flex items-baseline justify-between mb-1">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                   Tren kata · 30 hari terakhir
                 </p>
-                <span className="text-[11px] font-bold tabular text-writer-deep">{formatNumber(words30)} kata</span>
+                <span className="text-xs font-bold tabular text-writer-deep">{formatNumber(words30)} kata</span>
               </div>
               <Sparkline data={dailyWords30} height={44} />
             </div>
@@ -331,15 +322,15 @@ export default function JournalScreen() {
           tone="writer"
           icon={<CalendarDays className="h-4 w-4 text-writer-deep" />}
           action={
-            <span className="text-[11px] text-muted-foreground font-semibold">
+            <span className="text-xs text-muted-foreground font-semibold">
               {monthName(first.getMonth(), true)} {first.getFullYear()}
             </span>
           }
         >
-          <p className="text-[10px] text-muted-foreground mb-2">Intensitas hijau = jumlah kata yang ditulis hari itu</p>
+          <p className="text-xs text-muted-foreground mb-2">Intensitas hijau = jumlah kata yang ditulis hari itu</p>
           <div className="grid grid-cols-7 gap-1 text-center">
             {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d) => (
-              <span key={d} className="text-[10px] font-bold text-muted-foreground pb-1">
+              <span key={d} className="text-xs font-bold text-muted-foreground pb-1">
                 {d}
               </span>
             ))}
@@ -368,15 +359,15 @@ export default function JournalScreen() {
                         : "var(--secondary)",
                   }}
                 >
-                  <span className="text-[11px] font-semibold leading-none">{d.slice(8)}</span>
-                  {count > 0 && <span className="text-[10px] leading-none mt-0.5">{count}</span>}
+                  <span className="text-xs font-semibold leading-none">{d.slice(8)}</span>
+                  {count > 0 && <span className="text-xs leading-none mt-0.5">{count}</span>}
                   {isToday && <span className="h-1 w-1 rounded-full bg-sage-deep mt-1" />}
                 </div>
               );
             })}
           </div>
           <div className="mt-3 flex items-center justify-end gap-1.5" aria-hidden="true">
-            <span className="text-[10px] text-muted-foreground">Sepi</span>
+            <span className="text-xs text-muted-foreground">Sepi</span>
             {[0.15, 0.45, 0.7, 1].map((t) => (
               <span
                 key={t}
@@ -384,7 +375,7 @@ export default function JournalScreen() {
                 style={{ background: `color-mix(in srgb, var(--chart-2) ${Math.round(22 + 42 * t)}%, var(--card))` }}
               />
             ))}
-            <span className="text-[10px] text-muted-foreground">Rajin</span>
+            <span className="text-xs text-muted-foreground">Rajin</span>
           </div>
         </SectionCard>
 
@@ -396,12 +387,12 @@ export default function JournalScreen() {
           action={<DeltaBadge delta={weekDelta} suffix=" kata" />}
         >
           <MiniBars data={weeklyWords} height={88} labelEvery={1} highlightIndex={weeklyWords.length - 1} />
-          <p className="text-[10px] text-muted-foreground mt-2">6 pekan terakhir · batang pekat = pekan berjalan</p>
+          <p className="text-xs text-muted-foreground mt-2">6 pekan terakhir · batang pekat = pekan berjalan</p>
         </SectionCard>
 
         {/* ===== Distribusi folder & mood ===== */}
         <SectionCard title="Pola Penulisan" tone="writer" icon={<FolderOpen className="h-4 w-4 text-writer-deep" />}>
-          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-2">Folder</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Folder</p>
           <div className="space-y-2">
             {folderCounts.map((f) => (
               <div key={f.folder} className="flex items-center gap-2">
@@ -412,12 +403,12 @@ export default function JournalScreen() {
                     style={{ width: `${(f.count / maxFolder) * 100}%` }}
                   />
                 </div>
-                <span className="text-[11px] font-bold tabular text-muted-foreground w-6 text-right">{f.count}</span>
+                <span className="text-xs font-bold tabular text-muted-foreground w-6 text-right">{f.count}</span>
               </div>
             ))}
           </div>
 
-          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mt-4 mb-2">Mood saat menulis</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mt-4 mb-2">Mood saat menulis</p>
           <HBarList
             items={moodCounts.map((m, i) => ({
               label: m.label,
@@ -440,11 +431,11 @@ export default function JournalScreen() {
             <EmptyState
               icon={<AlertTriangle className="h-6 w-6" />}
               title="Gagal memuat catatan"
-              description="Writing Room tidak bisa dijangkau saat ini. Periksa koneksi internetmu, lalu coba muat ulang."
+              description="Server tidak bisa dijangkau saat ini. Periksa koneksi internetmu, lalu coba lagi."
               action={
                 <button
                   onClick={() => refetch()}
-                  className="press bg-writer-deep text-white text-sm font-bold rounded-full px-4 min-h-[44px]"
+                  className="press bg-writer-deep text-white text-sm font-bold rounded-xl px-4 min-h-[44px]"
                 >
                   Coba Lagi
                 </button>
@@ -468,7 +459,7 @@ export default function JournalScreen() {
               action={
                 <button
                   onClick={() => openQuickAction("journal")}
-                  className="press bg-writer-deep text-white text-sm font-bold rounded-full px-4 py-2.5"
+                  className="press bg-writer-deep text-white text-sm font-bold rounded-xl px-4 py-2.5"
                 >
                   Tulis Catatan
                 </button>
@@ -483,7 +474,7 @@ export default function JournalScreen() {
                   <button
                     key={e.id}
                     onClick={() => setActiveEntry(e)}
-                    className="press w-full text-left rounded-xl border border-border/70 bg-card p-3.5 space-y-2 shadow-soft [content-visibility:auto] [contain-intrinsic-size:auto_112px]"
+                    className="press w-full text-left rounded-xl border border-border/70 bg-card p-4 space-y-2 shadow-soft [content-visibility:auto] [contain-intrinsic-size:auto_112px]"
                   >
                     <div className="flex items-start gap-2">
                       {e.pinned && <Pin className="h-4 w-4 text-writer-deep shrink-0 mt-0.5 fill-writer-soft" />}
@@ -495,12 +486,12 @@ export default function JournalScreen() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <Pill tone={FOLDER_TONE[e.folder] ?? "stone"}>{e.folder}</Pill>
                       {MoodIcon && moodMeta && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
                           <MoodIcon className="h-3.5 w-3.5 text-writer" />
                           {moodMeta.label}
                         </span>
                       )}
-                      <span className="ml-auto text-[11px] text-muted-foreground tabular">
+                      <span className="ml-auto text-xs text-muted-foreground tabular">
                         {relativeDate(dayOf(e.updatedAt))} · {e.wordCount} kata
                       </span>
                     </div>
@@ -622,7 +613,7 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
                 onChange={(e) => setContent(e.target.value)}
                 className="min-h-40 resize-none"
               />
-              <p className="text-[11px] text-muted-foreground tabular text-right">
+              <p className="text-xs text-muted-foreground tabular text-right">
                 {content.trim() ? content.trim().split(/\s+/).length : 0} kata
               </p>
             </div>
@@ -664,14 +655,14 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
                       )}
                     >
                       <Icon className="h-5 w-5" />
-                      <span className="text-[10px] font-semibold leading-none">{m.label}</span>
+                      <span className="text-xs font-semibold leading-none">{m.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl bg-secondary px-3.5 py-3">
+            <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Pin className="h-4 w-4 text-writer-deep" />
                 Sematkan di atas
@@ -684,7 +675,7 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
                 type="button"
                 onClick={() => saveMutation.mutate()}
                 disabled={!canSave}
-                className="press flex-1 min-h-[48px] rounded-2xl bg-writer-deep text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                className="press flex-1 min-h-[48px] rounded-xl bg-writer-deep text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Simpan
@@ -693,9 +684,9 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
                 type="button"
                 onClick={() => setConfirmDelete(true)}
                 aria-label="Hapus catatan"
-                className="press h-12 min-h-[48px] w-14 rounded-2xl border border-destructive/40 text-destructive flex items-center justify-center"
+                className="press h-12 min-h-[48px] w-14 rounded-xl border border-destructive/40 text-destructive flex items-center justify-center"
               >
-                <Trash2 className="h-4.5 w-4.5" />
+                <Trash2 className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -707,7 +698,7 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus catatan ini?</AlertDialogTitle>
             <AlertDialogDescription>
-              Catatan &ldquo;{entry?.title || "Tanpa judul"}&rdquo; akan dihapus permanen dari Writing Room.
+              Catatan &ldquo;{entry?.title || "Tanpa judul"}&rdquo; akan dihapus permanen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

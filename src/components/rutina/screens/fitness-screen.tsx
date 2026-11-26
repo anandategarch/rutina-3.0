@@ -50,7 +50,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ScreenHeader, SectionCard, StatTile, EmptyState, ProgressRing, Pill } from "../primitives";
+import { ScreenHeader, SectionCard, StatTile, EmptyState, ProgressRing } from "../primitives";
 import {
   MiniBars,
   Sparkline,
@@ -140,9 +140,9 @@ export default function FitnessScreen() {
       <Tabs defaultValue="latihan" className="flex flex-col">
         {/* Header + strip tab dalam satu wrapper sticky: offset tidak bergantung tinggi header */}
         <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md">
-          <ScreenHeader title="Bugar" subtitle="Performance Studio" tone="studio" />
+          <ScreenHeader title="Bugar" subtitle="Latihan, asupan & tubuh dalam satu layar" tone="studio" />
           <div className="px-4 pt-3 pb-2 border-b border-border/40">
-            <TabsList className="w-full grid grid-cols-3 h-11 rounded-2xl bg-secondary p-1">
+            <TabsList className="w-full grid grid-cols-3 h-11 rounded-xl bg-secondary p-1">
               <TabsTrigger
                 value="latihan"
                 className="press rounded-xl text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-studio-deep data-[state=active]:shadow-soft min-h-[38px]"
@@ -182,9 +182,9 @@ export default function FitnessScreen() {
 function TabSkeleton() {
   return (
     <div className="space-y-3">
-      <Skeleton className="h-28 rounded-2xl" />
-      <Skeleton className="h-36 rounded-2xl" />
-      <Skeleton className="h-48 rounded-2xl" />
+      <Skeleton className="h-28 rounded-xl" />
+      <Skeleton className="h-36 rounded-xl" />
+      <Skeleton className="h-48 rounded-xl" />
     </div>
   );
 }
@@ -219,15 +219,15 @@ function WeeklyDailyCharts({ workouts }: { workouts: Workout[] }) {
 
   return (
     <div className="mt-3 border-t border-border/60 pt-3">
-      <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Pola 7 hari terakhir</p>
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Pola 7 hari terakhir</p>
       <div className="grid grid-cols-2 gap-2">
         {charts.map((c) => (
           <div key={c.title} className="rounded-xl bg-secondary/50 p-2.5">
             <div className="mb-1 flex items-baseline justify-between gap-1">
-              <span className="truncate text-[10px] font-semibold text-muted-foreground">{c.title}</span>
-              <span className="shrink-0 text-[11px] font-bold tabular">
+              <span className="truncate text-xs font-semibold text-muted-foreground">{c.title}</span>
+              <span className="shrink-0 text-xs font-bold tabular">
                 {formatNumber(c.values[6] ?? 0, c.digits)}
-                <span className="ml-0.5 text-[9px] font-semibold text-muted-foreground"> {c.unit}</span>
+                <span className="ml-0.5 text-[10px] font-semibold text-muted-foreground"> {c.unit}</span>
               </span>
             </div>
             <MiniBars data={days.map((d, i) => ({ label: d.label, value: c.values[i] }))} height={48} color={c.color} highlightIndex={6} />
@@ -254,11 +254,11 @@ function RingLegend({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2 mb-1">
-        <span className="flex items-center gap-1.5 text-[11px] font-bold text-foreground">
+        <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
           <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: color }} aria-hidden />
           {label}
         </span>
-        <span className="text-[11px] font-bold tabular text-foreground">{display}</span>
+        <span className="text-xs font-bold tabular text-foreground">{display}</span>
       </div>
       <MetricBar value={Math.min(1.5, Math.max(0, pct)) * 100} max={100} color={color} height={6} />
     </div>
@@ -283,8 +283,8 @@ function ReadinessBar({
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
-        <span className="text-[11px] font-bold tabular">{display}</span>
+        <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+        <span className="text-xs font-bold tabular">{display}</span>
       </div>
       <MetricBar value={value ?? 0} max={max} color={color} overColor={overColor} height={6} />
     </div>
@@ -345,7 +345,7 @@ function WorkoutTab({
     const energy = refCheckin.energy ?? 3;
     readiness = clampScore(sleepHours * 12 + (5 - soreness) * 10 + (5 - stress) * 8 + energy * 10);
     readinessLabel =
-      readiness >= 75 ? "Mantap — gas maksimal" : readiness >= 50 ? "Wajar — intensitas moderat" : "Kurang — recovery dulu";
+      readiness >= 75 ? "Mantap — boleh latihan intens hari ini" : readiness >= 50 ? "Wajar — intensitas moderat" : "Kurang — recovery dulu";
   }
 
   // ===== Coach: deteksi deload sederhana =====
@@ -425,7 +425,6 @@ function WorkoutTab({
         title="Coach Latihan"
         tone="gold"
         icon={<Sparkles className="h-4 w-4 text-gold" />}
-        action={<Pill tone="gold">Hari ini</Pill>}
       >
         {refCheckin && readiness !== null ? (
           <div className="flex items-center gap-4">
@@ -440,7 +439,7 @@ function WorkoutTab({
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">Kesiapan latihan</p>
               <p className="text-sm font-bold leading-snug">{readinessLabel}</p>
-              <p className="text-[11px] text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Berdasarkan check-in {todayCheckin ? "hari ini" : formatDateID(refCheckin.date)}
               </p>
             </div>
@@ -487,9 +486,9 @@ function WorkoutTab({
 
         <ul className="mt-3 space-y-2">
           {deloadExercise && (
-            <li className="flex items-start gap-2 rounded-xl bg-writer-soft p-2.5">
-              <AlertTriangle className="h-4 w-4 text-writer-deep shrink-0 mt-0.5" />
-              <span className="text-sm text-writer-deep leading-snug">
+            <li className="flex items-start gap-2 rounded-xl bg-clay-soft p-2.5">
+              <AlertTriangle className="h-4 w-4 text-clay-deep shrink-0 mt-0.5" />
+              <span className="text-sm text-clay-deep leading-snug">
                 <span className="font-bold">{deloadExercise}</span> tidak naik beban dalam 3 sesi terakhir — pertimbangkan
                 sesi deload (turunkan volume sekitar 30%).
               </span>
@@ -517,7 +516,7 @@ function WorkoutTab({
         {!todayCheckin && (
           <Button
             onClick={() => openQuickAction("checkin")}
-            className="press mt-3 w-full h-11 rounded-2xl bg-gold text-white font-bold hover:bg-gold/90 min-h-[44px]"
+            className="press mt-3 w-full h-11 rounded-xl bg-gold text-white font-bold hover:bg-gold/90 min-h-[44px]"
           >
             <HeartPulse className="h-4 w-4" /> Isi check-in
           </Button>
@@ -567,11 +566,11 @@ function E1rmCard({ workouts }: { workouts: Workout[] }) {
       .map((r) => ({ ...r, history: history.get(r.name) ?? [] }));
   }, [workouts]);
 
-  const rankTone = ["text-gold", "text-muted-foreground", "text-[#b87333]"];
+  const rankTone = ["text-gold", "text-muted-foreground", "text-gold-deep"];
 
   return (
     <SectionCard title="Kalkulator e1RM" tone="studio" icon={<Trophy className="h-4 w-4 text-studio-deep" />}>
-      <p className="text-[11px] text-muted-foreground mb-3">
+      <p className="text-xs text-muted-foreground mb-3">
         Papan rekor satu repetisi maksimal (rumus Epley) dari semua sesi beban.
       </p>
       {top3.length === 0 ? (
@@ -592,7 +591,7 @@ function E1rmCard({ workouts }: { workouts: Workout[] }) {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold truncate">{row.name}</p>
-                <p className="text-[10px] text-muted-foreground capitalize">{row.muscleGroup}</p>
+                <p className="text-xs text-muted-foreground capitalize">{row.muscleGroup}</p>
                 {row.history.length >= 2 && (
                   <div className="mt-1.5 flex items-center gap-2">
                     <Sparkline data={row.history} height={24} color={SAGE} className="min-w-0 flex-1" />
@@ -605,7 +604,7 @@ function E1rmCard({ workouts }: { workouts: Workout[] }) {
               </div>
               <div className="text-right shrink-0">
                 <p className="text-sm font-bold tabular text-studio-deep">{formatNumber(row.e1rm, 1)} kg</p>
-                <p className="text-[10px] text-muted-foreground">e1RM</p>
+                <p className="text-xs text-muted-foreground">e1RM</p>
               </div>
             </li>
           ))}
@@ -670,7 +669,7 @@ function MuscleBalanceCard({ workouts }: { workouts: Workout[] }) {
 
   return (
     <SectionCard title="Keseimbangan Otot" tone="studio" icon={<Shuffle className="h-4 w-4 text-studio-deep" />}>
-      <p className="mb-3 text-[11px] text-muted-foreground">Volume tonase per kelompok otot dalam 30 hari terakhir.</p>
+      <p className="mb-3 text-xs text-muted-foreground">Volume tonase per kelompok otot dalam 30 hari terakhir.</p>
       {total === 0 ? (
         <EmptyState
           icon={<Dumbbell className="h-6 w-6" />}
@@ -732,7 +731,7 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
             onClick={() => setTypeFilter(f.key)}
             aria-pressed={typeFilter === f.key}
             className={cn(
-              "press shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold min-h-[44px]",
+              "press shrink-0 rounded-full px-4 py-2 text-xs font-semibold min-h-[44px]",
               typeFilter === f.key
                 ? "bg-studio text-white shadow-soft"
                 : "bg-secondary text-muted-foreground"
@@ -795,14 +794,14 @@ function WorkoutHistoryCard({ workout: w }: { workout: Workout }) {
   });
 
   return (
-    <article className="rounded-2xl border border-border/70 bg-card p-3.5 shadow-soft">
+    <article className="rounded-xl border border-border/70 bg-card p-4 shadow-soft">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-studio-soft text-studio-deep">
           <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold">{w.title ?? meta.label}</p>
-          <p className="text-[11px] text-muted-foreground">{formatDateID(w.date, true)}</p>
+          <p className="text-xs text-muted-foreground">{formatDateID(w.date, true)}</p>
           <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs tabular text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock3 className="h-3.5 w-3.5" /> {formatDuration(w.durationMin)}
@@ -828,12 +827,12 @@ function WorkoutHistoryCard({ workout: w }: { workout: Workout }) {
           <AlertDialogTrigger asChild>
             <button
               aria-label={`Hapus sesi ${w.title ?? meta.label}`}
-              className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-writer-soft text-writer-deep"
+              className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-clay-soft text-clay-deep"
             >
               <Trash2 className="h-4 w-4" />
             </button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="max-w-[320px] rounded-3xl">
+          <AlertDialogContent className="max-w-[320px]">
             <AlertDialogHeader>
               <AlertDialogTitle>Hapus latihan ini?</AlertDialogTitle>
               <AlertDialogDescription>
@@ -858,7 +857,7 @@ function WorkoutHistoryCard({ workout: w }: { workout: Workout }) {
         <>
           <button
             onClick={() => setExpanded((e) => !e)}
-            className="press mt-2 flex min-h-[36px] items-center gap-1 text-xs font-bold text-studio-deep"
+            className="press mt-2 flex min-h-[44px] items-center gap-1 text-xs font-bold text-studio-deep"
             aria-expanded={expanded}
           >
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -916,13 +915,13 @@ function TrendSection({ workouts }: { workouts: Workout[] }) {
     <SectionCard title="Rekap Tren 6 Pekan" tone="studio" icon={<Activity className="h-4 w-4 text-studio-deep" />}>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">
             Sesi per pekan
           </p>
           <MiniBars data={data.map((d) => ({ label: d.label, value: d.Sesi }))} height={64} labelEvery={2} />
         </div>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">
             Menit per pekan
           </p>
           <MiniBars
@@ -965,7 +964,7 @@ function TrendSparkRow({
   return (
     <div>
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold text-muted-foreground">{title}</span>
+        <span className="text-xs font-semibold text-muted-foreground">{title}</span>
         <span className="flex items-center gap-1.5">
           <span className="text-xs font-bold tabular">
             {formatNumber(last, digits)} {unit}
@@ -1086,7 +1085,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
             >
               <div className="text-center px-3">
                 <p className="text-2xl font-bold tabular leading-none">{formatNumber(Math.round(totals.calories))}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">dari {formatNumber(calTarget)} kkal</p>
+                <p className="text-xs text-muted-foreground mt-1">dari {formatNumber(calTarget)} kkal</p>
               </div>
             </ProgressRing>
           </div>
@@ -1098,13 +1097,13 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
             </p>
             <div>
               <MetricBar value={totals.calories} max={Math.max(1, calTarget)} height={10} />
-              <div className="mt-1 flex justify-between text-[10px] text-muted-foreground tabular">
+              <div className="mt-1 flex justify-between text-xs text-muted-foreground tabular">
                 <span>Tercatat {formatNumber(Math.round(totals.calories))} kkal</span>
                 <span>Target {formatNumber(calTarget)} kkal</span>
               </div>
             </div>
             <div>
-              <label htmlFor="target-kalori" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
+              <label htmlFor="target-kalori" className="mb-1 block text-xs font-semibold text-muted-foreground">
                 Target kalori harian (kkal)
               </label>
               <div className="flex gap-2">
@@ -1132,7 +1131,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
             <Button
               type="button"
               onClick={() => openQuickAction("food")}
-              className="press h-11 w-full rounded-2xl bg-studio text-white font-bold hover:bg-studio-deep min-h-[44px]"
+              className="press h-11 w-full rounded-xl bg-studio text-white font-bold hover:bg-studio-deep min-h-[44px]"
             >
               <Plus className="h-4 w-4" /> Catat Asupan
             </Button>
@@ -1144,14 +1143,14 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
       <SectionCard title="Neraca Kalori 7 Hari" tone="studio" icon={<Activity className="h-4 w-4 text-studio-deep" />}>
         <MiniBars data={balance7} height={72} color={SAGE} altColor={CLAY} showAlt highlightIndex={6} />
         <div className="mt-2 flex items-center justify-center gap-4">
-          <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: SAGE }} /> Masuk (makan)
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: SAGE }} /> Masuk (makan)
           </span>
-          <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="h-2.5 w-2.5 rounded-sm" style={{ background: CLAY }} /> Keluar (latihan)
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: CLAY }} /> Keluar (latihan)
           </span>
         </div>
-        <p className="mt-1 text-center text-[11px] text-muted-foreground">
+        <p className="mt-1 text-center text-xs text-muted-foreground">
           Kalori keluar dihitung dari sesi latihan yang mencatat kalori.
         </p>
       </SectionCard>
@@ -1170,14 +1169,14 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
             />
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
               {macroRows.map((m, i) => (
-                <span key={m.label} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span key={m.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: rampColor(i, macroRows.length) }} />
                   {m.label}
                   <span className="font-bold tabular text-foreground">{formatNumber(m.grams, 1)} g</span>
                 </span>
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground">Proporsi dari total makro tercatat hari ini.</p>
+            <p className="text-xs text-muted-foreground">Proporsi dari total makro tercatat hari ini.</p>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">Belum ada data makro hari ini.</p>
@@ -1194,7 +1193,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
             action={
               <Button
                 onClick={() => openQuickAction("food")}
-                className="press rounded-2xl bg-studio text-white font-bold hover:bg-studio-deep min-h-[44px]"
+                className="press rounded-xl bg-studio text-white font-bold hover:bg-studio-deep min-h-[44px]"
               >
                 <Plus className="h-4 w-4" /> Catat Asupan
               </Button>
@@ -1204,7 +1203,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
           <div className="space-y-3">
             {/* Distribusi kalori per waktu makan */}
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1.5">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">
                 Distribusi kalori hari ini
               </p>
               <StackBar
@@ -1219,7 +1218,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
                   const kcal = todayEntries.filter((e) => e.meal === meal.key).reduce((a, e) => a + e.calories, 0);
                   const total = todayEntries.reduce((a, e) => a + e.calories, 0) || 1;
                   return (
-                    <span key={meal.key} className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
+                    <span key={meal.key} className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                       <span className="h-2 w-2 rounded-[3px]" style={{ background: rampColor(i, MEAL_META.length) }} />
                       {meal.label} {Math.round((kcal / total) * 100)}%
                     </span>
@@ -1234,10 +1233,10 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
                 <div key={meal.key}>
                   <div className="mb-1.5 flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{meal.label}</span>
-                    <span className="text-[11px] font-bold tabular text-studio-deep">{formatNumber(mealKcal)} kkal</span>
+                    <span className="text-xs font-bold tabular text-studio-deep">{formatNumber(mealKcal)} kkal</span>
                   </div>
                   {mealEntries.length === 0 ? (
-                    <p className="rounded-xl bg-secondary/60 px-3 py-2 text-[11px] text-muted-foreground">
+                    <p className="rounded-xl bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
                       Belum ada catatan.
                     </p>
                   ) : (
@@ -1249,7 +1248,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
                         >
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold">{e.name}</p>
-                            {e.portion && <p className="text-[10px] text-muted-foreground truncate">{e.portion}</p>}
+                            {e.portion && <p className="text-xs text-muted-foreground truncate">{e.portion}</p>}
                           </div>
                           <span className="shrink-0 text-xs font-bold tabular text-studio-deep">
                             {formatNumber(e.calories)} kkal
@@ -1258,7 +1257,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
                             onClick={() => deleteMutation.mutate(e.id)}
                             disabled={deleteMutation.isPending}
                             aria-label={`Hapus ${e.name}`}
-                            className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-writer-soft text-writer-deep"
+                            className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-clay-soft text-clay-deep"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -1275,14 +1274,14 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
 
       {/* Tren 7 hari */}
       <SectionCard title="Tren 7 Hari" tone="studio" icon={<Activity className="h-4 w-4 text-studio-deep" />}>
-        <p className="mb-1.5 text-[11px] font-semibold text-muted-foreground">Kalori (kkal/hari)</p>
+        <p className="mb-1.5 text-xs font-semibold text-muted-foreground">Kalori (kkal/hari)</p>
         <MiniBars data={trend7} height={72} color={SAGE} highlightIndex={6} />
-        <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+        <p className="mt-1.5 text-center text-xs text-muted-foreground">
           Rata-rata {formatNumber(Math.round(trend7.reduce((a, d) => a + d.value, 0) / Math.max(1, trend7.length)))} kkal/hari · target{" "}
           {formatNumber(calTarget)} kkal.
         </p>
         <div className="mt-4 border-t border-border/60 pt-3">
-          <p className="mb-2 text-[11px] font-semibold text-muted-foreground">Makro (g/hari)</p>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">Makro (g/hari)</p>
           <div className="grid grid-cols-3 gap-2">
             {(
               [
@@ -1292,7 +1291,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
               ] as const
             ).map((col) => (
               <div key={col.title}>
-                <p className="mb-1 text-[10px] font-semibold text-muted-foreground">{col.title}</p>
+                <p className="mb-1 text-xs font-semibold text-muted-foreground">{col.title}</p>
                 <MiniBars
                   data={trend7.map((d, i) => ({ label: d.label, value: col.values[i] }))}
                   height={44}
@@ -1354,8 +1353,8 @@ function GoalProgressRow({ label, value, max, display }: { label: string; value:
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
-        <span className="text-[11px] font-bold tabular">{display}</span>
+        <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+        <span className="text-xs font-bold tabular">{display}</span>
       </div>
       <MetricBar value={value} max={Math.max(1, max)} color={SAGE} overColor={SAGE} height={6} />
     </div>
@@ -1529,14 +1528,14 @@ function BodyTab({
             <span className="text-3xl font-bold tabular leading-none">{formatNumber(latestWeight.weightKg, 1)}</span>
             <span className="pb-0.5 text-sm font-semibold text-muted-foreground">kg</span>
             {weightDelta !== null && <DeltaBadge delta={weightDelta} suffix=" kg" className="mb-0.5" />}
-            <span className="ml-auto pb-0.5 text-[11px] text-muted-foreground">{formatDateID(latestWeight.date)}</span>
+            <span className="ml-auto pb-0.5 text-xs text-muted-foreground">{formatDateID(latestWeight.date)}</span>
           </div>
         ) : (
           <p className="mb-3 text-sm text-muted-foreground">Belum ada catatan berat badan.</p>
         )}
 
         <div>
-          <label htmlFor="berat-hari-ini" className="mb-1 block text-[11px] font-semibold text-muted-foreground">
+          <label htmlFor="berat-hari-ini" className="mb-1 block text-xs font-semibold text-muted-foreground">
             Catat berat badan hari ini (kg)
           </label>
           <div className="flex gap-2">
@@ -1592,17 +1591,17 @@ function BodyTab({
               formatValue={(v) => `${formatNumber(v, 1)} kg`}
             />
             {goals.weightGoalKg != null ? (
-              <p className="mt-1 text-center text-[11px] text-muted-foreground">
+              <p className="mt-1 text-center text-xs text-muted-foreground">
                 Garis putus-putus menandai berat sasaran {formatNumber(goals.weightGoalKg, 1)} kg.
               </p>
             ) : (
-              <p className="mt-1 text-center text-[11px] text-muted-foreground">
+              <p className="mt-1 text-center text-xs text-muted-foreground">
                 Atur berat sasaran di kartu Sasaran Kebugaran untuk melihat garis target.
               </p>
             )}
           </div>
         ) : (
-          <p className="mt-4 text-center text-[11px] text-muted-foreground">
+          <p className="mt-4 text-center text-xs text-muted-foreground">
             Minimal dua catatan berat dibutuhkan untuk grafik.
           </p>
         )}
@@ -1616,13 +1615,13 @@ function BodyTab({
               {glasses}
               <span className="ml-1 text-sm font-semibold text-muted-foreground">gelas</span>
             </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">Target {goals.dailyHydration} gelas per hari</p>
+            <p className="mt-1 text-xs text-muted-foreground">Target {goals.dailyHydration} gelas per hari</p>
           </div>
           <Button
             type="button"
             onClick={addGlass}
             disabled={hydrationMutation.isPending}
-            className="press ml-auto h-11 rounded-2xl bg-vault px-5 text-xs font-bold text-white hover:bg-vault-deep min-h-[44px]"
+            className="press ml-auto h-11 rounded-xl bg-vault-soft px-5 text-xs font-bold text-vault-deep hover:bg-vault-soft/80 min-h-[44px]"
           >
             {hydrationMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -1641,7 +1640,7 @@ function BodyTab({
           height={10}
           className="mt-3"
         />
-        <p className="mt-1.5 text-[11px] text-muted-foreground tabular">
+        <p className="mt-1.5 text-xs text-muted-foreground tabular">
           {glasses} dari {goals.dailyHydration} gelas target harian
         </p>
         <div
@@ -1676,7 +1675,6 @@ function BodyTab({
         title="Check-in"
         tone="gold"
         icon={<HeartPulse className="h-4 w-4 text-gold" />}
-        action={<Pill tone="gold">Hari ini</Pill>}
       >
         {todayCheckin ? (
           <>
@@ -1685,7 +1683,7 @@ function BodyTab({
                 [
                   { icon: Smile, label: "Mood", value: todayCheckin.mood, tone: "bg-studio-soft text-studio-deep" },
                   { icon: Zap, label: "Energi", value: todayCheckin.energy, tone: "bg-gold-soft text-gold" },
-                  { icon: Activity, label: "Nyeri", value: todayCheckin.soreness, tone: "bg-writer-soft text-writer-deep" },
+                  { icon: Activity, label: "Nyeri", value: todayCheckin.soreness, tone: "bg-secondary text-secondary-foreground" },
                   { icon: Brain, label: "Stres", value: todayCheckin.stress, tone: "bg-vault-soft text-vault-deep" },
                 ] as const
               ).map((row) => {
@@ -1694,7 +1692,7 @@ function BodyTab({
                   <div key={row.label} className={cn("rounded-xl p-2.5 text-center", row.tone)}>
                     <Icon className="mx-auto h-4 w-4" />
                     <p className="mt-1 text-sm font-bold tabular">{row.value !== null ? `${row.value}/5` : "-"}</p>
-                    <p className="text-[9px] font-semibold uppercase tracking-wide opacity-70">{row.label}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{row.label}</p>
                   </div>
                 );
               })}
@@ -1721,12 +1719,12 @@ function BodyTab({
           >
             <HeartPulse className="h-7 w-7 text-gold" />
             <span className="text-sm font-bold text-gold">Isi Check-in Harian</span>
-            <span className="text-[11px] text-muted-foreground">Mood, energi, nyeri, stres, dan tidur hari ini</span>
+            <span className="text-xs text-muted-foreground">Mood, energi, nyeri, stres, dan tidur hari ini</span>
           </button>
         )}
 
         <div className="mt-4">
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+          <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
             Riwayat 14 hari
           </p>
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
@@ -1753,12 +1751,12 @@ function BodyTab({
                     }
                     className={cn("h-7 w-7 rounded-full", bg)}
                   />
-                  <span className="text-[9px] font-semibold text-muted-foreground">{dayName(d, true)}</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground">{dayName(d, true)}</span>
                 </div>
               );
             })}
           </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             Hijau: mood bagus · Abu-abu: biasa · Merah bata: kurang
           </p>
         </div>
@@ -1806,7 +1804,7 @@ function BodyTab({
             <Button
               type="button"
               onClick={saveGoals}
-              className="press h-11 w-full rounded-2xl bg-studio font-bold text-white hover:bg-studio-deep min-h-[44px]"
+              className="press h-11 w-full rounded-xl bg-studio font-bold text-white hover:bg-studio-deep min-h-[44px]"
             >
               Simpan Sasaran
             </Button>

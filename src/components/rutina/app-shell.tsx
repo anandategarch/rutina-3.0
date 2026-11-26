@@ -66,7 +66,7 @@ const HASH_PAGE: Record<string, RutinaPage> = {
 const TABS: { key: MainTab; label: string; icon: React.ElementType }[] = [
   { key: "home", label: "Beranda", icon: Home },
   { key: "fitness", label: "Bugar", icon: Dumbbell },
-  { key: "finance", label: "Vault", icon: Wallet },
+  { key: "finance", label: "Keuangan", icon: Wallet },
   { key: "habits", label: "Kebiasaan", icon: Sprout },
 ];
 
@@ -88,7 +88,7 @@ function BottomNav() {
           <button
             onClick={() => setHubOpen(true)}
             aria-label="Buka Tindakan Cepat"
-            className="press-squish -mt-5 h-14 w-14 rounded-full text-white shadow-lift flex items-center justify-center ring-4 ring-background bg-gradient-to-b from-[#2FA960] to-[#1F7A43]"
+            className="press-squish -mt-5 h-14 w-14 rounded-full text-white shadow-lift flex items-center justify-center ring-4 ring-background bg-garden"
           >
             <Plus className="h-6 w-6" strokeWidth={2.75} />
           </button>
@@ -128,7 +128,7 @@ function TabButton({
       >
         <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
       </motion.span>
-      <span className={cn("text-[10px] font-semibold", active ? "text-garden-deep" : "text-muted-foreground")}>
+      <span className={cn("text-xs font-semibold", active ? "text-garden-deep" : "text-muted-foreground")}>
         {tab.label}
       </span>
     </button>
@@ -159,7 +159,7 @@ function QuickActionHub() {
   return (
     <Drawer open={hubOpen} onOpenChange={setHubOpen}>
       <DrawerContent className="max-h-[85dvh]">
-        <div className="px-5 pt-1 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] overflow-y-auto scroll-thin">
+        <div className="px-4 pt-1 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] overflow-y-auto scroll-thin">
           <div className="flex items-center justify-between mb-1">
             <DrawerTitle className="text-base font-bold">Tindakan Cepat</DrawerTitle>
           </div>
@@ -173,21 +173,21 @@ function QuickActionHub() {
                 <button
                   key={a.key}
                   onClick={() => setQuickAction(a.key)}
-                  className="press flex items-center gap-3 rounded-3xl border border-border/70 bg-card p-3 text-left shadow-clay min-h-[64px]"
+                  className="press flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-left shadow-clay min-h-[64px]"
                 >
-                  <span className={cn("h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 shadow-soft", a.tone)}>
+                  <span className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-soft", a.tone)}>
                     <Icon className="h-5 w-5" />
                   </span>
                   <span className="min-w-0">
                     <span className="block text-sm font-bold leading-tight">{a.label}</span>
-                    <span className="block text-[11px] text-muted-foreground truncate">{a.desc}</span>
+                    <span className="block text-xs text-muted-foreground truncate">{a.desc}</span>
                   </span>
                 </button>
               );
             })}
           </div>
           <div className="mt-4 border-t border-border/60 pt-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Jelajahi</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Jelajahi</p>
             <div className="grid grid-cols-3 gap-2.5">
               {shortcuts.map((s) => {
                 const Icon = s.icon;

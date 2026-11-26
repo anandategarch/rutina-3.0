@@ -54,9 +54,9 @@ export const HABIT_COLOR: Record<string, { soft: string; deep: string; solid: st
   emerald: { soft: "bg-garden-soft", deep: "text-garden-deep", solid: "bg-garden" },
   amber: { soft: "bg-gold-soft", deep: "text-gold-deep", solid: "bg-gold" },
   teal: { soft: "bg-vault-soft", deep: "text-vault-deep", solid: "bg-vault" },
-  rose: { soft: "bg-writer-soft", deep: "text-writer-deep", solid: "bg-writer" },
+  rose: { soft: "bg-clay-soft", deep: "text-clay-deep", solid: "bg-clay" },
   orange: { soft: "bg-studio-soft", deep: "text-studio-deep", solid: "bg-studio" },
-  stone: { soft: "bg-secondary", deep: "text-foreground", solid: "bg-stone-500" },
+  stone: { soft: "bg-secondary", deep: "text-secondary-foreground", solid: "bg-secondary" },
 };
 
 export function habitColor(key: string | null | undefined) {

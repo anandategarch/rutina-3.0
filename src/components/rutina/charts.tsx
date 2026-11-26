@@ -181,7 +181,7 @@ export function MiniBars({
           {data.map((d, i) => (
             <div
               key={i}
-              className="flex-1 text-center text-[9px] text-muted-foreground tabular"
+              className="flex-1 text-center text-[10px] text-muted-foreground tabular"
               style={{ visibility: i % labelEvery === 0 ? "visible" : "hidden" }}
             >
               {d.label}
@@ -382,14 +382,14 @@ export function TrendLine({
       </div>
       <div className="flex justify-between mt-1">
         {data.map((d, i) => (
-          <span key={i} className="text-[9px] text-muted-foreground tabular">
+          <span key={i} className="text-[10px] text-muted-foreground tabular">
             {i % Math.ceil(data.length / 4) === 0 || i === data.length - 1 ? d.label : ""}
           </span>
         ))}
       </div>
       <div className="flex justify-between mt-0.5">
-        <span className="text-[9px] text-muted-foreground tabular">{formatValue(min)}</span>
-        <span className="text-[9px] text-muted-foreground tabular">{formatValue(max)}</span>
+        <span className="text-[10px] text-muted-foreground tabular">{formatValue(min)}</span>
+        <span className="text-[10px] text-muted-foreground tabular">{formatValue(max)}</span>
       </div>
     </div>
   );
@@ -676,7 +676,7 @@ export function RadarChart({
                 textAnchor={Math.abs(lp.x - cx) < 6 ? "middle" : lp.x > cx ? "start" : "end"}
                 dominantBaseline="middle"
                 className="fill-foreground"
-                fontSize={11}
+                fontSize={12}
                 fontWeight={700}
               >
                 {a.label}
@@ -688,7 +688,7 @@ export function RadarChart({
                   textAnchor={Math.abs(lp.x - cx) < 6 ? "middle" : lp.x > cx ? "start" : "end"}
                   dominantBaseline="middle"
                   className="fill-[var(--muted-foreground)]"
-                  fontSize={10}
+                  fontSize={11}
                   fontWeight={600}
                 >
                   {a.display}

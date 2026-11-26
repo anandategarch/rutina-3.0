@@ -48,7 +48,7 @@ const SEGMENT: { key: TxType; label: string }[] = [
 
 const SEGMENT_STYLE: Record<TxType, string> = {
   income: "bg-garden text-white",
-  expense: "bg-writer text-white",
+  expense: "bg-clay text-white",
   transfer: "bg-vault text-white",
 };
 
@@ -168,7 +168,7 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
           <DrawerDescription>Pencatatan masuk, keluar, atau transfer antar dompet.</DrawerDescription>
         </DrawerHeader>
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
-          <div className="space-y-4 overflow-y-auto scroll-thin px-5 pb-4">
+          <div className="space-y-4 overflow-y-auto scroll-thin px-4 pb-4">
             {/* Segmented toggle */}
             <div className="grid grid-cols-3 gap-1 rounded-xl bg-secondary p-1">
               {SEGMENT.map((s) => (

@@ -43,6 +43,8 @@
   --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 4px);
+  --radius-3xl: calc(var(--radius) + 8px);
   /* Rutina semantic tokens (legacy tone names kept as aliases) */
   --color-garden: var(--garden);
   --color-garden-deep: var(--garden-deep);
@@ -119,6 +121,13 @@
   --clay: #b8401f;
   --clay-deep: #8f3115;
   --clay-soft: #fbe9e2;
+  /* ============================================================
+     MODULE TONE DISCIPLINE — ONE primary only: garden (green).
+     Module tones are strictly scoped:
+       studio = fitness · vault = finance · writer = JOURNAL ONLY
+       gold   = streak/XP/achievement ONLY · clay = danger/expense
+     sage/clay are kept as legacy aliases (sage ≡ garden).
+     ============================================================ */
   /* Module tone families: solid (white-text safe) / deep (text on soft) / soft (tint bg) */
   --garden: #1f7a43;
   --garden-deep: #175c33;
@@ -207,6 +216,8 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
     overscroll-behavior-y: none;
     /* Lock the document: all scrolling happens inside the app shell */
     height: 100%;
@@ -316,37 +327,6 @@
   outline-offset: 2px;
 }
 
-/* Pop celebration for completed check-ins */
-@keyframes pop-in {
-  0% {
-    transform: scale(0.6);
-  }
-  55% {
-    transform: scale(1.12);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-.pop-in {
-  animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-/* Gentle flame flicker for streak accents */
-@keyframes flicker {
-  0%,
-  100% {
-    transform: scale(1) rotate(-2deg);
-  }
-  50% {
-    transform: scale(1.12) rotate(3deg);
-  }
-}
-.flicker {
-  animation: flicker 1.8s ease-in-out infinite;
-  transform-origin: 50% 90%;
-}
-
 /* Safe area helpers */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -416,9 +396,7 @@
 @media (prefers-reduced-motion: reduce) {
   .rise-in,
   .press,
-  .press-squish,
-  .pop-in,
-  .flicker {
+  .press-squish {
     animation: none !important;
     transition: none !important;
   }

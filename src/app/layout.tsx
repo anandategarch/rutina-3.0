@@ -32,9 +32,8 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Rutina",
   },
-  icons: {
-    icon: "/icon.svg",
-  },
+  // Favicon & apple-touch-icon diinjeksi otomatis oleh konvensi file Next
+  // (src/app/icon.tsx + src/app/apple-icon.tsx) — tanpa entri `icons` manual.
 };
 
 export const viewport: Viewport = {

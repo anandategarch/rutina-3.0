@@ -97,7 +97,7 @@ export default function AddJournalSheet({
         <DrawerHeader className="pb-2">
           <DrawerTitle className="text-writer-deep">Tulis Catatan</DrawerTitle>
           <p className="text-xs text-muted-foreground">
-            Unting apa pun yang layak diingat — refleksi, ide, atau sorotan hari ini.
+            Catat apa pun yang layak diingat — refleksi, ide, atau sorotan hari ini.
           </p>
         </DrawerHeader>
 
@@ -128,7 +128,7 @@ export default function AddJournalSheet({
                 placeholder="Hari ini aku ..."
                 className="min-h-40 resize-none"
               />
-              <p className="text-[11px] text-muted-foreground tabular text-right">
+              <p className="text-xs text-muted-foreground tabular text-right">
                 {content.trim() ? content.trim().split(/\s+/).length : 0} kata
               </p>
             </div>
@@ -170,14 +170,14 @@ export default function AddJournalSheet({
                       )}
                     >
                       <Icon className="h-5 w-5" />
-                      <span className="text-[10px] font-semibold leading-none">{m.label}</span>
+                      <span className="text-xs font-semibold leading-none">{m.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl bg-secondary px-3.5 py-3">
+            <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Pin className="h-4 w-4 text-writer-deep" />
                 Sematkan di atas
@@ -191,7 +191,7 @@ export default function AddJournalSheet({
             <button
               type="submit"
               disabled={!canSubmit}
-              className="press w-full min-h-[48px] rounded-2xl bg-writer-deep text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              className="press w-full min-h-[48px] rounded-xl bg-writer-deep text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Simpan Catatan

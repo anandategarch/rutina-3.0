@@ -146,7 +146,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
               />
             </div>
 
-            <div className="max-h-[46dvh] overflow-y-auto scroll-thin rounded-2xl border border-border/60 divide-y divide-border/60">
+            <div className="max-h-[46dvh] overflow-y-auto scroll-thin rounded-xl border border-border/60 divide-y divide-border/60">
               {itemsQuery.isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Memuat daftar makanan...
@@ -166,7 +166,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold truncate">{item.name}</span>
                       {item.serving && (
-                        <span className="block text-[11px] text-muted-foreground truncate">{item.serving}</span>
+                        <span className="block text-xs text-muted-foreground truncate">{item.serving}</span>
                       )}
                     </span>
                     <span className="flex items-center gap-1 text-xs font-bold text-studio-deep tabular shrink-0">
@@ -177,7 +177,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                 ))
               )}
             </div>
-            <p className="text-[11px] text-muted-foreground text-center">
+            <p className="text-xs text-muted-foreground text-center">
               {query !== debouncedQuery ? "Mencari..." : "Ketuk makanan untuk mengisi form."}
             </p>
           </div>
@@ -185,7 +185,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
           /* ===== Step 2: Form detail ===== */
           <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
             <div className="overflow-y-auto scroll-thin px-4 pb-4 space-y-4">
-              <div className="flex items-center gap-2 rounded-2xl bg-studio-soft p-3">
+              <div className="flex items-center gap-2 rounded-xl bg-studio-soft p-3">
                 <button
                   type="button"
                   onClick={backToSearch}
@@ -197,7 +197,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                 <div className="min-w-0">
                   <p className="text-sm font-bold truncate">{selected.name}</p>
                   {selected.serving && (
-                    <p className="text-[11px] text-muted-foreground truncate">Standar: {selected.serving}</p>
+                    <p className="text-xs text-muted-foreground truncate">Standar: {selected.serving}</p>
                   )}
                 </div>
               </div>
@@ -260,7 +260,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                 <p className="text-xs font-semibold text-muted-foreground mb-1.5">Makro (gram, opsional)</p>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="text-[10px] font-semibold text-studio-deep block mb-1">Protein</label>
+                    <label className="text-xs font-semibold text-studio-deep block mb-1">Protein</label>
                     <Input
                       type="number"
                       inputMode="decimal"
@@ -273,7 +273,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-semibold text-garden-deep block mb-1">Karbo</label>
+                    <label className="text-xs font-semibold text-garden-deep block mb-1">Karbo</label>
                     <Input
                       type="number"
                       inputMode="decimal"
@@ -286,7 +286,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-semibold text-vault-deep block mb-1">Lemak</label>
+                    <label className="text-xs font-semibold text-vault-deep block mb-1">Lemak</label>
                     <Input
                       type="number"
                       inputMode="decimal"
@@ -306,7 +306,7 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
               <Button
                 type="submit"
                 disabled={!canSubmit}
-                className="press w-full h-12 rounded-2xl text-sm font-bold bg-studio text-white hover:bg-studio-deep min-h-[44px]"
+                className="press w-full h-12 rounded-xl text-sm font-bold bg-studio text-white hover:bg-studio-deep min-h-[44px]"
               >
                 {mutation.isPending ? (
                   <>

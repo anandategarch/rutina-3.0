@@ -195,7 +195,7 @@ export default function ProfileScreen() {
     <div className="flex flex-col min-h-full">
       <ScreenHeader
         title="Profil"
-        subtitle="Control Room"
+        subtitle="Pengaturan & data pribadimu"
         onBack={() => setPage("home")}
       />
 
@@ -203,8 +203,8 @@ export default function ProfileScreen() {
         {/* ===== Kartu identitas ===== */}
         <SectionCard>
           {profile ? (
-            <div className="flex items-start gap-3.5">
-              <div className="h-16 w-16 rounded-2xl bg-garden text-white flex items-center justify-center text-2xl font-bold shrink-0 shadow-soft">
+            <div className="flex items-start gap-4">
+              <div className="h-16 w-16 rounded-xl bg-garden text-white flex items-center justify-center text-2xl font-bold shrink-0 shadow-soft">
                 {profile.name.slice(0, 1).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
@@ -212,9 +212,9 @@ export default function ProfileScreen() {
                   <p className="text-base font-bold truncate">{profile.name}</p>
                   {level != null && <Pill tone="garden">Lv{level}</Pill>}
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Penghuni Rutina 3.0</p>
-                <div className="mt-3 rounded-xl bg-sage-soft border border-sage/20 px-3.5 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-sage-deep mb-1">Suara Identitas</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Penghuni Rutina 3.0</p>
+                <div className="mt-3 rounded-xl bg-sage-soft border border-sage/20 px-4 py-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-sage-deep mb-1">Suara Identitas</p>
                   <p className="font-script text-lg leading-snug text-foreground">
                     &ldquo;{profile.identityVoice}&rdquo;
                   </p>
@@ -239,13 +239,13 @@ export default function ProfileScreen() {
             <div className="space-y-3">
               <div className="flex items-end justify-between gap-3">
                 <p className="flex items-baseline gap-1.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Level</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Level</span>
                   <span className="text-2xl font-extrabold tabular leading-none text-garden-deep">{level}</span>
                 </p>
                 <span className="text-xs text-muted-foreground tabular">{formatNumber(xp ?? 0)} XP total</span>
               </div>
               <MetricBar value={levelProgress} max={1} height={10} />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {formatNumber(Math.max(0, xpToNext ?? 0))} XP lagi menuju Level {level + 1}
               </p>
             </div>
@@ -270,11 +270,11 @@ export default function ProfileScreen() {
             <div className="py-3">
               <div className="flex items-center gap-3">
                 <span className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground shrink-0">
-                  <Target className="h-4.5 w-4.5" />
+                  <Target className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold leading-tight">Target misi harian</p>
-                  <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">Jumlah misi ideal per hari</p>
+                  <p className="text-xs text-muted-foreground leading-snug mt-0.5">Jumlah misi ideal per hari</p>
                 </div>
                 <div className="shrink-0 flex items-center gap-2">
                   <button
@@ -329,7 +329,7 @@ export default function ProfileScreen() {
             </div>
             <button
               onClick={() => openQuickAction("checkin")}
-              className="press rounded-full bg-sage text-white text-xs font-bold px-4 min-h-[44px] shrink-0"
+              className="press rounded-xl bg-sage text-white text-xs font-bold px-4 min-h-[44px] shrink-0"
             >
               Isi
             </button>
@@ -384,7 +384,7 @@ export default function ProfileScreen() {
             <Row icon={HelpCircle} label="Pertanyaan umum" desc="Streak, hari jeda, dan cara cadangan">
               <button
                 onClick={() => setFaqOpen(true)}
-                className="press rounded-full bg-secondary text-xs font-bold px-3.5 min-h-[36px] text-muted-foreground"
+                className="press rounded-full bg-secondary text-xs font-bold px-4 min-h-[44px] text-muted-foreground"
               >
                 Buka
               </button>
@@ -393,7 +393,7 @@ export default function ProfileScreen() {
         </SectionCard>
 
         {/* ===== Zona kritis ===== */}
-        <section className="rounded-2xl border border-clay/40 bg-clay-soft p-4 shadow-soft">
+        <section className="rounded-xl border border-clay/40 bg-clay-soft p-4 shadow-soft">
           <div className="flex items-center gap-2 mb-1">
             <ShieldAlert className="h-4 w-4 text-clay" />
             <h2 className="text-sm font-bold uppercase tracking-wide text-clay-deep">Zona Kritis</h2>
@@ -412,7 +412,7 @@ export default function ProfileScreen() {
           </button>
         </section>
 
-        <p className="text-center text-[11px] text-muted-foreground pb-2">Rutina 3.0 — dibuat dengan disiplin hangat</p>
+        <p className="text-center text-xs text-muted-foreground pb-2">Rutina 3.0 — dibuat dengan disiplin hangat</p>
       </div>
 
       {/* ===== Dialog edit identitas ===== */}
@@ -422,7 +422,7 @@ export default function ProfileScreen() {
             <DialogTitle>Edit Profil</DialogTitle>
             <DialogDescription>Perbarui nama dan suara identitasmu.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3.5">
+          <div className="space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="edit-name" className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
                 Nama
@@ -440,14 +440,14 @@ export default function ProfileScreen() {
                 placeholder="Aku adalah orang yang ..."
                 className="min-h-24 resize-none"
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Kalimat ini tampil sebagai pengingat siapa dirimu — baca setiap pagi.
               </p>
             </div>
             <button
               onClick={saveEdit}
               disabled={updateMutation.isPending}
-              className="press w-full min-h-[48px] rounded-2xl bg-garden text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              className="press w-full min-h-[48px] rounded-xl bg-garden text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Simpan Perubahan
@@ -465,7 +465,7 @@ export default function ProfileScreen() {
           </DialogHeader>
           <div className="space-y-3">
             {FAQ_ITEMS.map((f) => (
-              <div key={f.q} className="rounded-xl bg-secondary/60 p-3.5">
+              <div key={f.q} className="rounded-xl bg-secondary/60 p-4">
                 <p className="text-sm font-bold">{f.q}</p>
                 <p className="text-xs text-muted-foreground leading-relaxed mt-1">{f.a}</p>
               </div>
@@ -594,11 +594,11 @@ function Row({
   return (
     <div className="flex items-center gap-3 py-3">
       <span className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground shrink-0">
-        <Icon className="h-4.5 w-4.5" />
+        <Icon className="h-5 w-5" />
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold leading-tight">{label}</p>
-        {desc && <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{desc}</p>}
+        {desc && <p className="text-xs text-muted-foreground leading-snug mt-0.5">{desc}</p>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
@@ -627,11 +627,11 @@ function ActionRow({
       )}
     >
       <span className="h-9 w-9 rounded-xl bg-vault-soft flex items-center justify-center text-vault-deep shrink-0">
-        {busy ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Icon className="h-4.5 w-4.5" />}
+        {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-bold leading-tight">{label}</span>
-        <span className="block text-[11px] text-muted-foreground leading-snug mt-0.5">{desc}</span>
+        <span className="block text-xs text-muted-foreground leading-snug mt-0.5">{desc}</span>
       </span>
     </button>
   );
@@ -640,7 +640,7 @@ function ActionRow({
 const FAQ_ITEMS = [
   {
     q: "Apa itu Rutina?",
-    a: "Rutina adalah ruang kerja pribadi untuk mengelola kebiasaan (Taman), kebugaran (Studio), keuangan (Vault), dan jurnal (Writing Room) dalam satu aplikasi yang hangat dan tenang.",
+    a: "Rutina adalah ruang kerja pribadi untuk mengelola kebiasaan (Kebiasaan), kebugaran (Bugar), keuangan (Keuangan), dan jurnal (Jurnal) dalam satu aplikasi yang hangat dan tenang.",
   },
   {
     q: "Apa itu streak?",

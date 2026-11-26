@@ -41,11 +41,11 @@ const DAY_CHIPS: { d: number; label: string }[] = [
 
 const COLOR_SWATCHES: { key: string; label: string; bg: string }[] = [
   { key: "emerald", label: "Sage", bg: "bg-garden" },
-  { key: "amber", label: "Bata", bg: "bg-gold" },
+  { key: "amber", label: "Kuning", bg: "bg-gold" },
   { key: "teal", label: "Lumut tua", bg: "bg-vault" },
-  { key: "rose", label: "Arang", bg: "bg-writer" },
+  { key: "rose", label: "Bata", bg: "bg-clay" },
   { key: "orange", label: "Lumut", bg: "bg-studio" },
-  { key: "stone", label: "Abu", bg: "bg-stone-400" },
+  { key: "stone", label: "Abu", bg: "bg-secondary" },
 ];
 
 interface HabitFormState {
@@ -177,7 +177,7 @@ export default function AddHabitSheet({
   return (
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
       <DrawerContent className="max-h-[85dvh]">
-        <DrawerHeader className="px-5 text-left">
+        <DrawerHeader className="px-4 text-left">
           <DrawerTitle className="text-base font-bold">
             {isEdit ? "Sunting Kebiasaan" : "Tanam Kebiasaan Baru"}
           </DrawerTitle>
@@ -189,7 +189,7 @@ export default function AddHabitSheet({
         </DrawerHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
-          <div className="overflow-y-auto scroll-thin px-5 pb-4 space-y-5">
+          <div className="overflow-y-auto scroll-thin px-4 pb-4 space-y-5">
             {/* ===== Nama ===== */}
             <div>
               <label htmlFor="habit-name" className="text-xs font-semibold text-muted-foreground mb-1.5 block">
@@ -279,7 +279,7 @@ export default function AddHabitSheet({
                   <span className={cn("h-8 w-8 rounded-lg flex items-center justify-center", COLOR_SWATCHES.find((c) => c.key === form.color)?.bg)}>
                     {iconPreview}
                   </span>
-                  <span className="text-[11px] font-semibold text-muted-foreground">Pratinjau</span>
+                  <span className="text-xs font-semibold text-muted-foreground">Pratinjau</span>
                 </span>
               </div>
             </div>
@@ -300,7 +300,7 @@ export default function AddHabitSheet({
                     onClick={() => set("scheduleType", opt.key)}
                     aria-pressed={form.scheduleType === opt.key}
                     className={cn(
-                      "press min-h-[40px] rounded-lg text-sm font-bold transition-colors",
+                      "press min-h-[44px] rounded-lg text-sm font-bold transition-colors",
                       form.scheduleType === opt.key
                         ? "bg-card shadow-soft text-foreground"
                         : "text-muted-foreground"
@@ -321,7 +321,7 @@ export default function AddHabitSheet({
                         onClick={() => toggleDay(d.d)}
                         aria-pressed={active}
                         className={cn(
-                          "press min-h-[40px] min-w-[44px] flex-1 rounded-xl text-xs font-bold border transition-colors",
+                          "press min-h-[44px] min-w-[44px] flex-1 rounded-xl text-xs font-bold border transition-colors",
                           active
                             ? "bg-garden text-white border-garden"
                             : "bg-card border-border text-muted-foreground"
@@ -353,11 +353,11 @@ export default function AddHabitSheet({
             </div>
 
             {/* ===== Habit terukur ===== */}
-            <div className="rounded-xl border border-border/70 p-3.5">
+            <div className="rounded-xl border border-border/70 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-bold">Habit terukur</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Catat progres dengan angka, misal jumlah gelas atau halaman.
                   </p>
                 </div>
@@ -370,7 +370,7 @@ export default function AddHabitSheet({
               {form.measured && (
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   <div className="col-span-3 sm:col-span-1">
-                    <label htmlFor="habit-unit" className="text-[11px] font-semibold text-muted-foreground mb-1 block">
+                    <label htmlFor="habit-unit" className="text-xs font-semibold text-muted-foreground mb-1 block">
                       Satuan
                     </label>
                     <Input
@@ -383,7 +383,7 @@ export default function AddHabitSheet({
                     />
                   </div>
                   <div>
-                    <label htmlFor="habit-target" className="text-[11px] font-semibold text-muted-foreground mb-1 block">
+                    <label htmlFor="habit-target" className="text-xs font-semibold text-muted-foreground mb-1 block">
                       Target/hari
                     </label>
                     <Input
@@ -398,7 +398,7 @@ export default function AddHabitSheet({
                     />
                   </div>
                   <div>
-                    <label htmlFor="habit-step" className="text-[11px] font-semibold text-muted-foreground mb-1 block">
+                    <label htmlFor="habit-step" className="text-xs font-semibold text-muted-foreground mb-1 block">
                       Langkah
                     </label>
                     <Input
@@ -444,7 +444,7 @@ export default function AddHabitSheet({
                 rows={2}
                 className="rounded-xl resize-none"
               />
-              <p className="text-[11px] text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Tuliskan pemicu: kebiasaan yang sudah ada sebelum kebiasaan ini.
               </p>
             </div>

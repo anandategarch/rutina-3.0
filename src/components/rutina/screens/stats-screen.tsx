@@ -85,19 +85,19 @@ export default function StatsScreen() {
   if (isError) {
     return (
       <div className="flex flex-col min-h-full">
-        <ScreenHeader title="Statistik" subtitle="The Observatory" onBack={() => setPage("home")} />
+        <ScreenHeader title="Statistik" subtitle="Pola & tren semua modulmu" onBack={() => setPage("home")} />
         <div className="p-4">
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 flex flex-col items-center text-center gap-2.5">
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 flex flex-col items-center text-center gap-2.5">
             <span className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
               <AlertTriangle className="h-6 w-6" />
             </span>
             <p className="text-sm font-bold">Gagal memuat statistik</p>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Data Observatorium tidak dapat diambil saat ini. Periksa koneksi internetmu, lalu coba lagi.
+              Data statistik tidak dapat diambil. Periksa koneksi internetmu, lalu coba lagi.
             </p>
             <Button
               onClick={() => refetch()}
-              className="mt-1.5 min-h-[44px] rounded-full px-5 font-bold flex items-center gap-2"
+              className="mt-1.5 min-h-[44px] rounded-xl px-5 font-bold flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
               Coba Lagi
@@ -132,13 +132,13 @@ export default function StatsScreen() {
     <div className="flex flex-col min-h-full">
       <ScreenHeader
         title="Statistik"
-        subtitle="The Observatory"
+        subtitle="Pola & tren semua modulmu"
         onBack={() => setPage("home")}
       />
 
       <div className="p-4 space-y-4">
         {/* ===== Hero level & streak ===== */}
-        <SectionCard className="bg-gradient-to-br from-gold-soft to-card">
+        <SectionCard className="bg-gold-soft/40">
           <div className="flex items-center gap-4">
             <ProgressRing progress={stats.levelProgress} size={124} stroke={10} color="var(--gold)">
               <div className="text-center">
@@ -146,7 +146,7 @@ export default function StatsScreen() {
               </div>
             </ProgressRing>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Total Pengalaman</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Total Pengalaman</p>
               <p className="text-2xl font-bold tabular">{formatNumber(stats.xp)}</p>
               <MetricBar value={stats.levelProgress * 100} max={100} height={10} className="mt-2" />
               <p className="text-xs text-muted-foreground mt-1.5">
@@ -159,18 +159,18 @@ export default function StatsScreen() {
             <div className="flex items-center gap-1.5 rounded-full bg-card border border-border/70 px-3 py-1.5">
               <Flame className="h-3.5 w-3.5 text-gold" />
               <span className="text-xs font-bold tabular">{stats.streak.current} hari</span>
-              <span className="text-[10px] text-muted-foreground">berjalan</span>
+              <span className="text-xs text-muted-foreground">berjalan</span>
             </div>
             <div className="flex items-center gap-1.5 rounded-full bg-card border border-border/70 px-3 py-1.5">
               <Trophy className="h-3.5 w-3.5 text-gold" />
               <span className="text-xs font-bold tabular">{stats.streak.best}</span>
-              <span className="text-[10px] text-muted-foreground">terbaik</span>
+              <span className="text-xs text-muted-foreground">terbaik</span>
             </div>
           </div>
           <div className="mt-3 rounded-xl bg-card/70 border border-border/50 p-3">
             <div className="flex items-baseline justify-between mb-1">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Riwayat misi harian</p>
-              <span className="text-[10px] text-muted-foreground tabular">14 hari terakhir</span>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Riwayat misi harian</p>
+              <span className="text-xs text-muted-foreground tabular">14 hari terakhir</span>
             </div>
             <Sparkline data={streakSpark} height={36} />
           </div>
@@ -179,9 +179,9 @@ export default function StatsScreen() {
         {/* ===== Keseimbangan hidup (radar) ===== */}
         <SectionCard
           title="Keseimbangan Hidup"
-          tone="gold"
-          icon={<Scale className="h-4 w-4 text-gold" />}
-          action={<span className="text-[11px] text-muted-foreground font-semibold">30 hari terakhir</span>}
+          tone="garden"
+          icon={<Scale className="h-4 w-4 text-garden-deep" />}
+          action={<span className="text-xs text-muted-foreground font-semibold">30 hari terakhir</span>}
         >
           {(() => {
             const habitScore = Math.min(1, Math.max(0, stats.weekly.completionRate));
@@ -196,7 +196,7 @@ export default function StatsScreen() {
             const axes = [
               { label: "Kebiasaan", value: habitScore, display: `${Math.round(habitScore * 100)}%` },
               { label: "Bugar", value: fitnessScore, display: `${stats.fitness.sessions30d} sesi` },
-              { label: "Vault", value: savingsRate, display: `${Math.round(savingsRate * 100)}%` },
+              { label: "Keuangan", value: savingsRate, display: `${Math.round(savingsRate * 100)}%` },
               { label: "Jurnal", value: journalScore, display: `${stats.journal.entries30d} entri` },
               { label: "Check-in", value: checkinScore, display: `${checkinFilled}/14` },
             ];
@@ -205,7 +205,7 @@ export default function StatsScreen() {
               <>
                 <RadarChart axes={axes} size={252} color={SAGE} />
                 <div className="mt-2 rounded-xl bg-secondary/60 border border-border/50 p-3">
-                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
                     <span className="font-bold text-foreground">{weakest.label}</span> adalah area paling santai
                     periode ini ({weakest.display}). Perhatikan dulu area ini supaya roda kehidupan tetap bulat.
                   </p>
@@ -213,8 +213,8 @@ export default function StatsScreen() {
                 <div className="mt-2 grid grid-cols-5 gap-1">
                   {axes.map((a) => (
                     <div key={a.label} className="text-center">
-                      <p className="text-[11px] font-bold tabular">{Math.round(a.value * 100)}%</p>
-                      <p className="text-[9px] text-muted-foreground font-semibold truncate">{a.label}</p>
+                      <p className="text-xs font-bold tabular">{Math.round(a.value * 100)}%</p>
+                      <p className="text-[10px] text-muted-foreground font-semibold truncate">{a.label}</p>
                     </div>
                   ))}
                 </div>
@@ -226,8 +226,8 @@ export default function StatsScreen() {
         {/* ===== Tren misi selesai ===== */}
         <SectionCard
           title="Tren Misi Selesai"
-          tone="gold"
-          icon={<Target className="h-4 w-4 text-gold" />}
+          tone="garden"
+          icon={<Target className="h-4 w-4 text-garden-deep" />}
           action={<DeltaBadge delta={stats.weekly.missionsDone - stats.weekly.prevWeekDone} suffix=" misi" />}
         >
           <MiniBars
@@ -243,7 +243,7 @@ export default function StatsScreen() {
         </SectionCard>
 
         {/* ===== Komposisi kategori kebiasaan ===== */}
-        <SectionCard title="Komposisi Kategori" tone="gold" icon={<PieIcon />}>
+        <SectionCard title="Komposisi Kategori" tone="garden" icon={<PieIcon />}>
           {stats.habitCategoryComposition.length === 0 ? (
             <p className="text-xs text-muted-foreground">Belum ada kebiasaan aktif untuk dihitung.</p>
           ) : (
@@ -260,7 +260,7 @@ export default function StatsScreen() {
                     <p className="text-lg font-extrabold tabular leading-none">
                       {stats.habitCategoryComposition.reduce((a, c) => a + c.count, 0)}
                     </p>
-                    <p className="text-[9px] text-muted-foreground mt-0.5">kebiasaan</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">kebiasaan</p>
                   </>
                 }
               />
@@ -284,7 +284,7 @@ export default function StatsScreen() {
         <MonthlyMissionCalendar stats={stats} />
 
         {/* ===== Kebugaran ===== */}
-        <SectionCard title="Kebugaran 30 Hari" tone="gold" icon={<Dumbbell className="h-4 w-4 text-studio-deep" />}>
+        <SectionCard title="Kebugaran 30 Hari" tone="studio" icon={<Dumbbell className="h-4 w-4 text-studio-deep" />}>
           <div className="grid grid-cols-2 gap-2.5">
             <StatTile label="Sesi latihan" value={formatNumber(stats.fitness.sessions30d)} sub={`${stats.fitness.strengthSessions30d} sesi beban`} tone="studio" icon={<Dumbbell className="h-3.5 w-3.5" />} />
             <StatTile label="Total durasi" value={formatDuration(stats.fitness.minutes30d)} sub="menit bergerak" tone="studio" icon={<Timer className="h-3.5 w-3.5" />} />
@@ -292,7 +292,7 @@ export default function StatsScreen() {
             <StatTile label="Berat terkini" value={stats.fitness.latestWeight != null ? `${stats.fitness.latestWeight} kg` : "-"} sub="timbangan terakhir" tone="studio" icon={<Scale className="h-3.5 w-3.5" />} />
           </div>
 
-          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mt-4 mb-1">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mt-4 mb-1">
             Sesi latihan per pekan
           </p>
           {stats.fitness.weeklyWorkouts.some((w) => w.sessions > 0) ? (
@@ -306,7 +306,7 @@ export default function StatsScreen() {
             <p className="text-xs text-muted-foreground">Belum ada sesi latihan dalam enam pekan terakhir.</p>
           )}
 
-          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mt-4 mb-1">Tren berat badan</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mt-4 mb-1">Tren berat badan</p>
           {stats.fitness.weightTrend.length > 1 ? (
             <TrendLine
               data={stats.fitness.weightTrend.map((w) => ({ label: formatDayMonth(w.date), value: w.weightKg }))}
@@ -318,7 +318,7 @@ export default function StatsScreen() {
             <p className="text-xs text-muted-foreground">Belum cukup data timbangan untuk menggambar tren.</p>
           )}
 
-          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mt-4 mb-1">Mood &amp; energi 14 hari</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mt-4 mb-1">Mood &amp; energi 14 hari</p>
           <MiniBars
             data={stats.mood14d.map((d) => ({ label: formatDayMonth(d.date), value: d.mood ?? 0, alt: d.energy ?? 0 }))}
             height={92}
@@ -328,19 +328,19 @@ export default function StatsScreen() {
             altColor={NEUTRAL}
           />
           <div className="flex flex-wrap items-center gap-4 mt-1.5">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: SAGE }} /> Mood
             </span>
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: NEUTRAL }} /> Energi
             </span>
-            <span className="ml-auto text-[9px] text-muted-foreground">skala 0–5 · kosong = tidak tercatat</span>
+            <span className="ml-auto text-[10px] text-muted-foreground">skala 0–5 · kosong = tidak tercatat</span>
           </div>
         </SectionCard>
 
         {/* ===== Keuangan ===== */}
-        <SectionCard title="Keuangan 30 Hari" tone="gold" icon={<Wallet className="h-4 w-4 text-vault-deep" />}>
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-vault-soft px-3.5 py-3 mb-3">
+        <SectionCard title="Keuangan 30 Hari" tone="vault" icon={<Wallet className="h-4 w-4 text-vault-deep" />}>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-vault-soft px-4 py-3 mb-3">
             <span className="text-xs font-bold text-vault-deep uppercase tracking-wide">Saldo bersih semua dompet</span>
             <span className="text-lg font-bold tabular text-vault-deep">{formatRupiah(stats.finance.netBalance, { compact: true })}</span>
           </div>
@@ -372,7 +372,7 @@ export default function StatsScreen() {
         <CrossModuleCalendar stats={stats} />
 
         {/* ===== Mood & pencapaian ===== */}
-        <SectionCard title="Mood Menulis" tone="gold" icon={<NotebookText className="h-4 w-4 text-writer-deep" />}>
+        <SectionCard title="Mood Menulis" tone="writer" icon={<NotebookText className="h-4 w-4 text-writer-deep" />}>
           {stats.journal.moodDistribution.length === 0 ? (
             <p className="text-xs text-muted-foreground">Belum ada catatan dengan mood untuk dihitung.</p>
           ) : (
@@ -402,7 +402,7 @@ export default function StatsScreen() {
         </SectionCard>
 
         {/* ===== Insight list ===== */}
-        <SectionCard title="Wawasan Observatorium" tone="garden" icon={<Lightbulb className="h-4 w-4 text-garden-deep" />}>
+        <SectionCard title="Wawasan Statistik" tone="garden" icon={<Lightbulb className="h-4 w-4 text-garden-deep" />}>
           <ul className="space-y-2.5">
             {stats.insights.map((ins, i) => (
               <li key={i} className="flex items-start gap-2.5 rounded-xl bg-secondary/60 p-3">
@@ -421,7 +421,7 @@ export default function StatsScreen() {
 
 function PieIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gold">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-garden-deep">
       <path d="M21 12A9 9 0 1 1 12 3v9h9z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
@@ -452,13 +452,13 @@ function MonthlyMissionCalendar({ stats }: { stats: StatsPayload }) {
   return (
     <SectionCard
       title="Kalender Misi Bulan Ini"
-      tone="gold"
-      icon={<CalendarDays className="h-4 w-4 text-gold" />}
-      action={<span className="text-[11px] text-muted-foreground font-semibold">{monthName(first.getMonth())}</span>}
+      tone="garden"
+      icon={<CalendarDays className="h-4 w-4 text-garden-deep" />}
+      action={<span className="text-xs text-muted-foreground font-semibold">{monthName(first.getMonth())}</span>}
     >
       <div className="grid grid-cols-7 gap-1 text-center mb-1">
         {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d) => (
-          <span key={d} className="text-[10px] font-bold text-muted-foreground">
+          <span key={d} className="text-xs font-bold text-muted-foreground">
             {d}
           </span>
         ))}
@@ -478,7 +478,7 @@ function MonthlyMissionCalendar({ stats }: { stats: StatsPayload }) {
               <span
                 key={i}
                 className={cn(
-                  "aspect-square rounded-[4px] flex items-center justify-center text-[10px] font-semibold tabular",
+                  "aspect-square rounded-[4px] flex items-center justify-center text-xs font-semibold tabular",
                   t > 0 ? (t >= 0.5 ? "text-white" : "text-foreground") : "text-muted-foreground/50",
                   i === todayCellIdx && "ring-2 ring-gold"
                 )}
@@ -494,9 +494,9 @@ function MonthlyMissionCalendar({ stats }: { stats: StatsPayload }) {
           {[0.3, 0.55, 0.8, 1].map((o) => (
             <span key={o} className="h-2.5 w-2.5 rounded-[3px]" style={{ background: "var(--primary)", opacity: o }} />
           ))}
-          <span className="text-[9px] text-muted-foreground ml-1">kosong → penuh</span>
+          <span className="text-[10px] text-muted-foreground ml-1">kosong → penuh</span>
         </div>
-        <span className="text-[10px] text-muted-foreground tabular shrink-0">
+        <span className="text-xs text-muted-foreground tabular shrink-0">
           {todayStat && todayStat.missionsTotal > 0
             ? `Hari ini ${todayStat.missionsDone}/${todayStat.missionsTotal} misi`
             : "Hari ini belum ada misi"}
@@ -523,15 +523,15 @@ function CrossModuleCalendar({ stats }: { stats: StatsPayload }) {
   return (
     <SectionCard
       title="Radar 90 Hari"
-      tone="gold"
-      icon={<CalendarDays className="h-4 w-4 text-gold" />}
-      action={<span className="text-[11px] text-muted-foreground font-semibold">ketuk sel untuk detail</span>}
+      tone="garden"
+      icon={<CalendarDays className="h-4 w-4 text-garden-deep" />}
+      action={<span className="text-xs text-muted-foreground font-semibold">ketuk sel untuk detail</span>}
     >
       <div className="space-y-3">
         {/* Header hari — pola grid 7 kolom (Sen–Min) seperti Kalender Misi Bulan Ini */}
         <div className="grid grid-cols-7 gap-1 text-center">
           {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((d) => (
-            <span key={d} className="text-[10px] font-bold text-muted-foreground">
+            <span key={d} className="text-xs font-bold text-muted-foreground">
               {d}
             </span>
           ))}
@@ -542,7 +542,7 @@ function CrossModuleCalendar({ stats }: { stats: StatsPayload }) {
           const leadingBlanks = days.length > 0 ? (parseDateStr(days[0].date).getDay() + 6) % 7 : 0;
           return (
             <div key={key}>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-1">{monthName(m, true)}</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">{monthName(m, true)}</p>
               <div className="grid grid-cols-7 gap-1">
                 {Array.from({ length: leadingBlanks }, (_, i) => (
                   <span key={`blank-${i}`} className="aspect-square" aria-hidden="true" />
@@ -589,7 +589,7 @@ function Dot({ show, className }: { show: boolean; className: string }) {
 
 function LegendDot({ className, label }: { className: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground">
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
       <span className={cn("h-1.5 w-1.5 rounded-full", className)} />
       {label}
     </span>
@@ -653,7 +653,7 @@ function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: S
                     <span
                       className={cn(
                         "font-bold tabular shrink-0 ml-2",
-                        t.type === "income" ? "text-garden-deep" : t.type === "expense" ? "text-writer-deep" : "text-muted-foreground"
+                        t.type === "income" ? "text-garden-deep" : t.type === "expense" ? "text-clay-deep" : "text-muted-foreground"
                       )}
                     >
                       {t.type === "expense" ? "-" : t.type === "income" ? "+" : ""}
@@ -674,7 +674,7 @@ function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: S
                 {dayWorkouts.length > 0 ? `${dayWorkouts.length} sesi` : "Tidak ada"}
               </p>
               {dayWorkouts.length > 0 && (
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {formatDuration(dayWorkouts.reduce((a, w) => a + w.durationMin, 0))}
                 </p>
               )}
@@ -685,7 +685,7 @@ function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: S
                 {dayEntries.length > 0 ? `${dayEntries.length} catatan` : "Tidak ada"}
               </p>
               {dayEntries.length > 0 && (
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {dayEntries.reduce((a, e) => a + e.wordCount, 0)} kata
                 </p>
               )}
@@ -715,18 +715,18 @@ function AchievementCard({ achievement }: { achievement: AchievementItem }) {
           unlocked ? "bg-garden/15 text-garden-deep" : "bg-muted text-muted-foreground"
         )}
       >
-        <Icon className="h-4.5 w-4.5" />
+        <Icon className="h-5 w-5" />
         {!unlocked && <Lock className="absolute -bottom-0.5 -right-0.5 h-3 w-3 text-muted-foreground bg-card rounded-full p-[1px]" />}
       </span>
-      <p className={cn("text-[11px] font-bold leading-tight", unlocked ? "text-garden-deep" : "text-muted-foreground")}>
+      <p className={cn("text-xs font-bold leading-tight", unlocked ? "text-garden-deep" : "text-muted-foreground")}>
         {achievement.title}
       </p>
       {unlocked ? (
-        <Pill tone="garden" className="text-[9px] px-1.5 py-0.5">
+        <Pill tone="garden" className="text-[10px] px-1.5 py-0.5">
           {formatDateID(achievement.unlockedAt!)}
         </Pill>
       ) : (
-        <span className="text-[9px] text-muted-foreground leading-tight line-clamp-2">{achievement.description}</span>
+        <span className="text-[10px] text-muted-foreground leading-tight line-clamp-2">{achievement.description}</span>
       )}
     </div>
   );
@@ -738,16 +738,16 @@ function StatsSkeleton() {
   const setPage = useRutinaStore((s) => s.setPage);
   return (
     <div className="flex flex-col min-h-full">
-      <ScreenHeader title="Statistik" subtitle="The Observatory" onBack={() => setPage("home")} />
+      <ScreenHeader title="Statistik" subtitle="Pola & tren semua modulmu" onBack={() => setPage("home")} />
       <div className="p-4 space-y-4">
-        <div className="h-36 rounded-2xl bg-secondary animate-pulse" />
-        <div className="h-48 rounded-2xl bg-secondary animate-pulse" />
+        <div className="h-36 rounded-xl bg-secondary animate-pulse" />
+        <div className="h-48 rounded-xl bg-secondary animate-pulse" />
         <div className="grid grid-cols-2 gap-2.5">
-          <div className="h-20 rounded-2xl bg-secondary animate-pulse" />
-          <div className="h-20 rounded-2xl bg-secondary animate-pulse" />
+          <div className="h-20 rounded-xl bg-secondary animate-pulse" />
+          <div className="h-20 rounded-xl bg-secondary animate-pulse" />
         </div>
-        <div className="h-40 rounded-2xl bg-secondary animate-pulse" />
-        <div className="h-56 rounded-2xl bg-secondary animate-pulse" />
+        <div className="h-40 rounded-xl bg-secondary animate-pulse" />
+        <div className="h-56 rounded-xl bg-secondary animate-pulse" />
       </div>
     </div>
   );

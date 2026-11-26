@@ -21,7 +21,7 @@ export async function GET() {
     const todayStr = jakartaToday();
     const dow = dayOfWeek(todayStr);
 
-    const profile = await db.profile.findFirst();
+    const profile = (await db.profile.findFirst()) ?? (await db.profile.create({ data: {} }));
     const xpData = await getXpData();
 
     // Habits + logs 40 hari terakhir

@@ -56,20 +56,12 @@ export default function OpenGraphImage() {
             marginBottom: 36,
           }}
         >
-          <svg
-            width="72"
-            height="72"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#faf6ea"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M7 20h10" />
-            <path d="M10 20c5.5-2.5.8-6.4 3-10" />
-            <path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3.4-4 1.9-.5 3.9-.6 5.9.6Z" />
-            <path d="M14.5 13.6c-1.1-.8-1.8-2.2-2.3-3.7 2-.4 3.5-.4 4.8.3 1.2.6 2.3 1.9 3.4 4-1.9.5-3.9.6-5.9-.6Z" />
+          <svg width="72" height="72" viewBox="0 0 64 64" fill="none">
+            {/* Twin-leaf brand mark (match public/icon.svg): daun + batang + titik amber */}
+            <path d="M32 47c0-13 6.5-21.5 17-25.5-2.2 13-6.5 21.5-17 25.5z" fill="#faf6ea" />
+            <path d="M32 47c0-13-6.5-21.5-17-25.5 2.2 13 6.5 21.5 17 25.5z" fill="#8fe0b0" />
+            <rect x="30.5" y="29" width="3" height="19" rx="1.5" fill="#faf6ea" />
+            <circle cx="44" cy="17" r="5" fill="#f59e0b" />
           </svg>
         </div>
         <div style={{ display: "flex", fontSize: 84, fontWeight: 800, color: "#1f4d2e", letterSpacing: -2 }}>
