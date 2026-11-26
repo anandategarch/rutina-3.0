@@ -21,7 +21,7 @@ Aplikasi personal mobile-first untuk mengelola rutinitas dan perkembangan hidup 
 | -------- | ------------------------------------------------ |
 | Frontend | Next.js 16 (App Router), React 19, Tailwind CSS 4, shadcn/ui, framer-motion, vaul, Zustand, TanStack Query |
 | Backend  | Next.js Route Handlers, Zona waktu Asia/Jakarta  |
-| Database | Prisma ORM + SQLite                              |
+| Database | Prisma ORM via driver adapter — Turso/libSQL (produksi) atau SQLite lokal (development) |
 
 ## Mulai Cepat
 
@@ -53,7 +53,62 @@ Buka `http://localhost:3000`.
 | `bun run start`    | Jalankan server produksi                      |
 | `bun run lint`     | ESLint                                        |
 | `bun run typecheck`| `tsc --noEmit`                                |
-| `bun run db:push`  | Sinkronkan schema Prisma ke database          |
+| `bun run db:push`  | Sinkronkan schema Prisma ke database lokal    |
+| `bun scripts/turso-sync.ts` | Terapkan schema Prisma ke database Turso (aman, tidak menyentuh tabel lain) |
+| `bun scripts/seed.ts`       | Isi data sampling 30 hari (idempoten; mengikuti env aktif: Turso atau SQLite) |
+
+## Deploy ke Vercel + Turso
+
+Aplikasi ini siap di-deploy ke [Vercel](https://vercel.com) dengan database [Turso](https://turso.tech) — tanpa mengubah satu baris kode.
+
+### 1. Siapkan database Turso
+
+```bash
+# Buat database & token (butuh turso CLI)
+turso db create habit-tracker
+turso db tokens create habit-tracker
+```
+
+Sinkronkan schema Prisma ke Turso (sekali di awal, dan setiap kali schema berubah):
+
+```bash
+TURSO_DATABASE_URL="libsql://habit-tracker-username.turso.io" \
+TURSO_AUTH_TOKEN="eyJ..." \
+bun scripts/turso-sync.ts
+
+# Opsional: isi data sampling agar aplikasi langsung berisi (idempoten)
+TURSO_DATABASE_URL="libsql://habit-tracker-username.turso.io" \
+TURSO_AUTH_TOKEN="eyJ..." \
+bun scripts/seed.ts
+```
+
+### 2. Set environment variables di Vercel
+
+Dashboard → Project → Settings → Environment Variables (atau `vercel env add`):
+
+| Variabel            | Nilai                                   |
+| ------------------- | --------------------------------------- |
+| `TURSO_DATABASE_URL` | `libsql://habit-tracker-username.turso.io` |
+| `TURSO_AUTH_TOKEN`   | token dari `turso db tokens create`     |
+
+`DATABASE_URL` (SQLite lokal) **tidak diperlukan** di Vercel — ketika `TURSO_DATABASE_URL` terpasang, aplikasi otomatis memakai Turso (logika di `src/lib/db.ts`).
+
+### 3. Deploy
+
+```bash
+vercel --prod
+```
+
+Vercel menjalankan `next build`; Prisma Client di-generate otomatis lewat skrip `postinstall`. Paket `@libsql/client`, `@prisma/adapter-libsql`, dan `libsql` sudah didaftarkan di `serverExternalPackages` agar aman di runtime serverless.
+
+### Cara kerja koneksi ganda
+
+`src/lib/db.ts` memilih koneksi secara otomatis:
+
+- `TURSO_DATABASE_URL` terpasang → Prisma Client + [driver adapter libSQL](https://www.prisma.io/docs/orm/overview/databases/database-drivers) (kompatibel serverless Vercel, koneksi via HTTP).
+- Tanpa Turso → SQLite lokal via `DATABASE_URL` (development offline).
+
+Data migrasi dari aplikasi versi lama (tabel `rutina_*` dsb.) tidak diganggu gugat — Rutina 3.0 memakai tabel sendiri (`Habit`, `Transaction`, dsb.) berdampingan dengan tabel legacy di database yang sama.
 
 ## Struktur Proyek
 

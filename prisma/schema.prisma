@@ -1,5 +1,8 @@
 generator client {
   provider = "prisma-client-js"
+  // Catatan: driver adapters sudah GA sejak Prisma 6 — flag preview
+  // "driverAdapters" tidak lagi diperlukan. Adapter libSQL (Turso) dipasang
+  // di src/lib/db.ts via @prisma/adapter-libsql.
 }
 
 datasource db {

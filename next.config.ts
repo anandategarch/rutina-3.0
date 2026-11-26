@@ -33,6 +33,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  // libSQL (Turso) memakai binding node-native; jangan di-bundle oleh Next
+  // agar aman dijalankan di runtime serverless Vercel.
+  serverExternalPackages: ["@libsql/client", "@prisma/adapter-libsql", "libsql"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

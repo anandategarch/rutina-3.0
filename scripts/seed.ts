@@ -1,7 +1,12 @@
 /**
  * Seed data sampling Rutina 3.0 — 30 hari terakhir.
  *
- * Jalankan: DATABASE_URL="file:/path/ke/rutina/db/custom.db" bun scripts/seed.ts
+ * Jalankan: bun scripts/seed.ts
+ *
+ * Target database mengikuti environment (lewat src/lib/db):
+ * - TURSO_DATABASE_URL + TURSO_AUTH_TOKEN terpasang → seed ke Turso (remote).
+ * - Tanpa keduanya                                  → seed ke SQLite lokal
+ *   (DATABASE_URL, mis. file:/path/ke/rutina/db/custom.db).
  *
  * Idempoten: setiap koleksi hanya diisi bila masih kosong (atau di-upsert pada
  * field unik). Menjalankan ulang tidak menduplikasi data.
@@ -10,9 +15,7 @@
  * docs/DESIGN.md § Palet Warna): emerald|amber|teal|rose|orange|stone —
  * bukan hex, agar UI tetap 100% konsisten dengan design token.
  */
-import { PrismaClient } from "@prisma/client";
-
-const db = new PrismaClient();
+import { db } from "@/lib/db";
 
 /* ---------------- util ---------------- */
 
