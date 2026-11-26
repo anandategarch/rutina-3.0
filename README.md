@@ -114,6 +114,24 @@ Buka `https://<project>.vercel.app/api/health` — bila JSON-nya `"ok": true, "d
 
 Data migrasi dari aplikasi versi lama (tabel `rutina_*` dsb.) tidak diganggu gugat — Rutina 3.0 memakai tabel sendiri (`Habit`, `Transaction`, dsb.) berdampingan dengan tabel legacy di database yang sama.
 
+## Migrasi Data Legacy (Rutina 2.0 → 3.0)
+
+Sudah dijalankan untuk database saat ini. Jika suatu saat perlu mengulang (mis. database baru):
+
+```bash
+bun scripts/turso-migrate-legacy.ts
+```
+
+Yang dilakukan script:
+
+- Membaca tabel legacy `rutina_wallets`, `rutina_habits`, `rutina_habit_logs`, `rutina_transactions`, `rutina_budgets`, `rutina_goals`, `rutina_body_logs`, `rutina_mood_logs`, `rutina_workout_sessions`, `rutina_app_settings` (read-only — legacy tidak pernah diubah).
+- Menghapus data sampling di tabel 3.0, lalu mengimpor data asli (idempoten — hasil re-run selalu sama).
+- ID legacy dipertahankan agar relasi wallet↔transaksi & habit↔log tersambung; 2 transaksi tanpa dompet ditempatkan ke dompet pertama (Kas).
+- Mapping: `masuk/keluar` → `income/expense`, kategori habit `Kesehatan/Belajar/Pribadi` → `health/learning/mind`, mood teks → skala 1–5, `lari-jalan` → `runwalk`, ikon habit dipetakan dari judul.
+- Check-in = gabungan `rutina_body_logs` (tidur/energi/sakit/stress) + `rutina_mood_logs` per tanggal.
+- Achievement dievaluasi ulang dari data asli (kriteria sama dengan app; XP = log×10 + workout×25 + jurnal×15 + check-in×5).
+- Profile: `dailyMissionTarget` diambil dari pengaturan legacy `app.dailyGoal`.
+
 ## Struktur Proyek
 
 ```
