@@ -101,6 +101,10 @@ vercel --prod
 
 Vercel menjalankan `next build`; Prisma Client di-generate otomatis lewat skrip `postinstall`. Paket `@libsql/client`, `@prisma/adapter-libsql`, dan `libsql` sudah didaftarkan di `serverExternalPackages` agar aman di runtime serverless.
 
+### 4. Verifikasi koneksi
+
+Buka `https://<project>.vercel.app/api/health` — bila JSON-nya `"ok": true, "db": "turso"` berarti aplikasi benar-benar tersambung ke Turso di production (endpoint ini juga bisa dipakai kapan saja untuk cek kesehatan database; tidak membocorkan token).
+
 ### Cara kerja koneksi ganda
 
 `src/lib/db.ts` memilih koneksi secara otomatis:
