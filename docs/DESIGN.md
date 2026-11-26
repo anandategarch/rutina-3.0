@@ -11,7 +11,7 @@ NextLevelBuilder): 80 UI styles, 194 palet warna, 74 font pairing, 141 UX guidel
 | Aspek | Keputusan |
 |---|---|
 | Gaya | Claymorphism Mobile (skill pairing #71) — permukaan lembut, shadow berlapis, sudut membulat |
-| Tema warna | Krem hangat `#faf6ea` + hijau taman `#2fa960/#1f7a43`; aksen: gold, vault (teal), studio, writer, clay |
+| Tema warna | Krem hangat `#faf6ea` + hijau taman `#2fa960/#1f7a43`; aksen: gold, vault (teal), studio, writer, clay (rincian §1a) |
 | Dark mode | Dukungan penuh via token CSS (`--*`), toggle di Profil |
 | Display font | Nunito (variable 200–1000) — semua heading, terminal membulat playful |
 | Body font | DM Sans (variable) — teks tubuh geometris bersih |
@@ -19,7 +19,65 @@ NextLevelBuilder): 80 UI styles, 194 palet warna, 74 font pairing, 141 UX guidel
 | Radius | `rounded-xl` (12px) kartu kecil, `rounded-2xl/3xl` kartu besar, FAB bulat |
 | Shadow | Token `shadow-soft`, `shadow-clay`, `shadow-lift` — jangan pakai nilai shadow mentah |
 
-Kontras token sudah diuji WCAG AA (lihat komentar di `src/app/globals.css`).
+## 1a. Palet warna resmi "Sunny Meadow"
+
+Satu-satunya sumber warna UI adalah token CSS di `src/app/globals.css`.
+Dilarang memakai kelas warna Tailwind mentah (`bg-emerald-500`, dsb.) atau hex
+arbitrary (`bg-[#...]`) di komponen — semua lewat token. Palet mengadaptasi
+arah palet skill `colors.csv` baris #94 **Habit Tracker** ("streak amber +
+habit green") dengan canvas krem.
+
+### Token inti (light)
+
+| Token | Nilai | Peran |
+|---|---|---|
+| `--background` | `#faf6ea` | Kanvas krem hangat (seluruh layar) |
+| `--foreground` | `#29241c` | Teks utama (kontras AA di krem) |
+| `--card` / `--popover` | `#ffffff` | Permukaan kartu & sheet |
+| `--primary` | `#1f7a43` | Hijau taman — CTA utama, ring progres, FAB |
+| `--secondary` | `#f3eddd` | Chip, track progres, permukaan netral |
+| `--muted-foreground` | `#6f6753` | Teks sekunder (digerdangkan agar AA) |
+| `--accent` | `#e6f4ea` | Tint hijau — hover/highlight |
+| `--destructive` | `#b8401f` | Error, aksi destruktif |
+| `--border` / `--input` | `#efe7d2` / `#e7dfc8` | Garis & input |
+| `--ring` | `#1f7a43` | Fokus keyboard |
+
+### Ramp chart
+
+`--chart-1..5`: `#1f7a43 → #2fa960 → #6bc289 → #a6ddb7 → #d3eedc`
+(vivid→pastel hijau); `--chart-out` `#b8401f` (outlier); `--chart-neutral`
+`#b3a98f` (batang netral). Di dark mode ramp dibalik dan digerangkan otomatis
+lihat token `.dark`.
+
+### Tone modul (keluarga 3 tingkat: solid / deep / soft)
+
+Disiplin **satu primer**: `garden` adalah satu-satunya warna aksi utama.
+Tone lain hanya boleh dipakai untuk konteksnya masing-masing:
+
+| Tone | Solid (teks putih aman) | Deep (teks di atas soft) | Soft (latar tint) | Dipakai khusus untuk |
+|---|---|---|---|---|
+| `garden` | `#1f7a43` | `#175c33` | `#e3f4e7` | Default & progres (Taman) |
+| `studio` | `#c2561d` | `#9a4514` | `#fdebdd` | Fitness (Bugar) |
+| `vault` | `#0b756d` | `#075e56` | `#e0f3f0` | Keuangan (Vault) |
+| `writer` | `#7443b8` | `#5a2f94` | `#f1e9fa` | Jurnal SAJA |
+| `gold` | `#b45309` | `#8f3d06` | `#fef3c7` | Streak/XP/Piala SAJA |
+| `clay` | `#b8401f` | `#8f3115` | `#fbe9e2` | Bahaya & pengeluaran |
+| `cream` | — | — | `#f7f1de` | Panel hero khusus |
+
+### Key warna entity (disimpan di DB)
+
+Entity (`Habit.color`, `Wallet.color`, `SavingsGoal.color`) menyimpan KEY, bukan
+hex — dipetakan ke tone via `src/components/rutina/habit-icons.ts`
+(`HABIT_COLOR`):
+
+`emerald→garden` · `amber→gold` · `teal→vault` · `rose→clay` ·
+`orange→studio` · `stone→secondary`
+
+### Dark mode (ringkas)
+
+Canvas `#16130c`, kartu `#201c12`, teks `#efe9d9`; primer menjadi `#7ed9a0`
+(hijau mint). Semua tone family punya padanan dark di blok `.dark` — lihat
+`globals.css`; kontras sudah diuji WCAG AA via komentar di file yang sama.
 Teks naratif multi-kalimat minimal `text-sm` (14px); 10–12px hanya untuk caption/eyebrow.
 
 ## 2. Aturan interaksi mobile (non-negotiable)
