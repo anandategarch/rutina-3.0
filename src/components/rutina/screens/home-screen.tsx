@@ -238,7 +238,9 @@ export default function HomeScreen() {
   return (
     <div className="flex flex-col">
       {/* ===== Header ===== */}
-      <div className="bg-gold-soft/40 px-4 pt-6 pb-4">
+      {/* Band header memakai tint teal (garden-soft) — disiplin tone:
+          gold HANYA untuk streak/XP/piala (docs/DESIGN.md §1a). */}
+      <div className="bg-garden-soft/30 px-4 pt-6 pb-4">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-muted-foreground">{formatDateID(d.today, true)}</p>
@@ -246,7 +248,7 @@ export default function HomeScreen() {
               {greeting()}, {profile?.name ?? "Sahabat"}
             </h1>
             {profile?.identityVoice && (
-              <p className="font-script text-lg text-gold leading-snug mt-1 line-clamp-2">
+              <p className="font-script text-lg text-garden-deep leading-snug mt-1 line-clamp-2">
                 “{profile.identityVoice}”
               </p>
             )}

@@ -4,8 +4,8 @@
   "description": "Aplikasi personal untuk mengelola rutinitas dan perkembangan hidup sehari-hari: kebiasaan, kebugaran, keuangan, jurnal, dan statistik.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FAF6EA",
-  "theme_color": "#FAF6EA",
+  "background_color": "#F0FDFA",
+  "theme_color": "#F0FDFA",
   "lang": "id",
   "icons": [
     {

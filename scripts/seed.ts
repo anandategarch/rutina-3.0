@@ -6,7 +6,7 @@
  * Idempoten: setiap koleksi hanya diisi bila masih kosong (atau di-upsert pada
  * field unik). Menjalankan ulang tidak menduplikasi data.
  *
- * Semua warna entity memakai KEY tone palet "Sunny Meadow" (lihat
+ * Semua warna entity memakai KEY tone palet "Focus Teal" (lihat
  * docs/DESIGN.md § Palet Warna): emerald|amber|teal|rose|orange|stone —
  * bukan hex, agar UI tetap 100% konsisten dengan design token.
  */
