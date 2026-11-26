@@ -273,14 +273,14 @@ export default function HomeScreen() {
 
         {/* Progress: papan BENTO GRID (ui-ux-pro-max skill #39 "Bento Box Grid",
             status active) — kartu modular dengan span bervariasi: hero ring
-            menempati 1 kolom × 2 baris, streak & level sebagai tile 1×1.
+            menempati 1 kolom × 3 baris, streak/level/saldo sebagai tile 1×1.
             Gap 10px, radius rounded-xl (24px), shadow halus, hover scale 1.02. */}
         <div className="mt-4 grid grid-cols-2 gap-2.5">
-          {/* Hero tile — 1 kolom × 2 baris */}
+          {/* Hero tile — 1 kolom × 3 baris (seimbang dengan streak+level+saldo) */}
           <button
             onClick={() => setPage("habits")}
             aria-label="Lihat misi hari ini"
-            className="press bento-tile row-span-2 bg-card rounded-xl border border-border/70 shadow-soft p-4 flex flex-col items-center justify-center"
+            className="press bento-tile row-span-3 bg-card rounded-xl border border-border/70 shadow-soft p-4 flex flex-col items-center justify-center"
           >
             <RingStat
               progress={agendaForSelected.length ? doneForSelected / agendaForSelected.length : 0}
@@ -342,6 +342,31 @@ export default function HomeScreen() {
               <p className="text-[11px] text-muted-foreground mt-1 tabular">
                 <span className="font-bold text-primary">{xpToNextLevel.toLocaleString("id-ID")} XP</span> ke Level{" "}
                 {d.level + 1}
+              </p>
+            </div>
+          </button>
+          {/* Saldo — tile 1×1 interaktif (intipan lintas modul ke The Vault) */}
+          <button
+            onClick={() => setPage("finance")}
+            aria-label="Buka keuangan"
+            className="press bento-tile bg-card rounded-xl border border-border/70 shadow-soft p-3.5 text-left flex flex-col justify-between gap-2"
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="h-8 w-8 rounded-full bg-vault-soft flex items-center justify-center shrink-0">
+                <Wallet className="h-4 w-4 text-vault-deep" />
+              </div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Saldo</p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-lg font-extrabold tabular leading-none truncate">
+                {statsQuery.data ? formatRupiah(statsQuery.data.finance.netBalance, { compact: true }) : "—"}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1 truncate tabular">
+                keluar{" "}
+                <span className="font-bold text-clay-deep">
+                  {statsQuery.data ? formatRupiah(statsQuery.data.finance.expense30d, { compact: true }) : "—"}
+                </span>{" "}
+                · 30 hari
               </p>
             </div>
           </button>

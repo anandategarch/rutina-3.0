@@ -77,17 +77,17 @@ export function greeting(): string {
 }
 
 export function formatRupiah(n: number, opts?: { compact?: boolean }): string {
-  if (opts?.compact && Math.abs(n) >= 1_000_000) {
-    const v = n / 1_000_000;
-    return `Rp ${v.toFixed(v >= 10 ? 0 : 1).replace(".", ",")} jt`;
-  }
-  if (opts?.compact && Math.abs(n) >= 1_000) {
-    const v = n / 1_000;
-    return `Rp ${v.toFixed(v >= 10 ? 0 : 1).replace(".", ",")} rb`;
-  }
   const neg = n < 0;
-  const abs = Math.abs(Math.round(n));
-  const s = abs.toLocaleString("id-ID");
+  const abs = Math.abs(n);
+  if (opts?.compact && abs >= 1_000_000) {
+    const v = abs / 1_000_000;
+    return `${neg ? "-" : ""}Rp ${v.toFixed(v >= 10 ? 0 : 1).replace(".", ",")} jt`;
+  }
+  if (opts?.compact && abs >= 1_000) {
+    const v = abs / 1_000;
+    return `${neg ? "-" : ""}Rp ${v.toFixed(v >= 10 ? 0 : 1).replace(".", ",")} rb`;
+  }
+  const s = Math.round(abs).toLocaleString("id-ID");
   return `${neg ? "-" : ""}Rp ${s}`;
 }
 
