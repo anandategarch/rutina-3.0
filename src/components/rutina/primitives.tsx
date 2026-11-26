@@ -80,7 +80,7 @@ export function SectionCard({
         <div className="flex items-center gap-2 mb-3">
           {icon}
           {title && (
-            <h2 className={cn("text-sm font-extrabold tracking-wide uppercase", tone ? toneText[tone] : "text-foreground")}>
+            <h2 className={cn("text-sm font-bold tracking-wide uppercase", tone ? toneText[tone] : "text-foreground")}>
               {title}
             </h2>
           )}
@@ -134,7 +134,7 @@ export function StatTile({
       </div>
       {/* break-words bukan truncate (bento #39 "content fits cards"): nilai
           uang 3-kolom boleh lipat ke baris kedua alih-alih terpotong "…" */}
-      <div className={cn("text-xl font-extrabold tabular leading-tight break-words", valueClassName, t.fg)}>{value}</div>
+      <div className={cn("text-xl font-bold tabular leading-tight break-words", valueClassName, t.fg)}>{value}</div>
       {sub && <div className="text-xs text-muted-foreground mt-0.5 truncate">{sub}</div>}
       {chart && <div className="mt-2 -mx-0.5">{chart}</div>}
     </div>

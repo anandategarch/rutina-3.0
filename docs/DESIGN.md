@@ -10,60 +10,62 @@ NextLevelBuilder): 80 UI styles, 194 palet warna, 74 font pairing, 141 UX guidel
 
 | Aspek | Keputusan |
 |---|---|
-| Gaya | Claymorphism Mobile (skill pairing #71) — permukaan lembut, shadow berlapis, sudut membulat |
-| Tema warna | Kanvas teal muda `#f0fdfa` + teal fokus `#0d9488/#0f766e`; aksen oranye aksi `#ea580c`; modul: gold, vault (sky), studio, writer, clay (rincian §1a) |
+| Gaya | Field Notes — Calm Editorial Utility: kertas hangat, permukaan netral 85–90%, tipografi semibold, elevasi halus tanpa inset |
+| Tema warna | Kertas `#f4f3ee` + hijau hutan `#315b48` (satu-satunya warna aksi utama); modul hemat: studio (steel blue), vault (teal), writer (terracotta), gold (sand), clay (brick) (rincian §1a) |
 | Dark mode | Dukungan penuh via token CSS (`--*`), toggle di Profil |
 | Display font | Nunito (variable 200–1000) — semua heading, terminal membulat playful |
 | Body font | DM Sans (variable) — teks tubuh geometris bersih |
 | Handwritten | Caveat (variable) — kutipan/aksen personal |
-| Radius | `rounded-xl` (12px) kartu kecil, `rounded-2xl/3xl` kartu besar, FAB bulat |
-| Shadow | Token `shadow-soft`, `shadow-clay`, `shadow-lift` — jangan pakai nilai shadow mentah |
+| Radius | Kartu 14–18px konsisten: `rounded-lg` (14px), `rounded-xl` (18px), FAB bulat |
+| Shadow | Token `shadow-soft`, `shadow-lift`, `shadow-clay` (nilai sudah dinetralkan — tanpa inset glow/claymorphism) |
 
-## 1a. Palet warna resmi "Focus Teal"
+## 1a. Palet warna resmi "Field Notes" (Calm Editorial Utility)
 
 Satu-satunya sumber warna UI adalah token CSS di `src/app/globals.css`.
 Dilarang memakai kelas warna Tailwind mentah (`bg-emerald-500`, dsb.) atau hex
-arbitrary (`bg-[#...]`) di komponen — semua lewat token. Palet mengadaptasi
-arah palet skill `colors.csv` baris #16 **Productivity Tool** ("Teal focus +
-action orange [Accent adjusted from #F97316]"): teal sebagai warna fokus
-utama + oranye sebagai aksen aksi, kanvas teal muda.
+arbitrary (`bg-[#...]`) di komponen — semua lewat token. Palet ditetapkan
+sebagai design directive "FIELD NOTES / CALM EDITORIAL UTILITY" dan
+**divalidasi terhadap pedoman ui-ux-pro-max**: 34/34 pasangan warna kritis
+WCAG 2.1 AA >= 4.5:1 (teks, modul solid+white, deep-on-soft, light & dark).
 
 ### Token inti (light)
 
 | Token | Nilai | Peran |
 |---|---|---|
-| `--background` | `#f0fdfa` | Kanvas teal muda (seluruh layar, katalog bg) |
-| `--foreground` | `#134e4a` | Teks utama teal-900 (katalog fg) |
-| `--card` / `--popover` | `#ffffff` | Permukaan kartu & sheet |
-| `--primary` | `#0f766e` | Teal-700 — CTA utama, ring progres, FAB (teal-600 katalog `#0d9488` di-darkened agar AA dengan teks putih) |
-| `--secondary` | `#ccfbf1` | Chip, track progres, permukaan netral (teal-100) |
-| `--muted` / `--muted-foreground` | `#e8f1f4` / `#475569` | Permukaan + teks sekunder (katalog muted) |
-| `--accent` | `#ffedd5` | Tint oranye aksi — hover/highlight (dari accent katalog `#ea580c`) |
-| `--destructive` | `#dc2626` | Error, aksi destruktif (katalog destructive) |
-| `--border` / `--input` | `#99f6e4` | Garis & input (teal-200, katalog border) |
-| `--ring` | `#0d9488` | Fokus keyboard (teal-600 katalog) |
+| `--background` | `#f4f3ee` | Kertas hangat — 85–90% permukaan UI |
+| `--foreground` | `#232a26` | Teks utama (13.2:1 di kertas) |
+| `--card` / `--popover` | `#fcfbf7` | Permukaan kartu & sheet (netral, default) |
+| `--primary` | `#315b48` | Hijau hutan — SATU-SATUNYA warna aksi utama (7.7:1 dgn putih) |
+| `--secondary` | `#e8ebe5` | Chip, track, permukaan sekunder netral |
+| `--muted` / `--muted-foreground` | `#e8ebe5` / `#606a63` | Permukaan + teks sekunder (5.1:1) |
+| `--accent` | `#e6ede7` | Tint hijau — hover/highlight |
+| `--destructive` | `#a3483c` | Brick muted — error & aksi destruktif |
+| `--border` / `--input` | `#d9ded7` / `#d1d8d0` | Garis kartu & input |
+| `--ring` | `#315b48` | Fokus keyboard |
 
-### Ramp chart
+### Ramp chart resmi (seri = makna modul, konsisten lintas layar)
 
-`--chart-1..5`: `#0d9488 → #14b8a6 → #2dd4bf → #5eead4 → #99f6e4`
-(vivid→pastel teal, keluarga teal katalog); `--chart-out` `#dc2626`
-(outlier/destructive); `--chart-neutral` `#94a3b8` (batang netral slate).
-Di dark mode ramp dibalik dan digerangkan otomatis — lihat token `.dark`.
+`--chart-1` garden `#315b48` (seri utama/masuk) · `--chart-2` studio
+`#4c6e86` · `--chart-3` vault `#3d766b` · `--chart-4` gold `#8a6b35` ·
+`--chart-5` writer `#a15f49`; `--chart-out` clay `#a3483c` (negatif);
+`--chart-neutral` `#8a9389` (netral). Dark mode memakai versi terang
+(`#91b59b`, `#c0d4e0`, …) — makna seri tidak berubah antar tema.
 
 ### Tone modul (keluarga 3 tingkat: solid / deep / soft)
 
-Disiplin **satu primer**: `garden` (teal) adalah satu-satunya warna aksi
-utama. Tone lain hanya boleh dipakai untuk konteksnya masing-masing:
+Disiplin **satu primer**: `garden` adalah satu-satunya warna aksi utama.
+Warna modul dipakai HEMAT — hanya ikon, indikator kecil, label, state
+aktif, dan seri chart; BUKAN latar kartu statistik (directive §4):
 
-| Tone | Solid (teks putih aman) | Deep (teks di atas soft) | Soft (latar tint) | Dipakai khusus untuk |
+| Tone | Solid (teks putih aman) | Deep (teks di atas soft) | Soft (tint kecil) | Makna |
 |---|---|---|---|---|
-| `garden` | `#0f766e` | `#115e59` | `#ccfbf1` | Default & progres (Teal fokus) |
-| `studio` | `#ea580c` | `#c2410c` | `#ffedd5` | Fitness (Bugar) — oranye aksi katalog |
-| `vault` | `#0369a1` | `#075985` | `#e0f2fe` | Keuangan (Vault) — sky kepercayaan (katalog Insurance `#0369A1`) |
-| `writer` | `#db2777` | `#be185d` | `#fce7f3` | Jurnal SAJA — pink kreatif (katalog Creative Agency `#EC4899`) |
-| `gold` | `#b45309` | `#92400e` | `#fef3c7` | Streak/XP/Piala SAJA |
-| `clay` | `#dc2626` | `#b91c1c` | `#fee2e2` | Bahaya & pengeluaran (katalog destructive) |
-| `cream` | — | — | `#e6faf6` | Panel hero khusus (tint teal muda) |
+| `garden` | `#315b48` | `#294c3c` | `#e7eee8` | Kebiasaan, konsistensi, progres |
+| `studio` | `#4c6e86` | `#3a566b` | `#e8edf1` | Workout, fitness, aktivitas fisik |
+| `vault` | `#3d766b` | `#2f5c54` | `#e5eeeb` | Keuangan, tabungan, dompet, budget |
+| `writer` | `#a15f49` | `#794534` | `#f1e8e3` | Jurnal & tulisan SAJA |
+| `gold` | `#8a6b35` | `#695127` | `#f1ecdf` | Achievement, milestone, streak SAJA |
+| `clay` | `#a3483c` | `#7b342d` | `#f3e7e4` | Bahaya, aksi destruktif, nilai negatif |
+| `cream` | — | — | `#f4f3ee` | Ujung gradasi ilustrasi (fade ke kanvas) |
 
 ### Key warna entity (disimpan di DB)
 
@@ -76,17 +78,19 @@ hex — dipetakan ke tone via `src/components/rutina/habit-icons.ts`
 
 ### Dark mode (ringkas)
 
-Canvas `#0a1a18` (teal-hitam), kartu `#102422`, teks `#d2efe9`; primer menjadi
-`#2dd4bf` (teal-400). Semua tone family punya padanan dark di blok `.dark` —
-lihat `globals.css`; kontras sudah diuji WCAG AA.
-Teks naratif multi-kalimat minimal `text-sm` (14px); 10–12px hanya untuk caption/eyebrow.
+Canvas `#171d19` (hijau-hitam), kartu `#222a24`, teks `#e7ece6`; primer
+menjadi `#91b59b` (sage terang, teks `#17231b`). Solid modul tetap gelap
+(teks putih aman), deep menjadi terang (teks di atas soft gelap) — semua
+kontras teruji WCAG AA.
 
 ## 2. Aturan interaksi mobile (non-negotiable)
 
 - Target sentuh minimal **44×44px**. Pengecualian terdokumentasi: chip kalender
   7-kolom berukuran ~34×53px — memenuhi WCAG 2.5.8 AA (24px) dengan hit-area
   diperluas via pseudo-element (`after:-inset-x-1`); 44px mustahil secara fisik
-  pada viewport 360px dengan 7 kolom + panah navigasi 44px.
+  pada viewport 360px dengan 7 kolom + panah navigasi 44px. Blok pengecualian
+  ditandai atribut `data-audit-tap-exception` agar `bun run audit:design`
+  menghormatinya; elemen `disabled` dikecualikan dari cek fokus (WCAG 2.1).
 - Safe area iOS: `pt-safe` / `pb-safe` / `env(safe-area-inset-*)` di semua tepi.
 - Scroll container internal memakai `overscroll-contain`; `h-dvh` untuk tinggi shell.
 - Sheet (vaul): footer submit sticky di luar area scroll, `<form onSubmit>` sungguhan,
@@ -161,9 +165,9 @@ dideprekasi dan menunjuk ke #39). Spesifikasi yang diadopsi:
 | Token bento | Nilai di Rutina |
 |---|---|
 | `--grid-gap` | 10px (`gap-2.5`) di papan ringkas; 12–16px antar section |
-| `--card-radius` | 24px (`rounded-xl` pada theme ini) — konsisten semua tile |
-| `--card-bg` | `--card` (#ffffff) |
-| `--page-bg` | `--background` (teal muda `#f0fdfa`) |
+| `--card-radius` | 18px (`rounded-xl` pada theme ini) — konsisten semua tile |
+| `--card-bg` | `--card` (#fcfbf7) |
+| `--page-bg` | `--background` (kertas `#f4f3ee`) |
 | `--shadow` | `shadow-soft` (halus, ada offset+blur — bukan halo) |
 | `--hover-scale` | 1.02 via `.bento-tile` (hanya tile interaktif, pointer presisi, hormati reduced-motion) |
 

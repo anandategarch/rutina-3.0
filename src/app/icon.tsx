@@ -18,14 +18,14 @@ export default async function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#0f766e",
+          backgroundColor: "#315b48",
         }}
       >
         <svg width="512" height="512" viewBox="0 0 64 64" fill="none">
-          <path d="M32 47c0-13 6.5-21.5 17-25.5-2.2 13-6.5 21.5-17 25.5z" fill="#f0fdfa" />
-          <path d="M32 47c0-13-6.5-21.5-17-25.5 2.2 13 6.5 21.5 17 25.5z" fill="#5eead4" />
-          <rect x="30.5" y="29" width="3" height="19" rx="1.5" fill="#f0fdfa" />
-          <circle cx="44" cy="17" r="5" fill="#fb923c" />
+          <path d="M32 47c0-13 6.5-21.5 17-25.5-2.2 13-6.5 21.5-17 25.5z" fill="#f4f3ee" />
+          <path d="M32 47c0-13-6.5-21.5-17-25.5 2.2 13 6.5 21.5 17 25.5z" fill="#bbd4c1" />
+          <rect x="30.5" y="29" width="3" height="19" rx="1.5" fill="#f4f3ee" />
+          <circle cx="44" cy="17" r="5" fill="#dfc58f" />
         </svg>
       </div>
     ),

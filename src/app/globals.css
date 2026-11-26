@@ -71,144 +71,145 @@
 }
 
 :root {
-  --radius: 1.25rem;
+  /* Radius editorial: kartu 14–18px konsisten (rounded-lg 14, rounded-xl 18) */
+  --radius: 0.875rem;
   /* ============================================================
-     RUTINA "FOCUS TEAL" PALETTE — ui-ux-pro-max skill colors.csv
-     row #16 "Productivity Tool": "Teal focus + action orange
-     [Accent adjusted from #F97316]".
-       bg #F0FDFA · fg #134E4A · primary teal (fokus) · accent
-       orange (aksi) · border teal-200 #99F6E4 · muted #E8F1F4
-     Claymorphism (Mobile): cool teal canvas, vivid module hues,
-     soft depth. Solid fills keep >=4.5:1 contrast with white
-     (--primary di-darkened ke teal-700 agar AA); "bright"
-     variants are for decorative fills.
+     RUTINA "FIELD NOTES" PALETTE — Calm Editorial Utility.
+     Kanvas kertas hangat + hijau hutan sebagai satu-satunya warna
+     aksi utama; warna modul dipakai hemat untuk ikon, indikator,
+     label, state aktif, dan seri chart. Divalidasi WCAG 2.1 AA:
+     34/34 pasangan kritis >= 4.5:1 (lihat docs/DESIGN.md §1a).
      ============================================================ */
-  --background: #f0fdfa;
-  --foreground: #134e4a;
-  --card: #ffffff;
-  --card-foreground: #134e4a;
-  --popover: #ffffff;
-  --popover-foreground: #134e4a;
-  --primary: #0f766e;
+  --background: #f4f3ee;
+  --foreground: #232a26;
+  --card: #fcfbf7;
+  --card-foreground: #232a26;
+  --popover: #fcfbf7;
+  --popover-foreground: #232a26;
+  --primary: #315b48;
   --primary-foreground: #ffffff;
-  --secondary: #ccfbf1;
-  --secondary-foreground: #115e59;
-  --muted: #e8f1f4;
-  /* Catalog muted-foreground #475569 (slate) — AA on teal-50 canvas */
-  --muted-foreground: #475569;
-  --accent: #ffedd5;
-  --accent-foreground: #c2410c;
-  --destructive: #dc2626;
-  --border: #99f6e4;
-  --input: #99f6e4;
-  --ring: #0d9488;
-  /* Chart ramp — vivid teal steps + slate neutral */
-  --chart-1: #0d9488;
-  --chart-2: #14b8a6;
-  --chart-3: #2dd4bf;
-  --chart-4: #5eead4;
-  --chart-5: #99f6e4;
-  --chart-out: #dc2626;
-  --chart-neutral: #94a3b8;
-  --sidebar: #f0fdfa;
-  --sidebar-foreground: #134e4a;
-  --sidebar-primary: #0f766e;
+  --secondary: #e8ebe5;
+  --secondary-foreground: #465149;
+  --muted: #e8ebe5;
+  --muted-foreground: #606a63;
+  --accent: #e6ede7;
+  --accent-foreground: #2f5542;
+  --destructive: #a3483c;
+  --border: #d9ded7;
+  --input: #d1d8d0;
+  --ring: #315b48;
+  /* Chart palette resmi — seri mengikuti makna modul agar konsisten
+     lintas layar (rule #8/#10 directive: warna punya makna tetap).
+     1 garden (utama/masuk) · 2 studio · 3 vault · 4 gold · 5 writer
+     out = clay (negatif) · neutral = abu editorial */
+  --chart-1: #315b48;
+  --chart-2: #4c6e86;
+  --chart-3: #3d766b;
+  --chart-4: #8a6b35;
+  --chart-5: #a15f49;
+  --chart-out: #a3483c;
+  --chart-neutral: #8a9389;
+  --sidebar: #f4f3ee;
+  --sidebar-foreground: #232a26;
+  --sidebar-primary: #315b48;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ccfbf1;
-  --sidebar-accent-foreground: #115e59;
-  --sidebar-border: #99f6e4;
-  --sidebar-ring: #0d9488;
+  --sidebar-accent: #e8ebe5;
+  --sidebar-accent-foreground: #465149;
+  --sidebar-border: #d9ded7;
+  --sidebar-ring: #315b48;
   /* Signature hues */
-  --sage: #0f766e;
-  --sage-deep: #115e59;
-  --sage-soft: #ccfbf1;
-  --clay: #dc2626;
-  --clay-deep: #b91c1c;
-  --clay-soft: #fee2e2;
+  --sage: #315b48;
+  --sage-deep: #294c3c;
+  --sage-soft: #e7eee8;
+  --clay: #a3483c;
+  --clay-deep: #7b342d;
+  --clay-soft: #f3e7e4;
   /* ============================================================
-     MODULE TONE DISCIPLINE — ONE primary only: garden (teal).
-     Module tones are strictly scoped:
+     MODULE TONE DISCIPLINE — ONE primary only: garden (hijau hutan).
+     Modul warna HANYA untuk ikon, indikator kecil, label, state
+     aktif & seri chart — bukan latar kartu statistik (rule §4).
        studio = fitness · vault = finance · writer = JOURNAL ONLY
-       gold   = streak/XP/achievement ONLY · clay = danger/expense
+       gold   = achievement/milestone/streak ONLY · clay = danger
      sage/clay are kept as legacy aliases (sage ≡ garden).
      ============================================================ */
   /* Module tone families: solid (white-text safe) / deep (text on soft) / soft (tint bg) */
-  --garden: #0f766e;
-  --garden-deep: #115e59;
-  --garden-soft: #ccfbf1;
-  --studio: #ea580c;
-  --studio-deep: #c2410c;
-  --studio-soft: #ffedd5;
-  --vault: #0369a1;
-  --vault-deep: #075985;
-  --vault-soft: #e0f2fe;
-  --writer: #db2777;
-  --writer-deep: #be185d;
-  --writer-soft: #fce7f3;
-  --gold: #b45309;
-  --gold-deep: #92400e;
-  --gold-soft: #fef3c7;
-  --cream: #e6faf6;
+  --garden: #315b48;
+  --garden-deep: #294c3c;
+  --garden-soft: #e7eee8;
+  --studio: #4c6e86;
+  --studio-deep: #3a566b;
+  --studio-soft: #e8edf1;
+  --vault: #3d766b;
+  --vault-deep: #2f5c54;
+  --vault-soft: #e5eeeb;
+  --writer: #a15f49;
+  --writer-deep: #794534;
+  --writer-soft: #f1e8e3;
+  --gold: #8a6b35;
+  --gold-deep: #695127;
+  --gold-soft: #f1ecdf;
+  --cream: #f4f3ee;
 }
 
 .dark {
-  /* FOCUS TEAL dark — deep teal-black canvas, teal-400 primer */
-  --background: #0a1a18;
-  --foreground: #d2efe9;
-  --card: #102422;
-  --card-foreground: #d2efe9;
-  --popover: #102422;
-  --popover-foreground: #d2efe9;
-  --primary: #2dd4bf;
-  --primary-foreground: #042f2e;
-  --secondary: #123c38;
-  --secondary-foreground: #99f6e4;
-  --muted: #0f2b27;
-  --muted-foreground: #93b8b1;
-  --accent: #331d0c;
-  --accent-foreground: #fdba74;
-  --destructive: #f87171;
-  --border: #1c3833;
-  --input: #274a44;
-  --ring: #2dd4bf;
-  --chart-1: #2dd4bf;
-  --chart-2: #14b8a6;
-  --chart-3: #0d9488;
-  --chart-4: #0f766e;
-  --chart-5: #115e59;
-  --chart-out: #f87171;
-  --chart-neutral: #64748b;
-  --sidebar: #102422;
-  --sidebar-foreground: #d2efe9;
-  --sidebar-primary: #2dd4bf;
-  --sidebar-primary-foreground: #042f2e;
-  --sidebar-accent: #123c38;
-  --sidebar-accent-foreground: #99f6e4;
-  --sidebar-border: #1c3833;
-  --sidebar-ring: #2dd4bf;
-  --sage: #2dd4bf;
-  --sage-deep: #5eead4;
-  --sage-soft: #0e2c29;
-  --clay: #f87171;
-  --clay-deep: #fca5a5;
-  --clay-soft: #331412;
-  /* Module tone families (dark) */
-  --garden: #2dd4bf;
-  --garden-deep: #5eead4;
-  --garden-soft: #0e2c29;
-  --studio: #fb923c;
-  --studio-deep: #fdba74;
-  --studio-soft: #331d0c;
-  --vault: #38bdf8;
-  --vault-deep: #7dd3fc;
-  --vault-soft: #0c2438;
-  --writer: #fb7185;
-  --writer-deep: #fda4af;
-  --writer-soft: #331420;
-  --gold: #fbbf24;
-  --gold-deep: #fcd34d;
-  --gold-soft: #2e1f06;
-  --cream: #102422;
+  /* FIELD NOTES dark — kanvas hijau-hitam, primer sage terang */
+  --background: #171d19;
+  --foreground: #e7ece6;
+  --card: #222a24;
+  --card-foreground: #e7ece6;
+  --popover: #222a24;
+  --popover-foreground: #e7ece6;
+  --primary: #91b59b;
+  --primary-foreground: #17231b;
+  --secondary: #29332c;
+  --secondary-foreground: #d3ddd4;
+  --muted: #29332c;
+  --muted-foreground: #a4aea5;
+  --accent: #26392d;
+  --accent-foreground: #c5d8c9;
+  --destructive: #df8b7d;
+  --border: #38443b;
+  --input: #455047;
+  --ring: #91b59b;
+  --chart-1: #91b59b;
+  --chart-2: #c0d4e0;
+  --chart-3: #b7d3cc;
+  --chart-4: #dfc58f;
+  --chart-5: #e0bdae;
+  --chart-out: #df8b7d;
+  --chart-neutral: #6f7a70;
+  --sidebar: #222a24;
+  --sidebar-foreground: #e7ece6;
+  --sidebar-primary: #91b59b;
+  --sidebar-primary-foreground: #17231b;
+  --sidebar-accent: #29332c;
+  --sidebar-accent-foreground: #d3ddd4;
+  --sidebar-border: #38443b;
+  --sidebar-ring: #91b59b;
+  --sage: #315b48;
+  --sage-deep: #bbd4c1;
+  --sage-soft: #25382b;
+  --clay: #a3483c;
+  --clay-deep: #f0bdb5;
+  --clay-soft: #422b28;
+  /* Module tone families (dark) — solid tetap gelap (teks putih aman),
+     deep menjadi terang (teks di atas soft gelap) */
+  --garden: #315b48;
+  --garden-deep: #bbd4c1;
+  --garden-soft: #25382b;
+  --studio: #4c6e86;
+  --studio-deep: #c0d4e0;
+  --studio-soft: #263743;
+  --vault: #3d766b;
+  --vault-deep: #b7d3cc;
+  --vault-soft: #233b35;
+  --writer: #a15f49;
+  --writer-deep: #e0bdae;
+  --writer-soft: #3d2d28;
+  --gold: #8a6b35;
+  --gold-deep: #dfc58f;
+  --gold-soft: #3e3422;
+  --cream: #171d19;
 }
 
 @layer base {
@@ -228,14 +229,14 @@
     height: 100%;
     overflow: hidden;
   }
-  /* Skill typography rule: rounded Nunito for ALL headings (700+ only),
-     DM Sans stays for body — never Nunito at small body sizes. */
+  /* Editorial typography: heading SEMIBOLD (600) — hierarki lewat ukuran
+     & spasi, bukan ketebalan berlebih. DM Sans untuk body. */
   h1,
   h2,
   h3,
   h4 {
     font-family: var(--font-display), ui-rounded, system-ui, sans-serif;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: -0.01em;
   }
   select,
@@ -250,16 +251,16 @@
      belong to no design system. Theme them from the palette."
      ============================================================ */
   ::selection {
-    background: var(--garden);
-    color: #ffffff;
+    background: var(--primary);
+    color: var(--primary-foreground);
   }
   .dark ::selection {
-    background: var(--garden);
-    color: var(--garden-soft);
+    background: var(--primary);
+    color: var(--primary-foreground);
   }
   input,
   textarea {
-    caret-color: var(--garden);
+    caret-color: var(--primary);
   }
 }
 
@@ -282,25 +283,23 @@
   font-family: var(--font-caveat), "Comic Sans MS", cursive;
 }
 
-/* Soft double shadow — quiet elevation (teal-tinted, matches --foreground) */
+/* Elevasi editorial — halus, tanpa inset glow / claymorphism.
+   (Nama .shadow-clay dipertahankan sebagai alias agar semua
+   pemakaian lama tetap valid, nilainya sudah dinetralkan.) */
 .shadow-soft {
   box-shadow:
-    0 1px 2px rgba(19, 78, 74, 0.05),
-    0 4px 14px rgba(19, 78, 74, 0.06);
+    0 1px 2px rgba(35, 42, 38, 0.06),
+    0 2px 8px rgba(35, 42, 38, 0.05);
 }
 .shadow-lift {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    0 2px 4px rgba(19, 78, 74, 0.06),
-    0 12px 26px rgba(19, 78, 74, 0.1);
+    0 1px 2px rgba(35, 42, 38, 0.07),
+    0 8px 20px rgba(35, 42, 38, 0.09);
 }
-/* Claymorphism double shadow — soft "pressed dough" depth for hero cards */
 .shadow-clay {
   box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -3px 6px rgba(19, 78, 74, 0.05),
-    0 3px 6px rgba(19, 78, 74, 0.05),
-    0 12px 28px rgba(19, 78, 74, 0.1);
+    0 2px 4px rgba(35, 42, 38, 0.06),
+    0 10px 24px rgba(35, 42, 38, 0.09);
 }
 .dark .shadow-soft {
   box-shadow:
@@ -309,15 +308,12 @@
 }
 .dark .shadow-lift {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 2px 4px rgba(0, 0, 0, 0.3),
     0 12px 26px rgba(0, 0, 0, 0.35);
 }
 .dark .shadow-clay {
   box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.06),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.25),
-    0 3px 6px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.3),
     0 12px 28px rgba(0, 0, 0, 0.4);
 }
 
@@ -333,7 +329,7 @@
 .press:active {
   transform: scale(0.96);
 }
-/* Deeper squish for the FAB (claymorphism scale 0.92 on press) */
+/* Deeper squish for the FAB */
 .press-squish {
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease-out;
   cursor: pointer;
@@ -353,9 +349,8 @@
 /* ============================================================
    Bento grid tiles — ui-ux-pro-max-skill style #39 "Bento Box Grid"
    (active): modular cards, asymmetric grid, varied sizes (1x1, 2x1,
-   2x2 / row-span), Apple-style dashboard tiles, negative space.
-   Spec tokens: gap 10–16px, radius 16–24px (rounded-xl = 24px di
-   theme ini), shadow halus, hover scale 1.02 untuk tile interaktif.
+   2x2 / row-span). Spec tokens: gap 10–16px, radius 16–24px
+   (rounded-xl = 18px di theme ini), shadow halus, hover scale 1.02.
    ============================================================ */
 .bento-tile {
   transition:
@@ -381,14 +376,14 @@
 /* Custom scrollbars for scrollable lists */
 .scroll-thin {
   scrollbar-width: thin;
-  scrollbar-color: rgba(71, 85, 105, 0.35) transparent;
+  scrollbar-color: rgba(96, 106, 99, 0.35) transparent;
 }
 .scroll-thin::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.3);
+  background: rgba(96, 106, 99, 0.3);
   border-radius: 999px;
 }
 .scroll-thin::-webkit-scrollbar-track {

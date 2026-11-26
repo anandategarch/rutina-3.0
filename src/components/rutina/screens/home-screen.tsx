@@ -244,7 +244,7 @@ export default function HomeScreen() {
         <div className="flex items-start justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-muted-foreground">{formatDateID(d.today, true)}</p>
-            <h1 className="text-2xl font-extrabold leading-tight mt-0.5">
+            <h1 className="text-2xl font-bold leading-tight mt-0.5">
               {greeting()}, {profile?.name ?? "Sahabat"}
             </h1>
             {profile?.identityVoice && (
@@ -420,7 +420,10 @@ export default function HomeScreen() {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <div className="flex-1 grid grid-cols-7 gap-1">
+          <div
+            className="flex-1 grid grid-cols-7 gap-1"
+            data-audit-tap-exception="chip-kalender-7-kolom"
+          >
             {stripDays.map((ds) => {
               const active = ds === selectedDate;
               const isToday = ds === d.today;

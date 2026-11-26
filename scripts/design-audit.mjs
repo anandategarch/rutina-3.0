@@ -77,15 +77,25 @@ function inPageChecks() {
   const noAlt = imgs.filter((im) => im.getAttribute('alt') === null);
   if (noAlt.length) push('high', 'img-alt', `${noAlt.length} <img> missing alt attribute.`);
 
-  // 3. Tap targets (mobile only)
+  // 3. Tap targets (mobile only). Elements inside a [data-audit-tap-exception]
+  // container are skipped when the exception is documented in docs/DESIGN.md §2
+  // (mis. chip kalender 7-kolom dgn hit-area pseudo-element, WCAG 2.5.8 AA).
   if (vw <= 480) {
     const small = [...document.querySelectorAll('a,button,[role=button],input,select')]
-      .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < 44 || r.height < 44); });
+      .filter((el) => {
+        if (el.closest('[data-audit-tap-exception]')) return false;
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && (r.width < 44 || r.height < 44);
+      });
     if (small.length) push('medium', 'tap-target', `${small.length} interactive targets < 44×44px on mobile.`);
   }
 
-  // 4. Focus visibility (sample of focusables)
-  const focusables = [...document.querySelectorAll('a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])')].slice(0, 25);
+  // 4. Focus visibility (sample of focusables).
+  // Disabled controls are exempt (WCAG 2.1): they cannot receive focus by
+  // design, so focus() is a no-op and no visible indicator is expected.
+  const focusables = [...document.querySelectorAll('a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])')]
+    .filter((el) => !('disabled' in el) || !el.disabled)
+    .slice(0, 25);
   let noFocus = 0;
   for (const el of focusables) {
     el.focus();
