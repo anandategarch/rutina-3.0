@@ -696,7 +696,7 @@ export function MetricBar({
             boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 25%, transparent) inset`,
             transform: `scaleX(${fillScale})`,
             transformOrigin: "left",
-            transition: fillSettled ? "transform 0.7s var(--ease-spring)" : "none",
+            transition: fillSettled ? "transform 0.7s var(--ease-out)" : "none",
           }}
         />
       </div>
@@ -800,7 +800,7 @@ export function RingStat({
             strokeDasharray={c}
             strokeDashoffset={filled ? c * (1 - clamped) : c}
             style={{
-              transition: "stroke-dashoffset var(--motion-slow) var(--ease-spring)",
+              transition: "stroke-dashoffset var(--motion-slow) var(--ease-out)",
               filter: `drop-shadow(0 1px 2px ${color}40)`,
             }}
           />

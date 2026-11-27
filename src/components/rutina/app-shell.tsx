@@ -124,7 +124,8 @@ function TabButton({
           halus antar tab via layoutId (aman terhadap crossfade di MainContent —
           pil hidup di header persisten, bukan di subtree yang di-crossfade;
           hanya SATU span aktif dalam satu waktu, jadi tepat satu layoutId).
-          Spring scale lama dipertahankan (ui-reasoning #94: spring bounce). */}
+          taste-skill motion.md "Never": an overshooting ease — bounce spring
+          scale 1.08 diganti tween decelerate 150ms (kurva --ease-ui). */}
       <motion.span
         layoutId="nav-pill"
         className={cn(
@@ -132,7 +133,7 @@ function TabButton({
           active ? "bg-garden-soft text-garden-deep" : "text-muted-foreground"
         )}
         animate={{ scale: active ? 1.08 : 1 }}
-        transition={{ type: "spring", stiffness: 500, damping: 18 }}
+        transition={{ duration: 0.15, ease: [0.2, 0.8, 0.2, 1] }}
       >
         <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
       </motion.span>

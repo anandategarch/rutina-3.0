@@ -153,14 +153,17 @@
   --gold-soft: #f1ecdf;
   --cream: #f4f3ee;
   /* Motion tokens — ui-ux-pro-max motion.csv + quick-ref §7 motion-consistency:
-     enter = decelerate, exit 60-70% of enter, spring untuk momen taktil */
+     enter = decelerate, exit 60-70% of enter.
+     taste-skill motion.md: "No curve passes its mark: no bounce, no overshoot"
+     — SATU kurva UI (ease-ui) untuk semua hover/press; --ease-spring dihapus
+     karena kontinuannya (0.34,1.56,..) melewati titik target (overshoot). */
   --motion-fast: 150ms;
   --motion-base: 250ms;
   --motion-slow: 350ms;
   --motion-exit: 150ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-ui: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-linear: linear;
 }
 
@@ -355,12 +358,13 @@
     0 12px 28px rgba(0, 0, 0, 0.4);
 }
 
-/* Spring press feedback — skill: "Spring bounce + Soft press 200ms"
-   (ease-spring via token var(--ease-spring), kurva identik 0.28s) */
+/* Press feedback — taste-skill motion.md: press 90-150ms, satu kurva UI
+   (--ease-ui), "no bounce, no overshoot". Kedalaman squish (0.96) dipertahankan
+   sebagai identitas taktil Rutina; kurva & durasinya dinormalkan. */
 .press {
   transition:
-    transform 0.28s var(--ease-spring),
-    box-shadow 0.2s ease-out,
+    transform 0.14s var(--ease-ui),
+    box-shadow 0.12s ease-out,
     background-color 0.15s ease-out;
   cursor: pointer;
   /* Touch hygiene: tekanan lama tidak memicu seleksi teks / zoom dobel */
@@ -373,7 +377,7 @@
 }
 /* Deeper squish for the FAB */
 .press-squish {
-  transition: transform 0.3s var(--ease-spring), box-shadow 0.2s ease-out;
+  transition: transform 0.14s var(--ease-ui), box-shadow 0.12s ease-out;
   cursor: pointer;
   /* Touch hygiene: tekanan lama tidak memicu seleksi teks / zoom dobel */
   user-select: none;
@@ -413,18 +417,27 @@
    Bento grid tiles — ui-ux-pro-max-skill style #39 "Bento Box Grid"
    (active): modular cards, asymmetric grid, varied sizes (1x1, 2x1,
    2x2 / row-span). Spec tokens: gap 10–16px, radius 16–24px
-   (rounded-xl = 18px di theme ini), shadow halus, hover scale 1.02.
+   (rounded-xl = 18px di theme ini).
+   taste-skill motion.md kartu ber-tautan: "lifts 2px, its border darkens
+   a step, an optional soft shadow" — diterapkan literal di sini.
+   Kartu yang SCALES saat hover masuk daftar "Never" ("a card that tilts,
+   flips, scales"), dan kartu TANPA tautan tak boleh merespons hover
+   ("Card without a link: nothing") — karena itu hover di-scope ke
+   .press.bento-tile (tile interaktif saja).
    ============================================================ */
 .bento-tile {
   transition:
-    transform 0.28s var(--ease-spring),
+    transform 0.18s var(--ease-ui),
+    border-color 0.18s var(--ease-ui),
     box-shadow 0.2s ease-out;
 }
-/* Hover scale hanya di pointer presisi & jika user tidak
-   meminta reduced-motion (impeccable motion floor). */
+/* Lift 2px hanya di pointer presisi, hanya tile interaktif, dan jika user
+   tidak meminta reduced-motion (impeccable motion floor). */
 @media (hover: hover) and (pointer: fine) {
-  .bento-tile:hover {
-    transform: scale(1.02);
+  .press.bento-tile:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--foreground) 24%, var(--border));
+    box-shadow: 0 8px 20px rgba(35, 42, 38, 0.09);
   }
 }
 
@@ -498,10 +511,12 @@
    tetap diset langsung oleh mutasi, animasi hanya aksen (ux #119) */
 @keyframes check-pop {
   0% { transform: scale(1); }
-  40% { transform: scale(1.15); }
+  40% { transform: scale(1.06); }
   100% { transform: scale(1); }
 }
-.check-pop { animation: check-pop var(--motion-base) var(--ease-spring); }
+/* taste-skill: "no curve passes its mark" — puncak pop diturunkan ke 1.06
+   dan memakai ease-out (decelerate), bukan kurva spring overshoot. */
+.check-pop { animation: check-pop var(--motion-base) var(--ease-out); }
 
 /* Stagger entrance utk list pendek (maks 8 anak; baris baru yang muncul
    lewat "Lihat semua" tampil langsung tanpa animasi) */

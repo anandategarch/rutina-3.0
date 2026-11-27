@@ -277,7 +277,7 @@ export function ProgressRing({
           strokeDasharray={c}
           strokeDashoffset={filled ? c * (1 - clamped) : c}
           style={{
-            transition: "stroke-dashoffset var(--motion-slow) var(--ease-spring)",
+            transition: "stroke-dashoffset var(--motion-slow) var(--ease-out)",
             filter: `drop-shadow(0 1px 2px ${color}40)`,
           }}
         />
