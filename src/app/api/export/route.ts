@@ -63,7 +63,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const [profile, habits, habitLogs, workouts, foodEntries, checkins, bodyMetrics, wallets, transactions, budgets, savingsGoals, journalEntries, foodItems, achievements] =
+    const [profile, habits, habitLogs, workouts, foodEntries, checkins, bodyMetrics, wallets, transactions, budgets, savingsGoals, journalEntries, foodItems, achievements, financeCategories] =
       await Promise.all([
         db.profile.findFirst(),
         db.habit.findMany(),
@@ -84,6 +84,11 @@ export async function GET(req: Request) {
         // audit C1: status piala adalah progres pengguna — wajib ikut
         // cadangan agar restore tidak mengunci ulang piala yang sudah diraih.
         db.achievement.findMany(),
+        // Kategori keuangan buatan pengguna + hasil migrasi Rutina 2.0 —
+        // tanpa ini restore kehilangan kategori (keluhan "kategori keuangan
+        // belum semua"): transaksi menyimpan kategori sebagai string, jadi
+        // daftar pemilih kategori kosong setelah pulih ke DB baru.
+        db.financeCategory.findMany(),
       ]);
 
     const payload = {
@@ -102,6 +107,7 @@ export async function GET(req: Request) {
       journalEntries,
       foodItems,
       achievements,
+      financeCategories,
     };
 
     return new NextResponse(JSON.stringify(payload, null, 2), {

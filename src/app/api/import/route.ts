@@ -205,6 +205,19 @@ function pickAchievement(r: Row) {
   };
 }
 
+// Kategori keuangan buatan pengguna — ikut dipulihkan agar daftar kategori
+// transaksi tidak kosong setelah restore (keluhan "kategori keuangan belum
+// semua"). Baris hasil migrasi Rutina 2.0 mempertahankan id legacy (slug).
+function pickFinanceCategory(r: Row) {
+  return {
+    id: str(r.id),
+    name: (str(r.name) ?? "").trim().slice(0, 60),
+    type: str(r.type) === "income" ? "income" : "expense",
+    archived: r.archived === true,
+    createdAt: safeDate(r.createdAt),
+  };
+}
+
 function asArray(v: unknown): Row[] {
   return Array.isArray(v) ? (v.filter((x) => x && typeof x === "object") as Row[]) : [];
 }
@@ -347,6 +360,35 @@ export async function POST(req: Request) {
           return ok;
         })
       : null;
+    // Koleksi kategori keuangan — opsional (cadangan lama tanpa koleksi ini
+    // tetap dipulihkan dan kategori yang ada di DB tidak disentuh).
+    const financeCategoriesPayload = Array.isArray(body.financeCategories)
+      ? asArray(body.financeCategories)
+          .map(pickFinanceCategory)
+          .filter((c) => {
+            const ok = Boolean(c.id) && Boolean(c.name);
+            if (!ok) bump("financeCategories");
+            return ok;
+          })
+          // nama unik tak peka huruf besar/kecil (selaras POST /api/fin-categories):
+          // duplikat nama dalam satu payload dibuang & dihitung, id pertama menang.
+          .filter(
+            (() => {
+              const seen = new Set<string>();
+              return (c, idx, arr) => {
+                void idx;
+                void arr;
+                const k = c.name.toLowerCase();
+                if (seen.has(k)) {
+                  bump("financeCategories");
+                  return false;
+                }
+                seen.add(k);
+                return true;
+              };
+            })()
+          )
+      : null;
 
     // audit B1-A2: seluruh koleksi kosong → tidak ada yang bisa dipulihkan
     if (
@@ -362,7 +404,8 @@ export async function POST(req: Request) {
       savingsGoals.length === 0 &&
       journalEntries.length === 0 &&
       (foodItemsPayload?.length ?? 0) === 0 &&
-      (achievementsPayload?.length ?? 0) === 0
+      (achievementsPayload?.length ?? 0) === 0 &&
+      (financeCategoriesPayload?.length ?? 0) === 0
     ) {
       return NextResponse.json(
         { error: "Cadangan kosong — tidak ada yang dipulihkan" },
@@ -394,6 +437,15 @@ export async function POST(req: Request) {
       }
     }
     // audit C1: id/kunci duplikat pada koleksi baru → 400
+    if (financeCategoriesPayload) {
+      const dupCat = findDupId(financeCategoriesPayload, "kategori keuangan");
+      if (dupCat) {
+        return NextResponse.json(
+          { error: "Payload berisi id duplikat pada data kategori keuangan" },
+          { status: 400 }
+        );
+      }
+    }
     if (foodItemsPayload) {
       const dupFood = findDupId(foodItemsPayload, "katalog makanan");
       if (dupFood) {
@@ -658,6 +710,26 @@ export async function POST(req: Request) {
           await tx.achievement.updateMany({ data: { unlockedAt: null } });
         }
 
+        // Kategori keuangan buatan pengguna — kumpulan referensi: hanya
+        // ditimpa bila payload membawa koleksi itu (cadangan lama tanpa
+        // financeCategories tidak menghapus kategori yang sudah ada).
+        let restoredFinanceCategories = 0;
+        if (financeCategoriesPayload) {
+          await tx.financeCategory.deleteMany({});
+          if (financeCategoriesPayload.length) {
+            await tx.financeCategory.createMany({
+              data: financeCategoriesPayload.map((c) => ({
+                id: c.id as string,
+                name: c.name as string,
+                type: c.type as string,
+                archived: c.archived as boolean,
+                ...(c.createdAt ? { createdAt: c.createdAt } : {}),
+              })),
+            });
+          }
+          restoredFinanceCategories = financeCategoriesPayload.length;
+        }
+
         // Import = pemulihan penuh: profil diterapkan
         if (p) {
           await tx.profile.upsert({
@@ -666,7 +738,7 @@ export async function POST(req: Request) {
             create: { id: "main", ...profileData },
           });
         }
-        return { restoredFoodItems, restoredAchievements };
+        return { restoredFoodItems, restoredAchievements, restoredFinanceCategories };
       },
       { timeout: 30_000 }
     );
@@ -687,6 +759,7 @@ export async function POST(req: Request) {
         journalEntries: validJournalEntries.length,
         foodItems: txResult.restoredFoodItems,
         achievements: txResult.restoredAchievements,
+        financeCategories: txResult.restoredFinanceCategories,
       },
       dropped,
     });

@@ -188,10 +188,40 @@ async function main() {
     userCatImported++;
     catImported++;
   }
+
+  // 1c. Tabel kategori terpadu legacy Rutina 2.0 — finance_categories
+  // (snake_case; inilah sumber data kategori asli di DB produksi —
+  // rutina_fin_categories di sana kosong). Kolom: id, name, emoji, color,
+  // type (sudah expense|income), sort_order, created_at, updated_at —
+  // tanpa kolom archived (semua baris aktif).
+  let unifiedRows: unknown[] = [];
+  try {
+    unifiedRows = await q(
+      "SELECT id, name, type, sort_order FROM finance_categories ORDER BY sort_order"
+    );
+  } catch {
+    console.log("   (tabel finance_categories tidak ada — lewati)");
+  }
+  let unifiedImported = 0;
+  for (const r of unifiedRows) {
+    const id = str(r, 0);
+    const name = str(r, 1)?.trim();
+    const typeRaw = str(r, 2);
+    if (!id || !name) continue;
+    const type = typeRaw === "income" ? "income" : typeRaw === "expense" ? "expense" : null;
+    if (!type) continue;
+    if (haveCatId.has(id)) continue;
+    if (haveCatNameLower.has(name.toLowerCase())) continue;
+    catRows.push({ id, name, type, archived: false });
+    haveCatId.add(id);
+    haveCatNameLower.add(name.toLowerCase());
+    unifiedImported++;
+    catImported++;
+  }
   if (catRows.length) {
     await db.financeCategory.createMany({ data: catRows });
   }
-  console.log(`📦 Kategori keuangan: +${catImported} (katalog legacy: ${catImported - userCatImported}, buatan pengguna: ${userCatImported})`);
+  console.log(`📦 Kategori keuangan: +${catImported} (katalog legacy: ${catImported - userCatImported - unifiedImported}, buatan pengguna: ${userCatImported}, finance_categories legacy: ${unifiedImported})`);
 
   /* 3. Jurnal ---------------------------------------------------------- */
   let noteRows: unknown[] = [];
