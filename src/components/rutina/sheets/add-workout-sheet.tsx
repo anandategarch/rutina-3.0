@@ -15,6 +15,7 @@ import {
   Clock3,
   Gauge,
   X,
+  WifiOff,
 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
@@ -355,6 +356,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                   <button
                     type="button"
                     onClick={() => setMuscleFilter(null)}
+                    aria-pressed={muscleFilter === null}
                     className={cn(
                       "press rounded-full px-3 py-1.5 text-xs font-semibold min-h-[44px]",
                       muscleFilter === null ? "bg-studio text-white" : "bg-card text-muted-foreground border border-border/70"
@@ -367,6 +369,7 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                       key={g.key}
                       type="button"
                       onClick={() => setMuscleFilter(g.key)}
+                      aria-pressed={muscleFilter === g.key}
                       className={cn(
                         "press rounded-full px-3 py-1.5 text-xs font-semibold min-h-[44px]",
                         muscleFilter === g.key ? "bg-studio text-white" : "bg-card text-muted-foreground border border-border/70"
@@ -382,6 +385,19 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
                   {exercisesQuery.isLoading ? (
                     <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" /> Memuat gerakan...
+                    </div>
+                  ) : exercisesQuery.isError ? (
+                    // audit ux-guidelines: gagal muat ≠ kosong — tampilkan retry
+                    <div className="flex flex-col items-center gap-2 py-4 text-xs text-muted-foreground">
+                      <WifiOff className="h-4 w-4 text-clay" />
+                      Gagal memuat library gerakan.
+                      <button
+                        type="button"
+                        onClick={() => exercisesQuery.refetch()}
+                        className="press min-h-[44px] rounded-xl bg-studio px-3 py-1.5 text-xs font-bold text-white"
+                      >
+                        Coba Lagi
+                      </button>
                     </div>
                   ) : filteredExercises.length === 0 ? (
                     <div className="py-4 text-center text-xs text-muted-foreground">Tidak ada gerakan cocok.</div>

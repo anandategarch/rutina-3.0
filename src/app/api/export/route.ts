@@ -63,7 +63,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const [profile, habits, habitLogs, workouts, foodEntries, checkins, bodyMetrics, wallets, transactions, budgets, savingsGoals, journalEntries] =
+    const [profile, habits, habitLogs, workouts, foodEntries, checkins, bodyMetrics, wallets, transactions, budgets, savingsGoals, journalEntries, foodItems, achievements] =
       await Promise.all([
         db.profile.findFirst(),
         db.habit.findMany(),
@@ -77,6 +77,13 @@ export async function GET(req: Request) {
         db.budget.findMany(),
         db.savingsGoal.findMany(),
         db.journalEntry.findMany(),
+        // audit C1: katalog makanan ikut diekspor — item buatan pengguna
+        // tidak boleh hilang saat pemulihan (katalog referensi aplikasi
+        // akan di-top-up ulang otomatis oleh GET /api/food-items).
+        db.foodItem.findMany(),
+        // audit C1: status piala adalah progres pengguna — wajib ikut
+        // cadangan agar restore tidak mengunci ulang piala yang sudah diraih.
+        db.achievement.findMany(),
       ]);
 
     const payload = {
@@ -93,6 +100,8 @@ export async function GET(req: Request) {
       budgets,
       savingsGoals,
       journalEntries,
+      foodItems,
+      achievements,
     };
 
     return new NextResponse(JSON.stringify(payload, null, 2), {

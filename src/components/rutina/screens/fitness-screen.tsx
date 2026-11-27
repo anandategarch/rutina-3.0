@@ -34,6 +34,7 @@ import {
   Shuffle,
   Plus,
   Loader2,
+  WifiOff,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -125,6 +126,28 @@ const TYPE_FILTERS = [
 
 // ============ Screen root ============
 
+/** Gagal muat satu tab (bukan seluruh layar) — EmptyState + coba lagi
+ *  (audit ux-guidelines: jangan tampilkan kosong palsu saat query gagal). */
+function TabLoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="pt-10">
+      <EmptyState
+        icon={<WifiOff className="h-6 w-6" />}
+        title="Ada kendala memuat data"
+        description="Periksa koneksi internetmu lalu coba lagi."
+        action={
+          <Button
+            onClick={onRetry}
+            className="press rounded-xl bg-studio text-white font-bold hover:bg-studio-deep min-h-[44px]"
+          >
+            Coba Lagi
+          </Button>
+        }
+      />
+    </div>
+  );
+}
+
 export default function FitnessScreen() {
   const workoutsQuery = useQuery({ queryKey: ["workouts"], queryFn: rutinaApi.workouts });
   const checkinsQuery = useQuery({ queryKey: ["checkins"], queryFn: rutinaApi.checkins });
@@ -134,6 +157,38 @@ export default function FitnessScreen() {
 
   // Sasaran kebugaran: satu sumber state untuk tab Latihan & Tubuh (sinkron dengan localStorage)
   const [goals, setGoals] = React.useState<FitnessGoals>(readGoals);
+
+  // Pola gagal muat yang sama dengan layar Keuangan (audit ux-guidelines):
+  // semua sumber utama gagal → layar penuh + coba lagi; sebagian gagal → banner.
+  const allFailed = workoutsQuery.isError && checkinsQuery.isError;
+  const anyFailed = workoutsQuery.isError || checkinsQuery.isError;
+  const retryFailed = () => {
+    if (workoutsQuery.isError) workoutsQuery.refetch();
+    if (checkinsQuery.isError) checkinsQuery.refetch();
+  };
+
+  if (allFailed) {
+    return (
+      <div className="flex flex-col min-h-full">
+        <ScreenHeader title="Bugar" subtitle="Latihan, asupan & tubuh dalam satu layar" tone="studio" />
+        <div className="px-4 pt-16">
+          <EmptyState
+            icon={<WifiOff className="h-6 w-6" />}
+            title="Ada kendala memuat data"
+            description="Periksa koneksi internetmu lalu coba lagi."
+            action={
+              <button
+                onClick={retryFailed}
+                className="press min-h-[44px] rounded-xl bg-studio px-4 py-2.5 text-sm font-bold text-white"
+              >
+                Coba Lagi
+              </button>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-full">
@@ -164,6 +219,22 @@ export default function FitnessScreen() {
             </TabsList>
           </div>
         </div>
+
+        {/* Banner gagal muat sebagian (query masih punya cache → tetap tampilkan data) */}
+        {anyFailed && (
+          <div className="mx-4 mt-3 flex items-center gap-3 rounded-xl border border-clay/40 bg-clay-soft p-3">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-clay" />
+            <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-clay-deep">
+              Sebagian data gagal dimuat — angka di bawah mungkin tidak lengkap.
+            </p>
+            <button
+              onClick={retryFailed}
+              className="press min-h-[44px] shrink-0 rounded-lg bg-clay px-3 text-xs font-bold text-white"
+            >
+              Coba Lagi
+            </button>
+          </div>
+        )}
 
         <TabsContent value="latihan" className="px-4 pt-4 pb-6 space-y-4">
           <WorkoutTab workouts={workouts} loading={workoutsQuery.isLoading || checkinsQuery.isLoading} checkins={checkins} goals={goals} />
@@ -892,11 +963,11 @@ const WorkoutHistoryCard = React.memo(function WorkoutHistoryCard({ workout: w }
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="rounded-xl">Batal</AlertDialogCancel>
+              <AlertDialogCancel className="press min-h-[44px] flex-1 sm:flex-none rounded-xl">Batal</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deleteMutation.mutate(w.id)}
                 disabled={deleteMutation.isPending}
-                className="rounded-xl bg-destructive text-white hover:bg-destructive/90"
+                className="press min-h-[44px] flex-1 sm:flex-none rounded-xl bg-destructive text-white hover:bg-destructive/90"
               >
                 {deleteMutation.isPending ? "Menghapus..." : "Hapus"}
               </AlertDialogAction>
@@ -911,12 +982,13 @@ const WorkoutHistoryCard = React.memo(function WorkoutHistoryCard({ workout: w }
             onClick={() => setExpanded((e) => !e)}
             className="press mt-2 flex min-h-[44px] items-center gap-1 text-xs font-bold text-studio-deep"
             aria-expanded={expanded}
+            aria-controls={`strength-list-${w.id}`}
           >
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             {items.length} gerakan beban
           </button>
           {expanded && (
-            <ul className="mt-1 space-y-2 rounded-xl bg-studio-soft/60 p-2.5">
+            <ul id={`strength-list-${w.id}`} className="mt-1 space-y-2 rounded-xl bg-studio-soft/60 p-2.5">
               {items.map((it, i) => {
                 // Tonase per gerakan dibandingkan gerakan terberat sesi ini —
                 // angka mentah kg×rep×set kini didampingi bar visual (ux-guidelines)
@@ -1209,6 +1281,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
   };
 
   if (foodsQuery.isLoading) return <TabSkeleton />;
+  if (foodsQuery.isError) return <TabLoadError onRetry={() => foodsQuery.refetch()} />;
 
   const remaining = calTarget - Math.round(totals.calories);
   const over = remaining < 0;
@@ -1421,11 +1494,11 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel className="rounded-xl">Batal</AlertDialogCancel>
+                                <AlertDialogCancel className="press min-h-[44px] flex-1 sm:flex-none rounded-xl">Batal</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => deleteMutation.mutate(e.id)}
                                   disabled={deleteMutation.isPending}
-                                  className="rounded-xl bg-destructive text-white hover:bg-destructive/90"
+                                  className="press min-h-[44px] flex-1 sm:flex-none rounded-xl bg-destructive text-white hover:bg-destructive/90"
                                 >
                                   {deleteMutation.isPending ? (
                                     <>
@@ -1657,6 +1730,7 @@ function BodyTab({
   };
 
   if (metricsQuery.isLoading) return <TabSkeleton />;
+  if (metricsQuery.isError) return <TabLoadError onRetry={() => metricsQuery.refetch()} />;
 
   const checkinBars = todayCheckin
     ? [

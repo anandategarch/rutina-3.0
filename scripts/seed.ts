@@ -17,6 +17,9 @@
  */
 import { db } from "@/lib/db";
 import { EXERCISE_CATALOG } from "@/lib/rutina/exercise-catalog";
+import { QUOTE_CATALOG } from "@/lib/rutina/quote-catalog";
+import { FOOD_CATALOG } from "@/lib/rutina/food-catalog";
+import { ACHIEVEMENT_CATALOG } from "@/lib/rutina/achievement-catalog";
 
 /* ---------------- util ---------------- */
 
@@ -202,68 +205,25 @@ const STRENGTH_SESSIONS: Array<{ title: string; items: Array<{ exercise: string;
   },
 ];
 
-const QUOTES = [
-  { text: "Disiplin adalah jembatan antara tujuan dan pencapaian.", author: "Jim Rohn" },
-  { text: "Kita adalah apa yang kita lakukan berulang-ulang. Keunggulan, maka, bukanlah tindakan melainkan kebiasaan.", author: "Aristoteles" },
-  { text: "Jangan menyerah sebelum mencoba. Bertahanlah sedikit lebih lama dari rasa malasmu.", author: "Mario Teguh" },
-  { text: "Pemuda yang berani dan keras kepala itulah yang kelak mengangkat derajat bangsanya.", author: "Soekarno" },
-  { text: "Berhentilah mengeluh, mulailah bergerak. Hari terbaik adalah hari ketika kamu mulai.", author: "Buya Hamka" },
-  { text: "Satu langkah kecil setiap hari lebih berharga daripada rencana besar yang tidak pernah dijalankan.", author: "Sahabat Rutina" },
-  { text: "Waktu yang kamu investasikan pada dirimu sendiri tidak pernah sia-sia.", author: "Robin Sharma" },
-  { text: "Pikiran yang tenang membawa kekuatan yang besar.", author: "Lao Tzu" },
-  { text: "Kesehatan adalah mahkota atas segala pencapaian.", author: "Ungkapan Melayu" },
-  { text: "Tumbuh itu tidak selalu terasa nyaman, dan rasa nyaman jarang membuatmu tumbuh.", author: "Anonim" },
-];
+/** Katalog referensi aplikasi bersumber dari lib katalog (satu sumber
+ *  dengan API): gerakan → @/lib/rutina/exercise-catalog, kutipan →
+ *  quote-catalog, makanan → food-catalog, piala → achievement-catalog. */
 
-/** Katalog latihan untuk picker sheet Workout (tanpa ini picker kosong di install baru). */
-// Katalog gerakan kini bersumber dari @/lib/rutina/exercise-catalog (data kategori
-// bugar aplikasi — 76 gerakan) supaya seed, API, dan UI memakai satu sumber.
+/** Status terbuka demo per piala (hanya untuk data sampling; katalog
+ *  definisinya selalu terkunci). key → n hari lalu. */
+const DEMO_UNLOCK_DAYS_AGO: Record<string, number> = {
+  "first-habit": 28,
+  "streak-7": 6,
+  "workout-10": 2,
+  "xp-500": 1,
+  "journal-5": 4,
+  "saver-1jt": 10,
+};
 
-/** Katalog makanan umum untuk saran sheet Food (tanpa ini saran kosong di install baru). */
-const FOOD_ITEM_CATALOG = [
-  { name: "Nasi putih", calories: 205, protein: 4.3, carbs: 45, fat: 0.4, serving: "1 piring (100 g)" },
-  { name: "Nasi goreng", calories: 350, protein: 8, carbs: 50, fat: 12, serving: "1 porsi" },
-  { name: "Ayam goreng", calories: 260, protein: 22, carbs: 5, fat: 16, serving: "1 potong" },
-  { name: "Ayam panggang", calories: 165, protein: 26, carbs: 0, fat: 6, serving: "1 potong (100 g)" },
-  { name: "Telur rebus", calories: 78, protein: 6.3, carbs: 0.6, fat: 5.3, serving: "1 butir" },
-  { name: "Telur dadar", calories: 154, protein: 9, carbs: 2, fat: 12, serving: "1 porsi" },
-  { name: "Tempe goreng", calories: 120, protein: 10, carbs: 6, fat: 6, serving: "1 potong" },
-  { name: "Tahu goreng", calories: 95, protein: 8, carbs: 3, fat: 5, serving: "2 potong" },
-  { name: "Roti tawar", calories: 75, protein: 2.6, carbs: 14, fat: 1, serving: "1 lembar" },
-  { name: "Mie instan", calories: 380, protein: 8, carbs: 55, fat: 15, serving: "1 bungkus" },
-  { name: "Bakso sapi", calories: 280, protein: 15, carbs: 25, fat: 12, serving: "1 mangkuk" },
-  { name: "Soto ayam", calories: 250, protein: 14, carbs: 20, fat: 11, serving: "1 mangkuk" },
-  { name: "Gado-gado", calories: 290, protein: 10, carbs: 28, fat: 15, serving: "1 porsi" },
-  { name: "Susu UHT full cream", calories: 150, protein: 8, carbs: 12, fat: 8, serving: "1 gelas (250 ml)" },
-  { name: "Yogurt plain", calories: 95, protein: 6, carbs: 9, fat: 4, serving: "1 cup (150 g)" },
-  { name: "Pisang", calories: 105, protein: 1.3, carbs: 27, fat: 0.4, serving: "1 buah" },
-  { name: "Apel", calories: 95, protein: 0.5, carbs: 25, fat: 0.3, serving: "1 buah" },
-  { name: "Pepaya", calories: 60, protein: 1, carbs: 15, fat: 0.4, serving: "1 potong (150 g)" },
-  { name: "Mangga", calories: 100, protein: 1.4, carbs: 25, fat: 0.6, serving: "1 potong (150 g)" },
-  { name: "Kopi susu gula aren", calories: 180, protein: 3, carbs: 24, fat: 7, serving: "1 gelas" },
-  { name: "Es teh manis", calories: 90, protein: 0, carbs: 22, fat: 0, serving: "1 gelas" },
-  { name: "Air mineral", calories: 0, protein: null, carbs: null, fat: null, serving: "1 gelas (250 ml)" },
-  { name: "Whey protein", calories: 120, protein: 24, carbs: 3, fat: 1.5, serving: "1 scoop" },
-  { name: "Oatmeal", calories: 150, protein: 5, carbs: 27, fat: 3, serving: "1 mangkuk (40 g)" },
-  { name: "Kentang goreng", calories: 310, protein: 4, carbs: 40, fat: 15, serving: "1 porsi sedang" },
-  { name: "Burger sapi", calories: 480, protein: 25, carbs: 40, fat: 24, serving: "1 buah" },
-  { name: "Pizza pepperoni", calories: 300, protein: 13, carbs: 32, fat: 13, serving: "2 potong" },
-  { name: "Martabak manis", calories: 450, protein: 8, carbs: 55, fat: 20, serving: "1 potong" },
-  { name: "Rendang daging", calories: 330, protein: 18, carbs: 8, fat: 25, serving: "1 porsi" },
-  { name: "Ikan goreng nila", calories: 220, protein: 24, carbs: 3, fat: 13, serving: "1 ekor sedang" },
-];
-
-const ACHIEVEMENT_DEFS = [
-  { key: "first-habit", title: "Langkah Pertama", description: "Ciptakan kebiasaan pertamamu di Taman.", icon: "sprout", unlockedAt: DAY(28) },
-  { key: "streak-7", title: "Api Menyala — 7 Hari", description: "Jaga satu kebiasaan tanpa putus selama 7 hari.", icon: "flame", unlockedAt: DAY(6) },
-  { key: "workout-10", title: "10 Sesi Latihan", description: "Selesaikan 10 sesi olahraga tercatat.", icon: "dumbbell", unlockedAt: DAY(2) },
-  { key: "xp-500", title: "500 XP Terkumpul", description: "Kumpulkan 500 XP dari seluruh aktivitas.", icon: "medal", unlockedAt: DAY(1) },
-  { key: "journal-5", title: "Sang Penulis — 5 Entri", description: "Tulis 5 entri jurnal di Ruang Tulis.", icon: "pen-line", unlockedAt: DAY(4) },
-  { key: "saver-1jt", title: "Menabung Rp1 Juta", description: "Total setoran tabungan mencapai Rp1 juta.", icon: "piggy-bank", unlockedAt: DAY(10) },
-  { key: "streak-30", title: "Streak 30 Hari", description: "Pertahankan kebiasaan selama satu bulan penuh.", icon: "trophy", unlockedAt: null },
-  { key: "habit-master", title: "Master Kebiasaan", description: "Selesaikan 100 hari total untuk semua kebiasaan.", icon: "crown", unlockedAt: null },
-  { key: "checkin-30", title: "30 Hari Rajin Check-in", description: "Isi check-in harian selama 30 hari berturut-turut.", icon: "heart-pulse", unlockedAt: null },
-];
+const ACHIEVEMENT_DEFS = ACHIEVEMENT_CATALOG.map((a) => {
+  const daysAgo = DEMO_UNLOCK_DAYS_AGO[a.key];
+  return { ...a, unlockedAt: daysAgo == null ? null : DAY(daysAgo) };
+});
 
 const JOURNAL_SEED = [
   {
@@ -682,18 +642,23 @@ async function seedExercises() {
 async function seedGamification() {
   let n = 0;
   if ((await db.quote.count()) === 0) {
-    await db.quote.createMany({ data: QUOTES });
-    n += QUOTES.length;
+    await db.quote.createMany({ data: QUOTE_CATALOG });
+    n += QUOTE_CATALOG.length;
   }
   if ((await db.achievement.count()) === 0) {
     await db.achievement.createMany({ data: ACHIEVEMENT_DEFS });
     n += ACHIEVEMENT_DEFS.length;
   }
   // Katalog makanan: wajib terisi agar picker/saran di sheet tidak kosong
-  // (katalog gerakan bugar ditangani seedExercises — satu sumber dengan API)
-  if ((await db.foodItem.count()) === 0) {
-    await db.foodItem.createMany({ data: FOOD_ITEM_CATALOG });
-    n += FOOD_ITEM_CATALOG.length;
+  // (top-up semantik sama dengan GET /api/food-items — satu sumber lib)
+  if ((await db.foodItem.count()) < FOOD_CATALOG.length) {
+    const existing = await db.foodItem.findMany({ select: { name: true } });
+    const have = new Set(existing.map((f) => f.name.toLowerCase()));
+    const missing = FOOD_CATALOG.filter((f) => !have.has(f.name.toLowerCase()));
+    if (missing.length) {
+      await db.foodItem.createMany({ data: missing });
+      n += missing.length;
+    }
   }
   return n;
 }

@@ -568,7 +568,7 @@ export default function ProfileScreen() {
             <AlertDialogDescription>Perubahan yang belum disimpan akan hilang.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>
+            <Button variant="outline" onClick={() => setConfirmDiscard(false)} className="press min-h-[44px] flex-1 sm:flex-none">
               Batal
             </Button>
             <Button
@@ -577,6 +577,7 @@ export default function ProfileScreen() {
                 setConfirmDiscard(false);
                 setEditOpen(false);
               }}
+              className="press min-h-[44px] flex-1 sm:flex-none"
             >
               Buang
             </Button>
@@ -623,13 +624,13 @@ export default function ProfileScreen() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <Button variant="outline" onClick={() => setResetOpen(false)}>
+                <Button variant="outline" onClick={() => setResetOpen(false)} className="press min-h-[44px] flex-1 sm:flex-none">
                   Batal
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => setResetStep(2)}
-                  className="flex items-center gap-1.5"
+                  className="press min-h-[44px] flex-1 sm:flex-none flex items-center gap-1.5"
                 >
                   Lanjutkan
                 </Button>
@@ -659,14 +660,14 @@ export default function ProfileScreen() {
                 />
               </div>
               <AlertDialogFooter>
-                <Button variant="outline" onClick={() => setResetOpen(false)}>
+                <Button variant="outline" onClick={() => setResetOpen(false)} className="press min-h-[44px] flex-1 sm:flex-none">
                   Batal
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => resetMutation.mutate()}
                   disabled={resetMutation.isPending || resetConfirmText !== "RESET RUTINA"}
-                  className="flex items-center gap-1.5"
+                  className="press min-h-[44px] flex-1 sm:flex-none flex items-center gap-1.5"
                 >
                   {resetMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                   Ya, hapus semua
@@ -716,14 +717,14 @@ export default function ProfileScreen() {
             />
           </div>
           <AlertDialogFooter>
-            <Button variant="outline" onClick={() => setPendingImport(null)} disabled={importMutation.isPending}>
+            <Button variant="outline" onClick={() => setPendingImport(null)} disabled={importMutation.isPending} className="press min-h-[44px] flex-1 sm:flex-none">
               Batal
             </Button>
             <Button
               variant="destructive"
               onClick={confirmImport}
               disabled={importMutation.isPending || importConfirmText !== "PULIHKAN DATA"}
-              className="flex items-center gap-1.5"
+              className="press min-h-[44px] flex-1 sm:flex-none flex items-center gap-1.5"
             >
               {importMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Ya, Pulihkan

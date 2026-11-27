@@ -1063,7 +1063,7 @@ export default function HabitsScreen() {
           </div>
 
           {/* Chips filter */}
-          <div className="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1 pb-0.5">
+          <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-0.5">
             {FILTERS.map((f) => {
               const Icon = f.icon;
               const active = filter === f.key;
@@ -1189,7 +1189,7 @@ export default function HabitsScreen() {
                     className="flex items-start gap-2.5 rounded-xl bg-garden-soft p-3"
                   >
                     <Icon className="h-4 w-4 text-garden-deep mt-0.5 shrink-0" />
-                    <p className="text-xs font-semibold text-garden-deep leading-relaxed">{s.text}</p>
+                    <p className="text-sm font-semibold text-garden-deep leading-relaxed">{s.text}</p>
                   </li>
                 );
               })}
@@ -1284,7 +1284,9 @@ function HabitCard({
   };
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-3">
+    // react-performance #26: content-visibility melompati render baris di luar
+    // viewport saat daftar diperluas (pola yang sama dengan daftar jurnal)
+    <div className="rounded-xl border border-border/70 bg-card p-3 [content-visibility:auto] [contain-intrinsic-size:auto_76px]">
       <div className="flex items-center gap-2">
         <button
           onClick={onOpen}
@@ -1788,11 +1790,11 @@ function HabitDetailDrawer({
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogCancel className="press min-h-[44px] flex-1 sm:flex-none">Batal</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => archiveMutation.mutate()}
                       disabled={archiveMutation.isPending}
-                      className="bg-garden text-white hover:bg-garden/90"
+                      className="press min-h-[44px] flex-1 sm:flex-none bg-garden text-white hover:bg-garden/90"
                     >
                       {archiveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                       Arsipkan
@@ -1821,11 +1823,11 @@ function HabitDetailDrawer({
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogCancel className="press min-h-[44px] flex-1 sm:flex-none">Batal</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => deleteMutation.mutate()}
                     disabled={deleteMutation.isPending}
-                    className="bg-destructive text-white hover:bg-destructive/90"
+                    className="press min-h-[44px] flex-1 sm:flex-none bg-destructive text-white hover:bg-destructive/90"
                   >
                     {deleteMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                     Hapus

@@ -179,21 +179,28 @@ hover scale 1.02. Papan bento pertama: ringkasan Beranda
 
 ## 5. Backlog prioritas (temuan audit yang belum diperbaiki)
 
+Sudah selesai dan dikeluarkan dari daftar: buang-perubahan konfirmasi (#2 lama —
+`ConfirmDiscard` dipakai semua sheet), progressive disclosure daftar panjang
+(#9 lama — semua layar memakai `ShowAllToggle`), dan `content-visibility`
+(#7 lama — jurnal, mutasi keuangan, perpustakaan kebiasaan). Tambahan terverifikasi
+2026-11: state gagal muat layar Bugar (gate penuh + banner sebagian + retry per tab),
+state gagal muat Jurnal (gate penuh saat tanpa cache), tombol dialog seluruh layar
+kini ≥44px (`press min-h-[44px]`), retry riwayat sheet (makanan/gerakan/pencarian)
+benar-benar memuat ulang, `aria-pressed` chips otot, `aria-controls` daftar beban,
+gap chip ≥8px, dan paragraf bantuan multi-kalimat naik ke `text-sm`.
+
+Sisa backlog (urutan prioritas):
+
 1. **ux#55** — error validasi inline per-field (`aria-invalid` + `aria-describedby`)
    di 6 sheet; saat ini hanya toast.
-2. **ux#135** — konfirmasi "buang perubahan?" saat menutup editor jurnal dengan draf.
-3. **ux#138** — kegagalan simpan perlu jalur error inline persisten (bukan hanya toast).
-4. **ux#56** — validasi on-blur untuk field numerik.
-5. **ux#134** — hindari pre-disable tombol submit berbasis validasi; tampilkan pesan saat klik.
+2. **ux#138** — kegagalan simpan perlu jalur error inline persisten (bukan hanya toast).
+3. **ux#56** — validasi on-blur untuk field numerik.
+4. **ux#134** — hindari pre-disable tombol submit berbasis validasi; tampilkan pesan saat klik.
+5. **ux#4 / app-interface#9** — sheet & dialog belum masuk history stack: tombol back
+   Android/PWA menutup halaman, bukan sheet yang terbuka (perlu pushState per sheet).
 6. **ux#52 / nextjs#38** — analisis ukuran bundel (`@next/bundle-analyzer`).
-7. **react-perf#26 (lanjutan)** — `content-visibility` untuk daftar transaksi & arsip kebiasaan.
-8. **nextjs#51 (lanjutan)** — CSP dengan nonce per-request via middleware (menghapus
+7. **nextjs#51 (lanjutan)** — CSP dengan nonce per-request via middleware (menghapus
    `'unsafe-inline'`).
-9. **ux#84/#113/#115 (progressive disclosure)** — daftar panjang (agenda hari ini,
-   jurnal, mutasi, riwayat) wajib dibatasi preview (5–10 item) + tombol
-   "Lihat semua (X)" operable dengan `aria-expanded` + bisa di-collapse kembali
-   (quick-reference Forms & Feedback "Progressive disclosure"). Beranda (agenda)
-   & Jurnal sudah memakai `ShowAllToggle`; mutasi & riwayat menyusul.
 
 ## 6. Atribusi
 

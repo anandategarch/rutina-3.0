@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Sprout, Wallet, NotebookText, Dumbbell, CreditCard, SearchX } from "lucide-react";
-import { toast } from "sonner";
 import { useRutinaStore } from "@/store/rutina";
 import { rutinaApi } from "@/lib/rutina/api";
 import { formatDateID, formatRupiah, formatDuration } from "@/lib/rutina/format";
@@ -124,8 +123,10 @@ export default function QuickSearchSheet() {
     setSearchOpen(false);
   };
 
-  const copyError = () => {
-    toast.error(resultsQuery.error instanceof Error ? resultsQuery.error.message : "Gagal mencari");
+  const retrySearch = () => {
+    // audit ux-guidelines: tombol "coba lagi" benar-benar memuat ulang —
+    // bukan sekadar menampilkan ulang pesan galat via toast
+    resultsQuery.refetch();
   };
 
   return (
@@ -154,7 +155,7 @@ export default function QuickSearchSheet() {
           <div className="mt-3 space-y-3">
             {resultsQuery.isError && (
               <button
-                onClick={copyError}
+                onClick={retrySearch}
                 className="press w-full rounded-xl border border-dashed border-border/70 px-3 py-3 min-h-[44px] text-left text-xs font-semibold text-muted-foreground"
               >
                 Pencarian gagal dimuat — ketuk untuk coba lagi

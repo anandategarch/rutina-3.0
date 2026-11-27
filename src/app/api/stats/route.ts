@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, getXpData, computeStreaks } from "@/lib/rutina/server";
+import { ensureAchievementCatalog } from "@/lib/rutina/catalog-ensure";
 import {
   addDays,
   rangeDays,
@@ -46,6 +47,10 @@ function daysInMonth(dateStr: string): number {
 export async function GET() {
   try {
     const today = jakartaToday();
+
+    // Top-up definisi piala — DB baru hasil db push/Turso baru tidak boleh
+    // menampilkan "Koleksi Piala" kosong hanya karena belum pernah di-seed.
+    await ensureAchievementCatalog();
 
     const [xpData, streak, habits, allLogs, workouts, bodyMetrics, checkinRows, wallets, transactions, journalEntries, achievements] =
       await Promise.all([

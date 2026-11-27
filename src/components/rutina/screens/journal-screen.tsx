@@ -161,7 +161,7 @@ function JournalFirstPage({ onBlank, onPrompt }: { onBlank: () => void; onPrompt
     <div className="flex flex-col items-center text-center py-8 px-4">
       <JournalDoodle />
       <p className="font-semibold text-foreground text-sm mt-3">Halaman pertamamu masih kosong</p>
-      <p className="text-xs text-muted-foreground mt-1 max-w-[250px]">
+      <p className="text-sm text-muted-foreground mt-1 max-w-[250px] leading-relaxed">
         Tak perlu menulis banyak — satu paragraf jujur cukup untuk memulai arsip pribadimu.
       </p>
       <div className="mt-4 w-full max-w-[300px] rounded-xl border border-writer/30 bg-writer-soft/50 p-3.5 text-left">
@@ -359,6 +359,40 @@ export default function JournalScreen() {
   }, [entries, today]);
 
   const [activeEntry, setActiveEntry] = React.useState<JournalEntry | null>(null);
+
+  // Gagal muat saat pertama (tanpa cache) → gate layar penuh, BUKAN statistik
+  // nol yang membaca seperti arsip hilang (pola sama dengan layar Statistik).
+  if (isError && !data) {
+    return (
+      <div className="flex flex-col min-h-full">
+        <ScreenHeader
+          title="Jurnal"
+          subtitle="Refleksi & arsip tulisanmu"
+          tone="writer"
+          onBack={() => setPage("home")}
+        />
+        <div className="p-4">
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 flex flex-col items-center text-center gap-2.5">
+            <span className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+              <AlertTriangle className="h-6 w-6" />
+            </span>
+            <p className="text-sm font-bold">Gagal memuat catatan</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Arsip jurnal tidak dapat diambil. Periksa koneksi internetmu, lalu coba lagi.
+            </p>
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="press mt-1.5 min-h-[44px] rounded-xl bg-writer-deep px-5 text-sm font-bold text-white flex items-center gap-2 disabled:opacity-60"
+            >
+              {isFetching && <Loader2 className="h-4 w-4 animate-spin" />}
+              Coba Lagi
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-full">
@@ -624,10 +658,11 @@ export default function JournalScreen() {
             {folderCounts.map((f) => (
               <div key={f.folder} className="flex items-center gap-2">
                 <span className="text-xs font-semibold w-20 shrink-0">{f.folder}</span>
+                {/* motion rule (ux #13): transform bukan layout — wrapper statis + scaleX */}
                 <div className="flex-1 h-2.5 rounded-full bg-secondary overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-writer-deep/80 transition-all"
-                    style={{ width: `${(f.count / maxFolder) * 100}%` }}
+                    className="h-full w-full rounded-full bg-writer-deep/80 origin-left transition-transform duration-300"
+                    style={{ transform: `scaleX(${maxFolder > 0 ? f.count / maxFolder : 0})` }}
                   />
                 </div>
                 <span className="text-xs font-bold tabular text-muted-foreground w-6 text-right">{f.count}</span>
@@ -975,7 +1010,7 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel className="press min-h-[44px] flex-1 sm:flex-none">Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 // preventDefault: dialog tetap terbuka selama proses hapus (spinner terlihat),
@@ -984,7 +1019,7 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
                 deleteMutation.mutate();
               }}
               disabled={deleteMutation.isPending}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              className="press min-h-[44px] flex-1 sm:flex-none bg-destructive text-white hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? (
                 <>
@@ -1006,13 +1041,13 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
             <AlertDialogDescription>Perubahan yang belum disimpan akan hilang.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel className="press min-h-[44px] flex-1 sm:flex-none">Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setConfirmDiscard(false);
                 onClose();
               }}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              className="press min-h-[44px] flex-1 sm:flex-none bg-destructive text-white hover:bg-destructive/90"
             >
               Buang
             </AlertDialogAction>

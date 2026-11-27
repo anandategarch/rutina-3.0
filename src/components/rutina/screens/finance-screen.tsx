@@ -1448,7 +1448,12 @@ export default function FinanceScreen() {
           ) : (
             <div id="mutasi-list" className="max-h-[520px] overflow-y-auto scroll-thin rounded-xl">
               {groups.map((g) => (
-                <div key={g.date}>
+                // react-performance #26: content-visibility per grup hari —
+                // grup di luar viewport dilompati saat daftar panjang diperluas
+                <div
+                  key={g.date}
+                  className="[content-visibility:auto] [contain-intrinsic-size:auto_360px]"
+                >
                   <div className="sticky top-0 z-10 bg-card/95 px-1 py-2 backdrop-blur-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-bold">

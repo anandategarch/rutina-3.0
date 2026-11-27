@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/rutina/server";
 import { isValidDateStr, isValidTimeStr } from "@/lib/rutina/format";
+import { ensureAchievementCatalog } from "@/lib/rutina/catalog-ensure";
 
 export const dynamic = "force-dynamic";
 
@@ -183,6 +184,27 @@ function pickJournalEntry(r: Row) {
   };
 }
 
+// audit C1: katalog makanan ikut dipulihkan (item buatan pengguna)
+function pickFoodItem(r: Row) {
+  return {
+    id: str(r.id),
+    name: (str(r.name) ?? "").slice(0, 120),
+    calories: round2(num(r.calories) ?? 0),
+    protein: numOrNull(r.protein),
+    carbs: numOrNull(r.carbs),
+    fat: numOrNull(r.fat),
+    serving: strOrNull(r.serving)?.slice(0, 60) ?? null,
+  };
+}
+
+// audit C1: status piala ikut dipulihkan (progres pengguna, bukan reset)
+function pickAchievement(r: Row) {
+  return {
+    key: str(r.key),
+    unlockedAt: strOrNull(r.unlockedAt) ?? null,
+  };
+}
+
 function asArray(v: unknown): Row[] {
   return Array.isArray(v) ? (v.filter((x) => x && typeof x === "object") as Row[]) : [];
 }
@@ -309,6 +331,22 @@ export async function POST(req: Request) {
     const transactions = asArray(body.transactions)
       .map(pickTransaction)
       .filter((t) => t.id && t.date);
+    // audit C1: koleksi referensi/progres — opsional (cadangan lama tanpa
+    // kedua koleksi ini tetap dipulihkan seperti semula)
+    const foodItemsPayload = Array.isArray(body.foodItems)
+      ? asArray(body.foodItems).map(pickFoodItem).filter((f) => {
+          const ok = f.id && f.name && f.calories >= 0 && f.calories <= MONEY_CAP;
+          if (!ok) bump("foodItems");
+          return ok;
+        })
+      : null;
+    const achievementsPayload = Array.isArray(body.achievements)
+      ? asArray(body.achievements).map(pickAchievement).filter((a) => {
+          const ok = Boolean(a.key);
+          if (!ok) bump("achievements");
+          return ok;
+        })
+      : null;
 
     // audit B1-A2: seluruh koleksi kosong → tidak ada yang bisa dipulihkan
     if (
@@ -322,7 +360,9 @@ export async function POST(req: Request) {
       transactions.length === 0 &&
       budgets.length === 0 &&
       savingsGoals.length === 0 &&
-      journalEntries.length === 0
+      journalEntries.length === 0 &&
+      (foodItemsPayload?.length ?? 0) === 0 &&
+      (achievementsPayload?.length ?? 0) === 0
     ) {
       return NextResponse.json(
         { error: "Cadangan kosong — tidak ada yang dipulihkan" },
@@ -351,6 +391,29 @@ export async function POST(req: Request) {
           { error: `Payload berisi id duplikat pada data ${dup}` },
           { status: 400 }
         );
+      }
+    }
+    // audit C1: id/kunci duplikat pada koleksi baru → 400
+    if (foodItemsPayload) {
+      const dupFood = findDupId(foodItemsPayload, "katalog makanan");
+      if (dupFood) {
+        return NextResponse.json(
+          { error: "Payload berisi id duplikat pada data katalog makanan" },
+          { status: 400 }
+        );
+      }
+    }
+    if (achievementsPayload) {
+      const seenKeys = new Set<string>();
+      for (const a of achievementsPayload) {
+        const key = a.key as string;
+        if (seenKeys.has(key)) {
+          return NextResponse.json(
+            { error: `Payload berisi piala duplikat untuk kunci ${key}` },
+            { status: 400 }
+          );
+        }
+        seenKeys.add(key);
       }
     }
 
@@ -509,7 +572,11 @@ export async function POST(req: Request) {
     }
 
     // ===== Eksekusi atomik: hapus + recreate dalam satu transaksi =====
-    await db.$transaction(
+    // audit C1: pastikan definisi piala lengkap sebelum status piala diterapkan
+    // (cadangan lama/baru sama-sama butuh definisi katalog di DB).
+    await ensureAchievementCatalog();
+
+    const txResult = await db.$transaction(
       async (tx) => {
         // ===== Fase hapus (urutan aman FK) =====
         await tx.habitLog.deleteMany({});
@@ -560,7 +627,38 @@ export async function POST(req: Request) {
         if (validTransactions.length)
           await tx.transaction.createMany({ data: validTransactions });
 
-        // Import = pemulihan penuh: profil diterapkan & status piala direset
+        // audit C1: katalog makanan — hanya ditimpa bila payload membawa koleksi
+        // itu (cadangan lama tanpa foodItems tidak menghapus item yang ada).
+        let restoredFoodItems = 0;
+        if (foodItemsPayload) {
+          await tx.foodItem.deleteMany({});
+          if (foodItemsPayload.length)
+            await tx.foodItem.createMany({ data: foodItemsPayload });
+          restoredFoodItems = foodItemsPayload.length;
+        }
+
+        // audit C1: status piala — progres pengguna dipulihkan dari cadangan.
+        // Payload tanpa koleksi achievements (cadangan lama) tetap direset
+        // (perilaku lama), kini definisi piala dijamin lengkap.
+        let restoredAchievements = 0;
+        if (achievementsPayload) {
+          const byKey = new Map(
+            achievementsPayload.map((a) => [a.key as string, a.unlockedAt ?? null])
+          );
+          const defs = await tx.achievement.findMany({ select: { key: true } });
+          for (const def of defs) {
+            await tx.achievement.update({
+              where: { key: def.key },
+              data: { unlockedAt: byKey.get(def.key) ?? null },
+            });
+          }
+          restoredAchievements = byKey.size;
+        } else {
+          // Import = pemulihan penuh: profil diterapkan & status piala direset
+          await tx.achievement.updateMany({ data: { unlockedAt: null } });
+        }
+
+        // Import = pemulihan penuh: profil diterapkan
         if (p) {
           await tx.profile.upsert({
             where: { id: "main" },
@@ -568,7 +666,7 @@ export async function POST(req: Request) {
             create: { id: "main", ...profileData },
           });
         }
-        await tx.achievement.updateMany({ data: { unlockedAt: null } });
+        return { restoredFoodItems, restoredAchievements };
       },
       { timeout: 30_000 }
     );
@@ -587,6 +685,8 @@ export async function POST(req: Request) {
         budgets: validBudgets.length,
         savingsGoals: validSavingsGoals.length,
         journalEntries: validJournalEntries.length,
+        foodItems: txResult.restoredFoodItems,
+        achievements: txResult.restoredAchievements,
       },
       dropped,
     });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getXpData, computeStreaks, db } from "@/lib/rutina/server";
+import { ensureQuoteCatalog } from "@/lib/rutina/catalog-ensure";
 import {
   addDays,
   dayOfWeek,
@@ -170,6 +171,9 @@ export async function GET(req: Request) {
     }
 
     // ============ Quote ============
+    // Top-up katalog kutipan — beranda tidak boleh kehilangan kartu kutipan
+    // hanya karena DB baru belum pernah di-seed.
+    await ensureQuoteCatalog();
     // audit B2-M4: orderBy id — indeks harian deterministik atas urutan baris DB
     const quotes = await db.quote.findMany({ orderBy: { id: "asc" } });
     let quote: (typeof quotes)[number] | null = null;

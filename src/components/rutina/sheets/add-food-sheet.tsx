@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Search, Loader2, Flame, ArrowLeft, UtensilsCrossed } from "lucide-react";
+import { Search, Loader2, Flame, ArrowLeft, UtensilsCrossed, WifiOff } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -184,6 +184,19 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
               {itemsQuery.isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Memuat daftar makanan...
+                </div>
+              ) : itemsQuery.isError ? (
+                // audit ux-guidelines: gagal muat ≠ kosong — tampilkan retry, bukan pesan kosong palsu
+                <div className="flex flex-col items-center gap-2 py-8 text-sm text-muted-foreground">
+                  <WifiOff className="h-5 w-5 text-clay" />
+                  Gagal memuat daftar makanan.
+                  <button
+                    type="button"
+                    onClick={() => itemsQuery.refetch()}
+                    className="press min-h-[44px] rounded-xl bg-studio px-4 py-2 text-xs font-bold text-white"
+                  >
+                    Coba Lagi
+                  </button>
                 </div>
               ) : items.length === 0 ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">

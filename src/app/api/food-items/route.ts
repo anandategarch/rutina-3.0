@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/rutina/server";
+import { ensureFoodCatalog } from "@/lib/rutina/catalog-ensure";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,10 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     // audit B3-M5: buang wildcard LIKE (% dan _) dari q
     const q = (url.searchParams.get("q") ?? "").replace(/[%_]/g, "").trim().toLowerCase();
+
+    // Top-up katalog makanan — sheet Catat Asupan tidak boleh kehilangan saran
+    // hanya karena DB baru belum pernah di-seed.
+    const imported = await ensureFoodCatalog();
 
     let items;
     if (q.length > 0) {
@@ -30,7 +35,7 @@ export async function GET(req: Request) {
       items = await db.foodItem.findMany({ where: { id: { in: ids } } });
     }
 
-    return NextResponse.json({ items });
+    return NextResponse.json({ items, imported });
   } catch (e) {
     console.error("food-items GET error", e);
     return NextResponse.json({ error: "Gagal memuat daftar makanan" }, { status: 500 });

@@ -168,7 +168,7 @@ export function EmptyState({
         </div>
       )}
       <p className="font-semibold text-foreground text-sm">{title}</p>
-      {description && <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">{description}</p>}
+      {description && <p className="text-sm text-muted-foreground mt-1 max-w-[260px] leading-relaxed">{description}</p>}
       {action && <div className="mt-3">{action}</div>}
     </div>
   );

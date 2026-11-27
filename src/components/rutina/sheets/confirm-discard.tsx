@@ -30,10 +30,10 @@ export default function ConfirmDiscard({
           <AlertDialogDescription>Perubahan yang belum disimpan akan hilang.</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Batal</AlertDialogCancel>
+          <AlertDialogCancel className="press min-h-[44px] flex-1 sm:flex-none">Batal</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-destructive text-white hover:bg-destructive/90"
+            className="press min-h-[44px] flex-1 sm:flex-none bg-destructive text-white hover:bg-destructive/90"
           >
             Buang
           </AlertDialogAction>

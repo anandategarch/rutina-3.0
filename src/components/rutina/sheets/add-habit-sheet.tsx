@@ -353,7 +353,7 @@ export default function AddHabitSheet({
                 ))}
               </div>
               {form.scheduleType === "custom" && (
-                <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                <div className="mt-2.5 flex items-center gap-2 flex-wrap">
                   {DAY_CHIPS.map((d) => {
                     const active = form.days.includes(d.d);
                     return (
