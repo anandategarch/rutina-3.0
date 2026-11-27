@@ -177,7 +177,29 @@ streak & level 1×1), sudut konsisten, shadow halus, konten muat di kartu,
 hover scale 1.02. Papan bento pertama: ringkasan Beranda
 (`src/components/rutina/screens/home-screen.tsx`).
 
-## 5. Backlog prioritas (temuan audit yang belum diperbaiki)
+## 5. Fitur "Jaga Catatan" (treatment lupa, ditambahkan 27 Nov 2026)
+
+Lapisan anti-lupa lintas modul — setiap kasus "lupa" pun dampak yang
+diquantifikasi dan treatment yang jelas, tanpa menghukum:
+
+| Kasus | Deteksi | Dampak yang ditampilkan | Treatment |
+|---|---|---|---|
+| Lupa catat keuangan | `/api/vault/misses` — hari lampau 30 hari tanpa satu pun transaksi | Estimasi rupiah (median belanja harian × hari bolong) + % pengeluaran bulan berjalan | **Catat Mundur** (sheet transaksi ber-tanggal hari bolong) · **Rekonsiliasi Kas** (selisih ditutup 1 transaksi "Penyesuaian") |
+| Kebiasaan bolong karena lupa | hari terjadwal tanpa log done (14 hari terakhir) di drawer habit | Pola lupa: weekday paling sering bolong (30 hari) + saran | **Rumah Kaca** — 1×/pekan, hari berpelindung netral: streak tidak putus, tidak juga bertambah |
+| Hari belum "ditutup" | `dayClose` di `/api/home` (hanya hari ini WIB) | Checklist 3 baris | **Tutup Hari** — misi · kas · refleksi; semua beres → state gold |
+
+Keputusan desain yang mengikat (melanjutkan §1a):
+
+- Tone **clay** dipakai untuk blok "Dampak lupa catat" (nilai negatif/risiko) —
+  bukan merah mentah; kartu tetap tenang, angka tetap tabular.
+- State "hari ditutup rapi" memakai **gold** (milestone/achievement, sesuai
+  disiplin §1a) — checklist baris yang beres memakai **garden** (progres).
+- Rekonsiliasi menulis kategori sistem `penyesuaian` (ikon Scale, tone vault) —
+  kategori ini tidak muncul di pilihan manual sheet transaksi.
+- Streak setelah Rumah Kaca memakai semantik identik server & klien
+  (`computeHabitStreaks` + helper klien) — sumber kebenaran tetap server.
+
+## 6. Backlog prioritas (temuan audit yang belum diperbaiki)
 
 Sudah selesai dan dikeluarkan dari daftar: buang-perubahan konfirmasi (#2 lama —
 `ConfirmDiscard` dipakai semua sheet), progressive disclosure daftar panjang
@@ -202,7 +224,7 @@ Sisa backlog (urutan prioritas):
 7. **nextjs#51 (lanjutan)** — CSP dengan nonce per-request via middleware (menghapus
    `'unsafe-inline'`).
 
-## 6. Atribusi
+## 7. Atribusi
 
 Standar & tool audit diadaptasi dari ui-ux-pro-max-skill (MIT License,
 © NextLevelBuilder) — `scripts/design-audit.mjs` dan `.github/workflows/design-review.yml`

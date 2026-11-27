@@ -6,12 +6,13 @@ Aplikasi personal mobile-first untuk mengelola rutinitas dan perkembangan hidup 
 
 ## Fitur
 
-- **Beranda** — agenda harian, streak kebiasaan, kalender 7 hari, check-in cepat
-- **Kebiasaan (The Garden)** — kebiasaan harian/kustom, kebiasaan terukur (unit + target), arsip, konsistensi
+- **Beranda** — agenda harian, streak kebiasaan, kalender 7 hari, check-in cepat, ritual **Tutup Hari**
+- **Kebiasaan (The Garden)** — kebiasaan harian/kustom, kebiasaan terukur (unit + target), arsip, konsistensi, **Rumah Kaca** (pelindung streak dari hari bolong) + **pola lupa**
 - **Kebugaran (Performance Studio)** — kardio (lari/jalan/badminton), latihan beban, asupan makanan, check-in harian (mood/energi/tidur), metrik tubuh
-- **Keuangan (The Vault)** — multi-dompet, transaksi (masuk/keluar/transfer), anggaran kategori, target tabungan
+- **Keuangan (The Vault)** — multi-dompet, transaksi (masuk/keluar/transfer), anggaran kategori, target tabungan, **Hari Bolong** (deteksi lupa catat + dampak + catat mundur + rekonsiliasi kas)
 - **Jurnal (Writing Room)** — folder, mood, pin catatan, jumlah kata otomatis
 - **Statistik** — radar kebiasaan, heatmap 90 hari, tren berat, komposisi kategori, achievement & XP
+- **Jaga Catatan** — lapisan anti-lupa lintas modul: dampak terkuantifikasi saat keuangan tidak dicatat, pelindung streak untuk kebiasaan yang bolong karena lupa, dan penutup hari tiga ketukan (misi · kas · refleksi)
 - **Ekspor / Impor** — backup JSON lengkap + ekspor CSV
 - **PWA-ready** — manifest, safe-area iPhone (notch & home indicator), tema terang/gelap
 
