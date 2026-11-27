@@ -144,6 +144,8 @@ export function MiniBars({
   labelEvery = 1,
   showLabels = true,
   highlightIndex,
+  /** Nama seri utama (legend + aria) saat showAlt aktif. */
+  label,
   altLabel,
   className,
 }: {
@@ -155,6 +157,8 @@ export function MiniBars({
   labelEvery?: number;
   showLabels?: boolean;
   highlightIndex?: number;
+  /** Nama seri utama (legend) — default "Utama". */
+  label?: string;
   /** Nama seri kedua (untuk legend + aria-label) saat showAlt aktif. */
   altLabel?: string;
   className?: string;
@@ -206,7 +210,7 @@ export function MiniBars({
         <div className="flex items-center gap-4 mb-1.5 text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <span aria-hidden="true" className="h-2 w-2 rounded-sm" style={{ background: color }} />
-            Utama
+            {label ?? "Utama"}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span aria-hidden="true" className="h-2 w-2 rounded-sm" style={{ background: altColor }} />

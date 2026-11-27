@@ -33,6 +33,7 @@ import {
   RadarChart,
   rampColor,
   SAGE,
+  SAGE_DEEP,
   Sparkline,
   TrendLine,
 } from "@/components/rutina/charts";
@@ -288,8 +289,44 @@ export default function StatsScreen() {
         {/* ===== Kebugaran ===== */}
         <SectionCard title="Kebugaran 30 Hari" tone="studio" icon={<Dumbbell className="h-4 w-4 text-studio-deep" />}>
           <div className="grid grid-cols-2 gap-2.5">
-            <StatTile label="Sesi latihan" value={formatNumber(stats.fitness.sessions30d)} sub={`${stats.fitness.strengthSessions30d} sesi beban`} tone="studio" icon={<Dumbbell className="h-3.5 w-3.5" />} />
-            <StatTile label="Total durasi" value={formatDuration(stats.fitness.minutes30d)} sub="menit bergerak" tone="studio" icon={<Timer className="h-3.5 w-3.5" />} />
+            <StatTile
+              label="Sesi latihan"
+              value={formatNumber(stats.fitness.sessions30d)}
+              sub={`${stats.fitness.strengthSessions30d} sesi beban`}
+              tone="studio"
+              icon={<Dumbbell className="h-3.5 w-3.5" />}
+              chart={
+                stats.fitness.weeklyWorkouts.length >= 2 ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground">vs pekan lalu</span>
+                    <DeltaBadge
+                      delta={
+                        stats.fitness.weeklyWorkouts[stats.fitness.weeklyWorkouts.length - 1].sessions -
+                        stats.fitness.weeklyWorkouts[stats.fitness.weeklyWorkouts.length - 2].sessions
+                      }
+                    />
+                  </div>
+                ) : undefined
+              }
+            />
+            <StatTile
+              label="Total durasi"
+              value={formatDuration(stats.fitness.minutes30d)}
+              sub="menit bergerak"
+              tone="studio"
+              icon={<Timer className="h-3.5 w-3.5" />}
+              chart={
+                stats.fitness.weeklyWorkouts.some((w) => w.minutes > 0) ? (
+                  <MiniBars
+                    data={stats.fitness.weeklyWorkouts.map((w) => ({ label: w.label, value: w.minutes }))}
+                    height={22}
+                    showLabels={false}
+                    color={SAGE_DEEP}
+                    highlightIndex={stats.fitness.weeklyWorkouts.length - 1}
+                  />
+                ) : undefined
+              }
+            />
             <StatTile label="Kardio" value={`${formatNumber(stats.fitness.cardioKm30d, 1)} km`} sub="jarak tempuh 30d" tone="studio" icon={<Route className="h-3.5 w-3.5" />} />
             <StatTile label="Berat terkini" value={stats.fitness.latestWeight != null ? `${stats.fitness.latestWeight} kg` : "-"} sub="timbangan terakhir" tone="studio" icon={<Scale className="h-3.5 w-3.5" />} />
           </div>
@@ -368,6 +405,22 @@ export default function StatsScreen() {
             Masuk <span className="font-bold text-garden-deep">{formatRupiah(stats.finance.income30d)}</span> · Keluar{" "}
             <span className="font-bold text-clay-deep">{formatRupiah(stats.finance.expense30d)}</span>
           </p>
+          {stats.finance.categoryComposition.length > 0 && (
+            <div className="mt-4 border-t border-border/60 pt-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                Komposisi pengeluaran · 30 hari
+              </p>
+              <HBarList
+                height={8}
+                items={stats.finance.categoryComposition.slice(0, 5).map((c) => ({
+                  label: c.category,
+                  value: c.amount,
+                  caption: formatRupiah(c.amount, { compact: true }),
+                  color: CLAY,
+                }))}
+              />
+            </div>
+          )}
         </SectionCard>
 
         {/* ===== Wawasan lintas modul (90 hari) ===== */}
@@ -629,12 +682,23 @@ function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: S
           <p className="text-xs text-muted-foreground">Ringkasan aktivitas lintas modul</p>
         </DrawerHeader>
         <div className="px-4 pb-6 space-y-3 overflow-y-auto scroll-thin">
-          <div className="rounded-xl bg-garden-soft p-3 flex items-center justify-between">
-            <span className="text-xs font-bold text-garden-deep uppercase tracking-wide">Misi selesai</span>
-            <span className="text-sm font-bold tabular text-garden-deep">
-              {activity?.habitsDone ?? 0}
-              {monthStat ? `/${monthStat.missionsTotal}` : ""} misi
-            </span>
+          <div className="rounded-xl bg-garden-soft p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-garden-deep uppercase tracking-wide">Misi selesai</span>
+              <span className="text-sm font-bold tabular text-garden-deep">
+                {activity?.habitsDone ?? 0}
+                {monthStat ? `/${monthStat.missionsTotal}` : ""} misi
+              </span>
+            </div>
+            {monthStat && (
+              <MetricBar
+                value={activity?.habitsDone ?? 0}
+                max={Math.max(1, monthStat.missionsTotal)}
+                height={6}
+                className="mt-2"
+                label="Misi selesai hari ini"
+              />
+            )}
           </div>
 
           <div className="rounded-xl bg-vault-soft p-3">

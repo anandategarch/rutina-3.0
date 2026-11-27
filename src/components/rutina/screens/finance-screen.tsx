@@ -701,6 +701,10 @@ export default function FinanceScreen() {
       }));
   }, [transactions, viewYear, viewMonthIdx, typeFilter, search]);
 
+  // Pengeluaran harian terbesar bulan terlihat — basis skala bar mini di header
+  // tiap grup hari pada daftar mutasi (angka −Rp kini didampingi bar visual)
+  const maxDayExpense = React.useMemo(() => Math.max(1, ...groups.map((g) => g.expense)), [groups]);
+
   // ux-guidelines #84: hitungan disclosure — total transaksi terfilter (sama dengan jumlah
   // seluruh item grup) vs jumlah yang tampil (maks 5 per grup hari saat tertutup)
   const txTotal = groups.reduce((a, g) => a + g.items.length, 0);
@@ -1445,14 +1449,26 @@ export default function FinanceScreen() {
             <div id="mutasi-list" className="max-h-[520px] overflow-y-auto scroll-thin rounded-xl">
               {groups.map((g) => (
                 <div key={g.date}>
-                  <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-card/95 px-1 py-2 backdrop-blur-sm">
-                    <span className="text-xs font-bold">
-                      {dayName(g.date)}, {formatDayMonth(g.date)}
-                    </span>
-                    {g.expense > 0 && (
-                      <span className="text-xs font-bold tabular text-clay">
-                        −{formatRupiah(g.expense, { compact: true })}
+                  <div className="sticky top-0 z-10 bg-card/95 px-1 py-2 backdrop-blur-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold">
+                        {dayName(g.date)}, {formatDayMonth(g.date)}
                       </span>
+                      {g.expense > 0 && (
+                        <span className="text-xs font-bold tabular text-clay">
+                          −{formatRupiah(g.expense, { compact: true })}
+                        </span>
+                      )}
+                    </div>
+                    {g.expense > 0 && (
+                      <MetricBar
+                        value={g.expense}
+                        max={maxDayExpense}
+                        height={3}
+                        className="mt-1.5"
+                        color={CLAY}
+                        label={`Pengeluaran ${dayName(g.date)}`}
+                      />
                     )}
                   </div>
                   <div className="divide-y divide-border/50">

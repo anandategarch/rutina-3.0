@@ -913,15 +913,32 @@ const WorkoutHistoryCard = React.memo(function WorkoutHistoryCard({ workout: w }
             {items.length} gerakan beban
           </button>
           {expanded && (
-            <ul className="mt-1 space-y-1 rounded-xl bg-studio-soft/60 p-2.5">
-              {items.map((it, i) => (
-                <li key={`${it.exercise}-${i}`} className="flex items-baseline justify-between gap-2 text-xs">
-                  <span className="min-w-0 truncate font-semibold">{it.exercise}</span>
-                  <span className="shrink-0 tabular text-muted-foreground">
-                    {formatNumber(it.weight, 1)}kg × {it.reps} × {it.sets}
-                  </span>
-                </li>
-              ))}
+            <ul className="mt-1 space-y-2 rounded-xl bg-studio-soft/60 p-2.5">
+              {items.map((it, i) => {
+                // Tonase per gerakan dibandingkan gerakan terberat sesi ini —
+                // angka mentah kg×rep×set kini didampingi bar visual (ux-guidelines)
+                const tonnage = it.weight * it.reps * it.sets;
+                const maxTonnage = Math.max(1, ...items.map((x) => x.weight * x.reps * x.sets));
+                return (
+                  <li key={`${it.exercise}-${i}`}>
+                    <div className="flex items-baseline justify-between gap-2 text-xs">
+                      <span className="min-w-0 truncate font-semibold">{it.exercise}</span>
+                      <span className="shrink-0 tabular text-muted-foreground">
+                        {formatNumber(it.weight, 1)}kg × {it.reps} × {it.sets}
+                        <span className="ml-1.5 font-bold text-studio-deep">{formatNumber(tonnage, 0)}kg</span>
+                      </span>
+                    </div>
+                    <MetricBar
+                      value={tonnage}
+                      max={maxTonnage}
+                      height={4}
+                      className="mt-1"
+                      color={SAGE_DEEP}
+                      label={`Volume ${it.exercise}`}
+                    />
+                  </li>
+                );
+              })}
             </ul>
           )}
         </>
@@ -1772,13 +1789,26 @@ function BodyTab({
               })}
             </div>
             <HBarList className="mt-3" height={7} items={checkinBars} />
-            <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary/70 px-3 py-2.5">
-              <span className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                <Moon className="h-4 w-4" /> Tidur
-              </span>
-              <span className="text-sm font-bold tabular">
-                {todayCheckin.sleepHours !== null ? `${formatNumber(todayCheckin.sleepHours, 1)} jam` : "-"}
-              </span>
+            <div className="mt-3 rounded-xl bg-secondary/70 px-3 py-2.5">
+              {todayCheckin.sleepHours !== null ? (
+                // Angka jam tidur kini divisualkan sebagai bar vs target 8 jam
+                // (komponen ReadinessBar yang sama dengan kartu Coach)
+                <ReadinessBar
+                  label="Tidur"
+                  value={todayCheckin.sleepHours}
+                  max={8}
+                  display={`${formatNumber(todayCheckin.sleepHours, 1)} jam`}
+                  color={SAGE}
+                  overColor={SAGE}
+                />
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                    <Moon className="h-4 w-4" /> Tidur
+                  </span>
+                  <span className="text-sm font-bold tabular">-</span>
+                </div>
+              )}
             </div>
             {todayCheckin.note && (
               <p className="mt-2 rounded-xl bg-secondary/70 px-3 py-2.5 text-xs italic text-muted-foreground">

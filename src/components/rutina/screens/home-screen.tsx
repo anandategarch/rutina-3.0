@@ -36,6 +36,7 @@ import {
 import { SectionCard, Pill, EmptyState, ShowAllToggle } from "@/components/rutina/primitives";
 import { habitIcon, habitColor } from "@/components/rutina/habit-icons";
 import {
+  CLAY,
   DeltaBadge,
   HeatGrid,
   MetricBar,
@@ -43,6 +44,7 @@ import {
   NEUTRAL,
   RingStat,
   SAGE,
+  SAGE_DEEP,
   Sparkline,
 } from "@/components/rutina/charts";
 import type { HomePayload, Habit } from "@/types/rutina";
@@ -180,6 +182,9 @@ export default function HomeScreen() {
     weekBars,
     todayBarIdx,
     workoutDelta,
+    saldoSpark,
+    cashflowBars,
+    cashflowTodayIdx,
     topBudget,
     topGoals,
   } = React.useMemo(() => {
@@ -203,6 +208,16 @@ export default function HomeScreen() {
       weeklyWorkouts.length >= 2
         ? weeklyWorkouts[weeklyWorkouts.length - 1].sessions - weeklyWorkouts[weeklyWorkouts.length - 2].sessions
         : null;
+    // Sparkline mini tile Saldo: pengeluaran harian 14 hari (data stats sudah di-fetch,
+    // field dailyExpenseHeat sebelumnya tidak pernah dirender)
+    const saldoSpark = (statsQuery.data?.finance.dailyExpenseHeat ?? []).slice(-14).map((x) => x.amount);
+    // Grafik arus kas 7 hari (field weekCashflow dari payload home — kini divisualkan)
+    const cashflowBars = (data?.weekCashflow ?? []).map((c) => ({
+      label: dayName(c.date, true),
+      value: c.expense,
+      alt: c.income,
+    }));
+    const cashflowTodayIdx = (data?.weekCashflow ?? []).findIndex((c) => c.date === data?.today);
     return {
       stripDays,
       xpToNextLevel: XP_PER_LEVEL - ((dd?.xp ?? 0) % XP_PER_LEVEL),
@@ -211,6 +226,9 @@ export default function HomeScreen() {
       weekBars,
       todayBarIdx,
       workoutDelta,
+      saldoSpark,
+      cashflowBars,
+      cashflowTodayIdx,
       topBudget: [...(budgetsQuery.data?.budgets ?? [])]
         .filter((b) => b.monthlyLimit > 0)
         .sort((a, b) => (b.spent ?? 0) / b.monthlyLimit - (a.spent ?? 0) / a.monthlyLimit)[0],
@@ -425,6 +443,12 @@ export default function HomeScreen() {
                 </span>{" "}
                 · 30 hari
               </p>
+              {statsQuery.data && saldoSpark.length >= 2 && (
+                <div className="mt-1.5">
+                  <Sparkline data={saldoSpark} height={20} strokeWidth={2} color={CLAY} showDot={false} />
+                  <p className="text-[11px] text-muted-foreground mt-0.5">pengeluaran harian · 14 hari</p>
+                </div>
+              )}
             </div>
           </button>
         </div>
@@ -666,6 +690,17 @@ export default function HomeScreen() {
               </div>
               <p className="text-xl font-bold tabular text-studio-deep mt-1">{d.weekRecap.workouts} sesi</p>
               <p className="text-xs text-muted-foreground mt-0.5">minggu berjalan</p>
+              {statsQuery.data && statsQuery.data.fitness.weeklyWorkouts.some((w) => w.sessions > 0) && (
+                <div className="mt-1.5">
+                  <MiniBars
+                    data={statsQuery.data.fitness.weeklyWorkouts.map((w) => ({ label: w.label, value: w.sessions }))}
+                    height={24}
+                    showLabels={false}
+                    color={SAGE_DEEP}
+                    highlightIndex={statsQuery.data.fitness.weeklyWorkouts.length - 1}
+                  />
+                </div>
+              )}
             </div>
           </div>
           {statsQuery.data && (
@@ -721,16 +756,35 @@ export default function HomeScreen() {
       {/* ===== Aktivitas lintas modul ===== */}
       <div className="px-4 mt-4 mb-2">
         <SectionCard title="Lintas Modul" icon={<CircleCheck className="h-4 w-4 text-foreground" />}>
-          <div className="flex items-center gap-3 rounded-xl bg-vault-soft p-3">
-            <span className="h-9 w-9 rounded-lg bg-white/60 flex items-center justify-center">
-              <Wallet className="h-5 w-5 text-vault-deep" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-vault-deep uppercase">Arus kas hari ini</p>
-              <p className="text-sm font-bold text-foreground truncate">
-                {formatRupiah(d.cashflowToday.expense, { compact: true })} keluar
-              </p>
+          <div className="rounded-xl bg-vault-soft p-3">
+            <div className="flex items-center gap-3">
+              <span className="h-9 w-9 rounded-lg bg-white/60 flex items-center justify-center shrink-0">
+                <Wallet className="h-5 w-5 text-vault-deep" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-vault-deep uppercase">Arus kas hari ini</p>
+                <p className="text-sm font-bold text-foreground truncate tabular">
+                  <span className="text-garden-deep">+{formatRupiah(d.cashflowToday.income, { compact: true })}</span>
+                  {" · "}
+                  <span className="text-clay-deep">−{formatRupiah(d.cashflowToday.expense, { compact: true })}</span>
+                </p>
+              </div>
             </div>
+            {cashflowBars.length > 0 && (
+              <div className="mt-2.5 border-t border-border/50 pt-2.5">
+                <MiniBars
+                  data={cashflowBars}
+                  showAlt
+                  label="Keluar"
+                  altLabel="Masuk"
+                  color={CLAY}
+                  altColor={SAGE}
+                  height={56}
+                  showLabels={false}
+                  highlightIndex={cashflowTodayIdx >= 0 ? cashflowTodayIdx : undefined}
+                />
+              </div>
+            )}
           </div>
           <button
             onClick={() => setPage("stats")}

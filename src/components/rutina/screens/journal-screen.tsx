@@ -245,6 +245,7 @@ export default function JournalScreen() {
     maxDayWords,
     weeklyWords,
     weekDelta,
+    entriesWeekly,
     dailyWords30,
     words30,
     lastEntry,
@@ -295,6 +296,18 @@ export default function JournalScreen() {
     }
     const weekDelta = weeklyWords[weeklyWords.length - 1].value - weeklyWords[weeklyWords.length - 2].value;
 
+    // Entri per pekan (4 pekan terakhir) — mini bar di tile "Bulan ini"
+    const entriesWeekly: { label: string; value: number }[] = [];
+    for (let w = 3; w >= 0; w--) {
+      const start = weekStart(addDays(today, -7 * w));
+      const end = addDays(start, 6);
+      const count = entries.filter((e) => {
+        const d = dayOf(e.createdAt);
+        return d >= start && d <= end;
+      }).length;
+      entriesWeekly.push({ label: w === 0 ? "Ini" : formatDayMonth(start), value: count });
+    }
+
     // ===== Tren kata 30 hari terakhir =====
     const byDay30 = new Map<string, number>();
     for (const e of entries) {
@@ -333,6 +346,7 @@ export default function JournalScreen() {
       maxDayWords,
       weeklyWords,
       weekDelta,
+      entriesWeekly,
       dailyWords30,
       words30,
       lastEntry,
@@ -450,9 +464,48 @@ export default function JournalScreen() {
 
         {/* ===== Statistik menulis ringkas ===== */}
         <div className="grid grid-cols-3 gap-2.5">
-          <StatTile label="Pekan ini" value={formatNumber(wordsThisWeek)} sub="kata ditulis" tone="writer" icon={<PenLine className="h-3.5 w-3.5" />} />
-          <StatTile label="Bulan ini" value={formatNumber(entriesThisMonth)} sub="entri baru" tone="writer" icon={<CalendarDays className="h-3.5 w-3.5" />} />
-          <StatTile label="Rata-rata" value={formatNumber(avgWords)} sub="kata / entri" tone="writer" icon={<AlignLeft className="h-3.5 w-3.5" />} />
+          <StatTile
+            label="Pekan ini"
+            value={formatNumber(wordsThisWeek)}
+            sub="kata ditulis"
+            tone="writer"
+            icon={<PenLine className="h-3.5 w-3.5" />}
+            chart={
+              <MiniBars
+                data={weeklyWords.slice(-4).map((w) => ({ label: w.label, value: w.value }))}
+                height={22}
+                showLabels={false}
+                highlightIndex={3}
+              />
+            }
+          />
+          <StatTile
+            label="Bulan ini"
+            value={formatNumber(entriesThisMonth)}
+            sub="entri baru"
+            tone="writer"
+            icon={<CalendarDays className="h-3.5 w-3.5" />}
+            chart={
+              <MiniBars
+                data={entriesWeekly.map((w) => ({ label: w.label, value: w.value }))}
+                height={22}
+                showLabels={false}
+                highlightIndex={3}
+              />
+            }
+          />
+          <StatTile
+            label="Rata-rata"
+            value={formatNumber(avgWords)}
+            sub="kata / entri"
+            tone="writer"
+            icon={<AlignLeft className="h-3.5 w-3.5" />}
+            chart={
+              dailyWords30.length >= 2 ? (
+                <Sparkline data={dailyWords30.slice(-14)} height={22} strokeWidth={1.8} showDot={false} />
+              ) : undefined
+            }
+          />
         </div>
 
         {/* ===== Total arsip & tren kata ===== */}

@@ -61,6 +61,7 @@ import {
   TIME_OF_DAY_META,
 } from "@/components/rutina/primitives";
 import {
+  DeltaBadge,
   MiniBars,
   Sparkline,
   RingStat,
@@ -1297,9 +1298,18 @@ function HabitCard({
             <span className="block truncate text-sm font-bold leading-tight">{habit.name}</span>
             <span className="mt-1 flex items-center gap-1.5 flex-wrap">
               <Pill tone={catMeta.tone}>{catMeta.label}</Pill>
-              {isMeasured && log && (
-                <span className="text-xs text-muted-foreground tabular">
-                  {formatNumber(log.value ?? 0, 1)}/{formatNumber(habit.unitTarget ?? 0, 1)} {habit.unitLabel}
+              {isMeasured && log && habit.unitTarget !== null && (
+                <span className="inline-flex min-w-0 items-center gap-1.5" style={{ maxWidth: 132 }}>
+                  <MetricBar
+                    value={log.value ?? 0}
+                    max={habit.unitTarget}
+                    height={5}
+                    className="min-w-[40px] flex-1"
+                    label={`Progres ${habit.name} hari ini`}
+                  />
+                  <span className="shrink-0 text-xs text-muted-foreground tabular">
+                    {formatNumber(log.value ?? 0, 1)}/{formatNumber(habit.unitTarget, 1)}
+                  </span>
                 </span>
               )}
             </span>
@@ -1468,6 +1478,14 @@ function HabitDetailDrawer({
   const statRest = statLogs.filter((l) => l.status === "rest").length;
   const statScheduled = statDays.filter((ds) => isScheduled(habit, ds)).length;
   const statRate = statScheduled > 0 ? Math.min(100, Math.round((statDone / statScheduled) * 100)) : 0;
+  // Pembanding: jendela 4 pekan sebelumnya (–28 s.d. –55 hari) untuk DeltaBadge
+  const prevRateStart = addDays(today, -55);
+  const prevRateEnd = addDays(today, -28);
+  const prevLogs = (habit.logs ?? []).filter((l) => l.date >= prevRateStart && l.date <= prevRateEnd);
+  const prevDays = rangeDays(prevRateStart, prevRateEnd);
+  const prevScheduled = prevDays.filter((ds) => isScheduled(habit, ds)).length;
+  const prevDone = prevLogs.filter((l) => isDoneLog(habit, l)).length;
+  const prevRate = prevScheduled > 0 ? Math.min(100, Math.round((prevDone / prevScheduled) * 100)) : 0;
   const totalValue = statLogs.reduce((acc, l) => acc + (l.value ?? 0), 0);
   const avgValue = statDone > 0 ? totalValue / statDone : 0;
 
@@ -1674,7 +1692,10 @@ function HabitDetailDrawer({
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                   Tingkat keberhasilan
                 </p>
-                <span className="text-sm font-bold tabular text-garden-deep">{statRate}%</span>
+                <span className="inline-flex items-center gap-1.5">
+                  {prevScheduled > 0 && <DeltaBadge delta={statRate - prevRate} suffix="%" />}
+                  <span className="text-sm font-bold tabular text-garden-deep">{statRate}%</span>
+                </span>
               </div>
               <MetricBar value={statRate} max={100} height={6} />
               <p className="mt-1.5 text-xs text-muted-foreground">
