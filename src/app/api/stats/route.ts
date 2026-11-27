@@ -11,6 +11,7 @@ import {
   formatRupiah,
   jakartaDateStr,
   jakartaToday,
+  monthName,
 } from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
@@ -59,10 +60,10 @@ export async function GET() {
         db.habit.findMany({ where: { archived: false }, orderBy: { createdAt: "asc" } }),
         // audit B2-M12: ambil hanya kolom yang dipakai agregasi misi (tanpa note/id dkk)
         db.habitLog.findMany({
-          where: { date: { gte: addDays(today, -95) } },
+          where: { date: { gte: addDays(today, -185) } },
           select: { habitId: true, date: true, status: true, value: true },
         }),
-        db.workout.findMany({ where: { date: { gte: addDays(today, -60) } } }),
+        db.workout.findMany({ where: { date: { gte: addDays(today, -185) } } }),
         db.bodyMetric.findMany({ orderBy: { date: "asc" } }),
         db.checkIn.findMany({ where: { date: { gte: addDays(today, -13) } } }),
         db.wallet.findMany(),
@@ -208,6 +209,54 @@ export async function GET() {
       .map(([category, amount]) => ({ category, amount: round2(amount) }))
       .sort((a, b) => b.amount - a.amount);
 
+    // ===== Tren bulanan 6 bulan (deep dive) =====
+    // Satu titik per bulan (WIB): arus kas keuangan, sesi latihan, misi
+    // kebiasaan (vs terjadwal — jadwal diaproksimasi dgn jadwal aktif saat
+    // ini, catatan di UI), dan jumlah entri jurnal. Bulan berjalan dihitung
+    // s.d. hari ini; bulan sebelumnya penuh.
+    const [ty, tmon] = today.split("-").map(Number);
+    const monthly = Array.from({ length: 6 }, (_, k) => {
+      const abs = ty * 12 + (tmon - 1) - (5 - k);
+      const y = Math.floor(abs / 12);
+      const m = (abs % 12) + 1;
+      const ym = `${y}-${String(m).padStart(2, "0")}`;
+      const inMonth = (dateStr: string) => dateStr.startsWith(ym);
+      const income = round2(
+        transactions.filter((t) => t.type === "income" && inMonth(t.date)).reduce((a, t) => a + t.amount, 0)
+      );
+      const expense = round2(
+        transactions.filter((t) => t.type === "expense" && inMonth(t.date)).reduce((a, t) => a + t.amount, 0)
+      );
+      const wInMonth = workouts.filter((w) => inMonth(w.date));
+      // Hari efektif bulan ini (bulan berjalan berhenti di hari ini)
+      const monthDates: string[] = [];
+      for (let d = 1; d <= 31; d++) {
+        const ds = `${ym}-${String(d).padStart(2, "0")}`;
+        if (ds > today) break;
+        // validitas hari: masih di bulan yang sama (28-31 aman lewat perbandingan bulan)
+        if (!ds.startsWith(ym)) break;
+        monthDates.push(ds);
+      }
+      let missionsDone = 0;
+      let missionsScheduled = 0;
+      for (const ds of monthDates) {
+        missionsDone += doneCountFor(ds);
+        missionsScheduled += scheduledCountFor(ds);
+      }
+      return {
+        month: ym,
+        label: monthName(m - 1, true),
+        income,
+        expense,
+        net: round2(income - expense),
+        sessions: wInMonth.length,
+        minutes: Math.round(wInMonth.reduce((a, w) => a + w.durationMin, 0)),
+        missionsDone,
+        missionsScheduled,
+        journalEntries: journalEntries.filter((e) => inMonth(jakartaDateStr(e.createdAt))).length,
+      };
+    });
+
     // ===== Jurnal =====
     // Tanggal entri jurnal mengikuti WIB (bukan TZ server) agar konsisten dgn log habit/tx
     const recentEntries = journalEntries.filter((e) => jakartaDateStr(e.createdAt) >= d30);
@@ -300,6 +349,7 @@ export async function GET() {
         dailyExpenseHeat,
         categoryComposition,
       },
+      monthly,
       journal: { entries30d, words30d, moodDistribution },
       activityCalendar,
       mood14d: checkins,

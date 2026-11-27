@@ -186,6 +186,20 @@ export interface QuoteItem {
 
 // ============ Computed / stats types ============
 
+// Satu titik tren bulanan (deep dive 6 bulan) — WIB, bulan berjalan s.d. hari ini
+export interface MonthlyPoint {
+  month: string; // "YYYY-MM"
+  label: string; // "Nov", "Okt", ...
+  income: number;
+  expense: number;
+  net: number;
+  sessions: number;
+  minutes: number;
+  missionsDone: number;
+  missionsScheduled: number;
+  journalEntries: number;
+}
+
 export interface StatsPayload {
   xp: number;
   level: number;
@@ -219,6 +233,7 @@ export interface StatsPayload {
     dailyExpenseHeat: { date: string; amount: number }[];
     categoryComposition: { category: string; amount: number }[];
   };
+  monthly: MonthlyPoint[];
   journal: { entries30d: number; words30d: number; moodDistribution: { mood: string; count: number }[] };
   activityCalendar: {
     date: string;

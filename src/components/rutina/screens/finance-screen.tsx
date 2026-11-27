@@ -22,6 +22,7 @@ import {
   Laptop,
   Gift,
   CircleDollarSign,
+  ChartLine,
   TrendingUp,
   TrendingDown,
   Scale,
@@ -67,6 +68,7 @@ import {
   SAGE_DEEP,
   Sparkline,
   StackBar,
+  TrendLine,
   rampColor,
 } from "@/components/rutina/charts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -360,6 +362,42 @@ export default function FinanceScreen() {
 
   // useMemo agar array stabil antar render (tidak menggunggung deps effect/memo lain)
   const transactions = React.useMemo(() => qTx.data?.transactions ?? [], [qTx.data]);
+
+  // ===== Tren bulanan 6 bulan (deep dive) — dihitung dari seluruh transaksi =====
+  // Bulan berjalan (WIB) dihitung s.d. hari ini; bulan sebelumnya penuh.
+  const monthlyTrend = React.useMemo(() => {
+    const t = todayStr();
+    const [ty, tmon] = t.split("-").map(Number);
+    return Array.from({ length: 6 }, (_, k) => {
+      const abs = ty * 12 + (tmon - 1) - (5 - k);
+      const y = Math.floor(abs / 12);
+      const m = (abs % 12) + 1;
+      const ym = `${y}-${String(m).padStart(2, "0")}`;
+      let income = 0;
+      let expense = 0;
+      for (const tx of transactions) {
+        if (!tx.date.startsWith(ym)) continue;
+        if (tx.type === "income") income += tx.amount;
+        else if (tx.type === "expense") expense += tx.amount;
+      }
+      const round2 = (n: number) => Math.round(n * 100) / 100;
+      return {
+        month: ym,
+        label: monthName(m - 1, true),
+        income: round2(income),
+        expense: round2(expense),
+        net: round2(income - expense),
+      };
+    });
+  }, [transactions]);
+  const [showAllMonthly, setShowAllMonthly] = React.useState(false);
+  const monthNow = monthlyTrend[monthlyTrend.length - 1];
+  const monthPrev = monthlyTrend[monthlyTrend.length - 2];
+  const expenseDelta =
+    monthPrev && monthPrev.expense > 0
+      ? Math.round(((monthNow.expense - monthPrev.expense) / monthPrev.expense) * 100)
+      : null;
+  const hasMonthlyData = monthlyTrend.some((m) => m.income > 0 || m.expense > 0);
   const wallets = React.useMemo(() => qWallets.data?.wallets ?? [], [qWallets.data]);
   const budgets = React.useMemo(() => qBudgets.data?.budgets ?? [], [qBudgets.data]);
   const goals = React.useMemo(() => qGoals.data?.goals ?? [], [qGoals.data]);
@@ -1135,6 +1173,74 @@ export default function FinanceScreen() {
               Banyak
             </span>
           </div>
+        </SectionCard>
+
+        {/* ============ Tren bulanan 6 bulan (deep dive) ============ */}
+        <SectionCard
+          title="Tren Bulanan 6 Bulan"
+          icon={<ChartLine className="h-4 w-4 text-vault-deep" />}
+          tone="vault"
+          className="rise-in"
+        >
+          {!hasMonthlyData ? (
+            <p className="text-xs text-muted-foreground">
+              Belum ada transaksi 6 bulan terakhir. Catat satu transaksi — pemasukan, pengeluaran, dan selisihnya akan tergambar di sini.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <MiniBars
+                data={monthlyTrend.map((m) => ({ label: m.label, value: m.income, alt: m.expense }))}
+                height={96}
+                showAlt
+                label="Pemasukan"
+                altLabel="Pengeluaran"
+                color={SAGE}
+                altColor={CLAY}
+                highlightIndex={monthlyTrend.length - 1}
+              />
+              <div>
+                <p className="text-xs font-bold mb-1">Selisih bulanan (pemasukan − pengeluaran)</p>
+                <TrendLine
+                  data={monthlyTrend.map((m) => ({ label: m.label, value: m.net }))}
+                  height={104}
+                  color={SAGE_DEEP}
+                  formatValue={(v) => formatRupiah(v, { compact: true })}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground tabular">
+                Bulan ini selisih <span className={cn("font-bold", monthNow.net >= 0 ? "text-garden-deep" : "text-clay-deep")}>{formatRupiah(monthNow.net)}</span>
+                {expenseDelta !== null && (
+                  <>
+                    {" "}· pengeluaran {expenseDelta === 0 ? "sama" : expenseDelta > 0 ? `naik ${expenseDelta}%` : `turun ${Math.abs(expenseDelta)}%`} dari bulan lalu
+                  </>
+                )}
+              </p>
+
+              <div id="finance-monthly-detail" className={showAllMonthly ? "space-y-1.5" : "hidden"}>
+                {monthlyTrend.map((m) => (
+                  <div key={m.month} className="flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-2 text-xs">
+                    <span className="w-9 shrink-0 font-bold">{m.label}</span>
+                    <span className="min-w-0 flex-1 truncate text-muted-foreground tabular">
+                      masuk {formatRupiah(m.income, { compact: true })} · keluar {formatRupiah(m.expense, { compact: true })}
+                    </span>
+                    <span className={cn("shrink-0 font-bold tabular", m.net >= 0 ? "text-garden-deep" : "text-clay-deep")}>
+                      {m.net >= 0 ? "+" : ""}
+                      {formatRupiah(m.net, { compact: true })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <ShowAllToggle
+                total={monthlyTrend.length}
+                visibleCount={showAllMonthly ? monthlyTrend.length : 0}
+                expanded={showAllMonthly}
+                onToggle={() => setShowAllMonthly((v) => !v)}
+                controlsId="finance-monthly-detail"
+                labelAll="Lihat rincian per bulan"
+                labelLess="Tutup rincian"
+              />
+            </div>
+          )}
         </SectionCard>
 
         {/* ============ Anggaran bulanan ============ */}

@@ -333,18 +333,26 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
                   </SelectContent>
                 </Select>
                 {newCatOpen ? (
-                  <form onSubmit={submitNewCat} className="flex items-center gap-2">
+                  // Div + tombol — JANGAN <form> bersarang di dalam form utama
+                  // (HTML melarang form dalam form; klik submit bisa salah sasaran).
+                  <div className="flex items-center gap-2">
                     <Input
                       value={newCatName}
                       onChange={(e) => setNewCatName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          submitNewCat(e);
+                        }
+                      }}
                       placeholder={`Nama kategori ${type === "income" ? "pemasukan" : "pengeluaran"}`}
                       maxLength={60}
                       className="min-h-[44px]"
                       aria-label="Nama kategori baru"
-                      autoFocus
                     />
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={submitNewCat}
                       disabled={createCat.isPending}
                       className="press flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl bg-garden px-3 text-sm font-bold text-white disabled:opacity-60"
                     >
@@ -362,7 +370,7 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
                     >
                       <X className="h-4 w-4" />
                     </button>
-                  </form>
+                  </div>
                 ) : (
                   <button
                     type="button"

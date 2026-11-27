@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   Loader2,
   RefreshCw,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -52,11 +53,11 @@ import {
   toDateStr,
   todayStr,
 } from "@/lib/rutina/format";
-import { ScreenHeader, SectionCard, StatTile, ProgressRing, Pill, HABIT_CATEGORY_META } from "@/components/rutina/primitives";
+import { ScreenHeader, SectionCard, StatTile, ProgressRing, Pill, HABIT_CATEGORY_META, ShowAllToggle } from "@/components/rutina/primitives";
 import { Button } from "@/components/ui/button";
 import { JOURNAL_MOODS } from "@/components/rutina/sheets/add-journal-sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import type { StatsPayload, AchievementItem } from "@/types/rutina";
+import type { StatsPayload, AchievementItem, MonthlyPoint } from "@/types/rutina";
 import { cn } from "@/lib/utils";
 
 const ACHIEVEMENT_ICON: Record<string, LucideIcon> = {
@@ -79,6 +80,91 @@ function cellIntensityBg(habitsDone: number): string {
   if (habitsDone <= 4) return "bg-garden/40";
   return "bg-garden/60";
 }
+
+/* ============ Kartu tren bulanan 6 bulan (deep dive) ============
+ * Dua grafik (misi & latihan) + rincian per bulan di balik progressive
+ * disclosure (aturan #9 — daftar panjang tidak boleh memaksa scroll). */
+function MonthlyTrendCard({ monthly }: { monthly: MonthlyPoint[] }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const totalMissions = monthly.reduce((a, m) => a + m.missionsScheduled, 0);
+  const totalSessions = monthly.reduce((a, m) => a + m.sessions, 0);
+  const totalJournal = monthly.reduce((a, m) => a + m.journalEntries, 0);
+
+  if (totalMissions === 0 && totalSessions === 0 && totalJournal === 0) {
+    return (
+      <SectionCard
+        title="Tren 6 Bulan"
+        tone="garden"
+        icon={<TrendingUp className="h-4 w-4 text-garden-deep" />}
+      >
+        <p className="text-xs text-muted-foreground">
+          Belum ada aktivitas 6 bulan terakhir untuk dibandingkan. Mulai satu misi hari ini — trennya akan tergambar di sini.
+        </p>
+      </SectionCard>
+    );
+  }
+
+  return (
+    <SectionCard
+      title="Tren 6 Bulan"
+      tone="garden"
+      icon={<TrendingUp className="h-4 w-4 text-garden-deep" />}
+    >
+      <div className="space-y-4">
+        <div>
+          <p className="text-xs font-bold mb-1.5">Misi kebiasaan — selesai vs terjadwal</p>
+          <MiniBars
+            data={monthly.map((m) => ({ label: m.label, value: m.missionsDone, alt: m.missionsScheduled }))}
+            height={92}
+            showAlt
+            label="Selesai"
+            altLabel="Terjadwal"
+            highlightIndex={monthly.length - 1}
+          />
+        </div>
+        <div>
+          <p className="text-xs font-bold mb-1.5">Sesi latihan per bulan</p>
+          <MiniBars
+            data={monthly.map((m) => ({ label: m.label, value: m.sessions }))}
+            height={92}
+            color="var(--chart-out)"
+            highlightIndex={monthly.length - 1}
+          />
+        </div>
+
+        <div id="monthly-detail" className={expanded ? "space-y-1.5" : "hidden"}>
+          {monthly.map((m) => {
+            const rate = m.missionsScheduled > 0 ? Math.round((m.missionsDone / m.missionsScheduled) * 100) : null;
+            return (
+              <div
+                key={m.month}
+                className="flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-2 text-xs"
+              >
+                <span className="w-9 shrink-0 font-bold">{m.label}</span>
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  misi {m.missionsDone}/{m.missionsScheduled}
+                  {rate !== null && ` (${rate}%)`} · {m.sessions} sesi ({m.minutes} mnt) · {m.journalEntries} jurnal
+                </span>
+              </div>
+            );
+          })}
+          <p className="text-[11px] text-muted-foreground pt-1">
+            Catatan: jumlah terjadwal memakai jadwal kebiasaan aktif saat ini — kebiasaan yang diarsipkan/berubah jadwal bisa sedikit berbeda dari catatan aslinya.
+          </p>
+        </div>
+
+        <ShowAllToggle
+          total={monthly.length}
+          visibleCount={expanded ? monthly.length : 0}
+          expanded={expanded}
+          onToggle={() => setExpanded((v) => !v)}
+          controlsId="monthly-detail"
+          labelAll="Lihat rincian bulanan"
+          labelLess="Tutup rincian"
+        />
+      </div>
+    </SectionCard>
+  );}
 
 export default function StatsScreen() {
   const setPage = useRutinaStore((s) => s.setPage);
@@ -244,6 +330,9 @@ export default function StatsScreen() {
             {stats.weekly.prevWeekDone}/{stats.weekly.prevWeekScheduled}
           </p>
         </SectionCard>
+
+        {/* ===== Tren bulanan 6 bulan (deep dive) ===== */}
+        <MonthlyTrendCard monthly={stats.monthly} />
 
         {/* ===== Komposisi kategori kebiasaan ===== */}
         <SectionCard title="Komposisi Kategori" tone="garden" icon={<PieIcon />}>
