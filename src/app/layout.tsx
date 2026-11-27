@@ -42,6 +42,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Android Chrome: keyboard mengecilkan layout viewport (bukan hanya visual)
+  // sehingga shell 100dvh, bottom-nav & sheet reaktif terhadap keyboard.
+  // Tanpa ini input di bawah sheet tertutup keyboard. Zoom TIDAK dimatikan —
+  // aksesibilitas tetap utuh (input sudah 16px agar iOS tidak zoom sendiri).
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F4F3EE" },
     { media: "(prefers-color-scheme: dark)", color: "#171D19" },

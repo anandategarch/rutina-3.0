@@ -71,6 +71,9 @@
 }
 
 :root {
+  /* Browser native surfaces (scrollbar, form control) ikuti skema terang;
+     .dark di bawah mengalihkannya ke gelap. */
+  color-scheme: light;
   /* Radius editorial: kartu 14–18px konsisten (rounded-lg 14, rounded-xl 18) */
   --radius: 0.875rem;
   /* ============================================================
@@ -163,6 +166,7 @@
 
 .dark {
   /* FIELD NOTES dark — kanvas hijau-hitam, primer sage terang */
+  color-scheme: dark;
   --background: #171d19;
   --foreground: #e7ece6;
   --card: #222a24;
@@ -228,6 +232,30 @@
   }
   html {
     -webkit-tap-highlight-color: transparent;
+    /* Tanpa font inflation otomatis di landscape (Safari iOS menaikkan font
+       teks saat orientasi berubah — merusak layout editorial). */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Dokumen dikunci (body overflow hidden) & semua scroll terjadi di dalam
+       shell — matikan pull-to-refresh / rubber-band root agar app terasa
+       terinstal, bukan halaman web. */
+    overscroll-behavior: none;
+  }
+  /* Touch hygiene GLOBAL untuk semua kontrol (bukan hanya .press):
+     tap langsung memicu click tanpa jeda double-tap-zoom 300ms. */
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+  /* Tekan lama pada kontrol tidak mengubahnya jadi seleksi teks / callout
+     Salin-Bagikan iOS. Teks KONTEN (paragraf, nomor rekening, pesan error)
+     tetap bisa diseleksi — aturan ini tidak pernah menyentuh body. */
+  button,
+  [role="button"] {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   body {
     @apply bg-background text-foreground;
