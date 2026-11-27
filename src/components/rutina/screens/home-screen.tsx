@@ -35,6 +35,7 @@ import {
   weekStart,
 } from "@/lib/rutina/format";
 import { SectionCard, Pill, EmptyState, ShowAllToggle } from "@/components/rutina/primitives";
+import { IlloSproutMission } from "@/components/rutina/illustrations";
 import { habitIcon, habitColor } from "@/components/rutina/habit-icons";
 import {
   CLAY,
@@ -496,6 +497,7 @@ export default function HomeScreen() {
           {agendaForSelected.length === 0 ? (
             <EmptyState
               icon={<Target className="h-6 w-6" />}
+              illustration={<IlloSproutMission className="mx-auto" />}
               title="Belum ada misi untuk hari ini"
               description="Tambahkan kebiasaan pertama dan mulai tanam kebiasaan baik."
               action={

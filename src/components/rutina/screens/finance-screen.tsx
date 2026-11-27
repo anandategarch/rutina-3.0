@@ -56,6 +56,7 @@ import {
   dayOfWeek,
 } from "@/lib/rutina/format";
 import { ScreenHeader, SectionCard, StatTile, EmptyState, Pill, ShowAllToggle } from "@/components/rutina/primitives";
+import { IlloDonutChart, IlloEnvelopeBudget, IlloSavingsJar, IlloSubscriptionLoop, IlloSearchList } from "@/components/rutina/illustrations";
 import {
   CLAY,
   DeltaBadge,
@@ -1069,6 +1070,7 @@ export default function FinanceScreen() {
           {composition.data.length === 0 ? (
             <EmptyState
               icon={<PieChartIcon className="h-6 w-6" />}
+              illustration={<IlloDonutChart className="mx-auto" />}
               title="Belum ada pengeluaran bulan ini"
               description="Catat transaksi keluar untuk melihat komposisi per kategori."
               action={
@@ -1253,6 +1255,7 @@ export default function FinanceScreen() {
           {budgetRows.length === 0 ? (
             <EmptyState
               icon={<Wallet className="h-6 w-6" />}
+              illustration={<IlloEnvelopeBudget className="mx-auto" />}
               title="Belum ada anggaran"
               description="Buat anggaran per kategori untuk menjaga pengeluaran."
             />
@@ -1355,6 +1358,7 @@ export default function FinanceScreen() {
           {goalRows.length === 0 ? (
             <EmptyState
               icon={<PiggyBank className="h-6 w-6" />}
+              illustration={<IlloSavingsJar className="mx-auto" />}
               title="Belum ada tujuan tabungan"
               description="Buat tujuan seperti dana darurat atau liburan untuk mulai menabung."
               action={
@@ -1427,6 +1431,7 @@ export default function FinanceScreen() {
           {subscriptions.length === 0 ? (
             <EmptyState
               icon={<Repeat className="h-6 w-6" />}
+              illustration={<IlloSubscriptionLoop className="mx-auto" />}
               title="Belum ada langganan"
               description="Transaksi berulang mingguan atau bulanan akan tampil di sini."
               action={
@@ -1548,6 +1553,7 @@ export default function FinanceScreen() {
           {groups.length === 0 ? (
             <EmptyState
               icon={<List className="h-6 w-6" />}
+              illustration={<IlloSearchList className="mx-auto" />}
               title="Tidak ada transaksi"
               description="Coba ubah bulan, filter, atau kata kunci pencarian."
             />

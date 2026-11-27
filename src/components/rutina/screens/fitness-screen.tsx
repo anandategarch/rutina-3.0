@@ -51,6 +51,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ScreenHeader, SectionCard, StatTile, EmptyState, ProgressRing, ShowAllToggle } from "../primitives";
+import { IlloBarbell, IlloRunRoute, IlloFoodBowl } from "../illustrations";
 import {
   MiniBars,
   Sparkline,
@@ -654,6 +655,7 @@ function E1rmCard({ workouts }: { workouts: Workout[] }) {
       {top3.length === 0 ? (
         <EmptyState
           icon={<Dumbbell className="h-6 w-6" />}
+          illustration={<IlloBarbell className="mx-auto" />}
           title="Belum ada data beban"
           description="Catat sesi latihan beban untuk melihat papan rekor e1RM-mu."
           action={
@@ -760,6 +762,7 @@ function MuscleBalanceCard({ workouts }: { workouts: Workout[] }) {
       {total === 0 ? (
         <EmptyState
           icon={<Dumbbell className="h-6 w-6" />}
+          illustration={<IlloBarbell className="mx-auto" />}
           title="Belum ada volume beban"
           description="Catat sesi latihan beban untuk melihat keseimbangan push, pull, dan kaki."
           action={
@@ -864,6 +867,7 @@ function HistorySection({ workouts }: { workouts: Workout[] }) {
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Route className="h-6 w-6" />}
+          illustration={<IlloRunRoute className="mx-auto" />}
           title="Belum ada sesi"
           description={`Tidak ada latihan ${typeFilter !== "all" ? "pada filter ini " : ""}${range} hari terakhir.`}
           action={
@@ -1411,6 +1415,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
         {todayEntries.length === 0 ? (
           <EmptyState
             icon={<UtensilsCrossed className="h-6 w-6" />}
+            illustration={<IlloFoodBowl className="mx-auto" />}
             title="Belum ada asupan hari ini"
             description="Catat makanan pertamamu untuk memantau kalori dan makro."
             action={

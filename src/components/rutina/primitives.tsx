@@ -162,7 +162,11 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center text-center py-8 px-4">
-      {illustration ?? (
+      {illustration ? (
+        /* Ilustrasi Field Notes sudah aria-hidden dari pembuatnya; jarak bawah
+           setara kotak ikon agar ritme kartu tetap sama. */
+        <div className="mb-3">{illustration}</div>
+      ) : (
         <div className="h-14 w-14 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground mb-3 shadow-soft">
           {icon}
         </div>

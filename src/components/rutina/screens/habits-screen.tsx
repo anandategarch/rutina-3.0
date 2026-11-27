@@ -60,6 +60,7 @@ import {
   HABIT_CATEGORY_META,
   TIME_OF_DAY_META,
 } from "@/components/rutina/primitives";
+import { IlloArchiveBox, IlloSearchList } from "@/components/rutina/illustrations";
 import {
   DeltaBadge,
   MiniBars,
@@ -1117,6 +1118,9 @@ export default function HabitsScreen() {
             {visibleHabits.length === 0 ? (
               <EmptyState
                 icon={<Sprout className="h-6 w-6" />}
+                illustration={
+                  tab === "archived" ? <IlloArchiveBox className="mx-auto" /> : <IlloSearchList className="mx-auto" />
+                }
                 title={tab === "archived" ? "Arsip masih kosong" : "Tidak ada kebiasaan yang cocok"}
                 description={
                   tab === "archived"
