@@ -480,7 +480,14 @@ export default function HomeScreen() {
       </div>
 
       {/* ===== Agenda ===== */}
-      <div className="px-4 mt-4">
+      {/* Momen dekoratif halaman (satu per halaman, taste-skill): selotip washi
+          di puncak kartu — identitas "jurnal fisik" Field Notes. aria-hidden,
+          tak mengganggu hierarki & tab order. */}
+      <div className="px-4 mt-4 relative">
+        <div
+          aria-hidden="true"
+          className="absolute -top-2.5 left-1/2 -translate-x-1/2 -rotate-2 h-5 w-24 rounded-sm bg-gold-soft/80 border border-border/60 shadow-soft pointer-events-none"
+        />
         <SectionCard
           title={isTodaySelected ? "Agenda Hari Ini" : `Agenda ${formatDateID(selectedDate)}`}
           tone="garden"
