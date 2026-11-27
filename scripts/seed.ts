@@ -513,11 +513,13 @@ async function seedBodyMetrics() {
 async function seedFinance() {
   let walletsCreated = 0;
   if ((await db.wallet.count()) === 0) {
+    // Dompet dibuat 35 hari lalu — sampling 30 hari berada di dalam jendela
+    // pencatatan, sehingga deteksi "Hari Bolong" bekerja pada data seed.
     await db.wallet.createMany({
       data: [
-        { name: "Bank BCA", type: "bank", initialBalance: 12500000, color: "teal", icon: "wallet" },
-        { name: "GoPay", type: "ewallet", initialBalance: 750000, color: "emerald", icon: "wallet" },
-        { name: "Tunai", type: "cash", initialBalance: 500000, color: "amber", icon: "wallet" },
+        { name: "Bank BCA", type: "bank", initialBalance: 12500000, color: "teal", icon: "wallet", createdAt: D(35) },
+        { name: "GoPay", type: "ewallet", initialBalance: 750000, color: "emerald", icon: "wallet", createdAt: D(35) },
+        { name: "Tunai", type: "cash", initialBalance: 500000, color: "amber", icon: "wallet", createdAt: D(35) },
       ],
     });
     walletsCreated = 3;
@@ -556,6 +558,9 @@ async function seedFinance() {
   // pengeluaran harian 30 hari
   for (let i = 29; i >= 0; i--) {
     const date = DAY(i);
+    // Hari bolong realistis: 2 hari dalam sebulan pengguna lupa mencatat sama
+    // sekali — inilah yang dideteksi kartu "Hari Bolong" di The Vault.
+    if (i === 11 || i === 6) continue;
     // makan (1-3 trx/hari)
     for (let m = 0; m < intBetween(1, 3); m++) {
       await add({

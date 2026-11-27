@@ -80,10 +80,12 @@ export { db };
  * - hanya hari terjadwal yang dihitung (daily / daysOfWeek)
  * - done = status "done" ATAU value >= unitTarget (habit terukur)
  * - hari ini yang belum selesai diberi grace (tidak memutus streak)
+ * - hari bolong berpelindung "Rumah Kaca" di-skip: runtun tidak putus,
+ *   namun juga tidak bertambah (netral, seperti hari non-terjadwal)
  */
 export async function computeHabitStreaks(): Promise<Record<string, { current: number; best: number }>> {
   const today = jakartaToday();
-  const [habits, logs] = await Promise.all([
+  const [habits, logs, shieldRows] = await Promise.all([
     db.habit.findMany({
       select: { id: true, createdAt: true, scheduleType: true, daysOfWeek: true, unitTarget: true },
     }),
@@ -92,6 +94,7 @@ export async function computeHabitStreaks(): Promise<Record<string, { current: n
       where: { date: { lte: today } },
       select: { habitId: true, date: true, status: true, value: true },
     }),
+    db.habitShield.findMany({ select: { habitId: true, date: true } }),
   ]);
 
   const logsByHabit = new Map<string, Map<string, { status: string; value: number | null }>>();
@@ -102,6 +105,16 @@ export async function computeHabitStreaks(): Promise<Record<string, { current: n
       logsByHabit.set(l.habitId, m);
     }
     m.set(l.date, { status: l.status, value: l.value });
+  }
+
+  const shieldsByHabit = new Map<string, Set<string>>();
+  for (const s of shieldRows) {
+    let set = shieldsByHabit.get(s.habitId);
+    if (!set) {
+      set = new Set();
+      shieldsByHabit.set(s.habitId, set);
+    }
+    set.add(s.date);
   }
 
   const isScheduled = (daysOfWeek: string, scheduleType: string, ds: string) => {
@@ -121,6 +134,7 @@ export async function computeHabitStreaks(): Promise<Record<string, { current: n
   const out: Record<string, { current: number; best: number }> = {};
   for (const h of habits) {
     const m = logsByHabit.get(h.id) ?? new Map<string, { status: string; value: number | null }>();
+    const shieldSet = shieldsByHabit.get(h.id) ?? new Set<string>();
 
     // ---- current streak (jalan mundur dari hari ini, dengan grace hari ini) ----
     let current = 0;
@@ -135,6 +149,12 @@ export async function computeHabitStreaks(): Promise<Record<string, { current: n
         cursor = addDays(cursor, -1);
         continue;
       }
+      // Rumah Kaca: hari bolong terlindungi netral — runtun tetap berjalan.
+      // Hari ini tidak pernah berpelindung (shield hanya untuk hari lampau).
+      if (cursor !== today && shieldSet.has(cursor)) {
+        cursor = addDays(cursor, -1);
+        continue;
+      }
       if (cursor === today && current === 0) {
         cursor = addDays(cursor, -1); // grace: hari ini belum selesai
         continue;
@@ -143,7 +163,8 @@ export async function computeHabitStreaks(): Promise<Record<string, { current: n
     }
 
     // ---- best streak (jalan maju sejak log done pertama, semantik identik dengan
-    //      klien: hari non-terjadwal di-skip tanpa memutus run; log backfill tetap dihitung) ----
+    //      klien: hari non-terjadwal & hari berpelindung di-skip tanpa memutus run;
+    //      log backfill tetap dihitung) ----
     const doneSet = new Set(
       Array.from(m.entries())
         .filter(([, l]) => isDone(h.unitTarget, l))
@@ -158,6 +179,8 @@ export async function computeHabitStreaks(): Promise<Record<string, { current: n
         if (doneSet.has(ds)) {
           run++;
           best = Math.max(best, run);
+        } else if (shieldSet.has(ds)) {
+          // dilindungi: run dilanjutkan tanpa menambah hitungan
         } else {
           run = 0;
         }

@@ -188,6 +188,40 @@ export async function GET(req: Request) {
     const journalDraftHint =
       (await db.journalEntry.findMany({ orderBy: { updatedAt: "desc" }, take: 1 }))[0] ?? null;
 
+    // ============ Ritual "Tutup Hari" (Jaga Catatan) ============
+    // Hanya untuk hari ini WIB — tanggal lampau bukan ritual, hari esok belum ada.
+    // Tiga ketukan sebelum tidur: misi, kas, satu kalimat refleksi.
+    let dayClose: {
+      financeLogged: boolean;
+      journalLogged: boolean;
+      habitsRemaining: number;
+      habitsTotal: number;
+      closed: boolean;
+    } | null = null;
+    if (reqDate === todayStr) {
+      const [txCount, journalCount] = await Promise.all([
+        db.transaction.count({ where: { date: reqDate } }),
+        // createdAt disimpan UTC — jendela hari WIB = UTC+7
+        db.journalEntry.count({
+          where: {
+            createdAt: {
+              gte: new Date(`${reqDate}T00:00:00+07:00`),
+              lt: new Date(`${addDays(reqDate, 1)}T00:00:00+07:00`),
+            },
+          },
+        }),
+      ]);
+      const habitsRemaining = missions.total - missions.done;
+      dayClose = {
+        financeLogged: txCount > 0,
+        journalLogged: journalCount > 0,
+        habitsRemaining,
+        habitsTotal: missions.total,
+        closed:
+          txCount > 0 && journalCount > 0 && missions.total > 0 && habitsRemaining === 0,
+      };
+    }
+
     return NextResponse.json({
       profile,
       today: todayStr,
@@ -224,6 +258,7 @@ export async function GET(req: Request) {
       cashflowToday: cashToday,
       quote,
       journalDraftHint,
+      dayClose,
     });
   } catch (e) {
     console.error("home error", e);

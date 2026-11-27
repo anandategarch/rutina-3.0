@@ -62,6 +62,7 @@ import type {
   SearchResults,
   StatsPayload,
   Transaction,
+  VaultMisses,
   Wallet,
   Workout,
 } from "@/types/rutina";
@@ -81,6 +82,12 @@ export const rutinaApi = {
   deleteHabit: (id: string) => api.delete<{ ok: boolean }>(`/api/habits/${id}`),
   checkHabit: (id: string, date: string, value?: number) =>
     api.post<{ log: import("@/types/rutina").HabitLog | null }>(`/api/habits/${id}/check`, { date, value }),
+
+  // Rumah Kaca — pelindung runtun dari satu hari bolong karena lupa
+  shieldHabit: (id: string, date: string) =>
+    api.post<{ shield: { id: string; habitId: string; date: string } }>(`/api/habits/${id}/shield`, { date }),
+  unshieldHabit: (id: string, date: string) =>
+    api.delete<{ ok: boolean }>(`/api/habits/${id}/shield?date=${date}`),
 
   workouts: () => api.get<{ workouts: Workout[] }>("/api/workouts"),
   createWorkout: (body: Record<string, unknown>) => api.post<{ workout: Workout }>("/api/workouts", body),
@@ -111,6 +118,14 @@ export const rutinaApi = {
   finCategories: () => api.get<{ categories: FinanceCategory[] }>("/api/fin-categories"),
   createFinCategory: (body: { name: string; type: "expense" | "income" }) =>
     api.post<{ category: FinanceCategory }>("/api/fin-categories", body),
+
+  // Jaga Catatan — deteksi hari bolong & rekonsiliasi kas
+  vaultMisses: () => api.get<VaultMisses>("/api/vault/misses"),
+  reconcileWallet: (id: string, actualBalance: number) =>
+    api.post<{ reconciled: boolean; delta: number; transaction: Transaction | null }>(
+      `/api/wallets/${id}/reconcile`,
+      { actualBalance }
+    ),
 
   goals: () => api.get<{ goals: SavingsGoal[] }>("/api/goals"),
   createGoal: (body: Record<string, unknown>) => api.post<{ goal: SavingsGoal }>("/api/goals", body),

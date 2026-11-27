@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { db, computeHabitStreaks } from "@/lib/rutina/server";
-import { addDays, jakartaToday, isValidTimeStr } from "@/lib/rutina/format";
+import {
+  addDays,
+  dayOfWeek,
+  jakartaDateStr,
+  jakartaToday,
+  isValidTimeStr,
+  rangeDays,
+} from "@/lib/rutina/format";
 
 export const dynamic = "force-dynamic";
 
@@ -10,21 +17,56 @@ const COLORS = ["emerald", "amber", "teal", "rose", "orange", "stone"];
 // isValidTimeStr kini helper bersama di lib/rutina/format (dipakai POST & PATCH)
 
 /**
+ * Pola lupa (30 hari lampau, hari ini dikecualikan): weekday terjadwal yang
+ * paling sering bolong. Menonjol bila >=2 bolong pada weekday yang sama.
+ * Habit yang dibuat setelah tanggal ds tidak dihitung (belum terjadwal saat itu).
+ */
+function computeMissPattern(h: {
+  createdAt: Date;
+  scheduleType: string;
+  daysOfWeek: string;
+  unitTarget: number | null;
+}, logs: { date: string; status: string; value: number | null }[], today: string) {
+  const byDate = new Map(logs.map((l) => [l.date, l]));
+  const perDow = new Array<number>(7).fill(0);
+  const schedPerDow = new Array<number>(7).fill(0);
+  const isDone = (l?: { status: string; value: number | null }) =>
+    !!l && (l.status === "done" || (h.unitTarget !== null && (l.value ?? 0) >= h.unitTarget));
+  for (const ds of rangeDays(addDays(today, -29), addDays(today, -1))) {
+    if (jakartaDateStr(h.createdAt) > ds) continue;
+    const dow = dayOfWeek(ds);
+    if (h.scheduleType !== "daily" && !h.daysOfWeek.split(",").map(Number).includes(dow)) continue;
+    schedPerDow[dow]++;
+    if (!isDone(byDate.get(ds))) perDow[dow]++;
+  }
+  const max = Math.max(0, ...perDow);
+  if (max < 2) return null;
+  const weekday = perDow.indexOf(max);
+  return { weekday, count: max, scheduled: schedPerDow[weekday], rate: schedPerDow[weekday] > 0 ? 1 - max / schedPerDow[weekday] : 0 };
+}
+
+/**
  * GET /api/habits
- * Semua habit (termasuk yang diarsipkan) beserta logs 35 hari terakhir.
+ * Semua habit (termasuk yang diarsipkan) beserta logs 35 hari terakhir,
+ * pelindung Rumah Kaca (35 hari), dan pola lupa per habit.
  * Response: { habits: Habit[] }
  */
 export async function GET() {
   try {
     // Jendela 35 hari mengikuti zona WIB (bukan TZ server), konsisten dengan hari ini WIB
     const sinceStr = addDays(jakartaToday(), -34); // 35 hari inklusif
+    const today = jakartaToday();
 
     const [habitsRaw, streaks] = await Promise.all([
       db.habit.findMany({
         include: {
           logs: {
             // audit B2-H3: log masa depan tidak boleh tampil di daftar kebiasaan
-            where: { date: { gte: sinceStr, lte: jakartaToday() } },
+            where: { date: { gte: sinceStr, lte: today } },
+            orderBy: { date: "asc" },
+          },
+          shields: {
+            where: { date: { gte: sinceStr, lte: today } },
             orderBy: { date: "asc" },
           },
         },
@@ -37,6 +79,8 @@ export async function GET() {
     const habits = habitsRaw.map((h) => ({
       ...h,
       streak: streaks[h.id] ?? { current: 0, best: 0 },
+      shields: h.shields.map((s) => s.date),
+      missPattern: computeMissPattern(h, h.logs, today),
     }));
 
     return NextResponse.json({ habits });

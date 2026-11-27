@@ -40,6 +40,21 @@ model Habit {
   archived     Boolean    @default(false)
   createdAt    DateTime   @default(now())
   logs         HabitLog[]
+  shields      HabitShield[]
+}
+
+// Pelindung runtun "Rumah Kaca" — treatment untuk hari terjadwal yang bolong
+// karena lupa: streak tidak terputus (tidak juga bertambah) pada hari yang
+// dilindungi. Kuota diikat di API: 1 pemakaian per habit per 7 hari berjalan.
+model HabitShield {
+  id        String   @id @default(cuid())
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date      String // YYYY-MM-DD — hari terjadwal yang bolong
+  createdAt DateTime @default(now())
+
+  @@unique([habitId, date])
+  @@index([habitId, createdAt])
 }
 
 model HabitLog {

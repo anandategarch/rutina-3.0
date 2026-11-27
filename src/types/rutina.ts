@@ -34,6 +34,19 @@ export interface Habit {
   logs?: HabitLog[];
   /** Streak full-history dihitung server-side (sumber kebenaran); opsional agar objek lama tetap valid. */
   streak?: { current: number; best: number };
+  /** Hari bolong yang dilindungi "Rumah Kaca" (YYYY-MM-DD, jendela 35 hari). */
+  shields?: string[];
+  /** Pola lupa: hari terjadwal paling sering bolong dalam 30 hari (null = tidak menonjol). */
+  missPattern?: MissPattern | null;
+}
+
+export interface MissPattern {
+  /** 0=Minggu .. 6=Sabtu — weekday yang paling sering bolong. */
+  weekday: number;
+  count: number;
+  scheduled: number;
+  /** Kehadiran pada weekday tsb (0..1) — 1 - count/scheduledDow. */
+  rate: number;
 }
 
 export interface Workout {
@@ -275,6 +288,39 @@ export interface HomePayload {
   cashflowToday: { income: number; expense: number };
   quote: QuoteItem | null;
   journalDraftHint: JournalEntry | null;
+  /** Ritual "Tutup Hari" — hanya untuk hari ini WIB (null untuk tanggal lampau). */
+  dayClose: DayClose | null;
+}
+
+export interface DayClose {
+  /** Ada minimal 1 transaksi keuangan tercatat hari ini (termasuk transfer). */
+  financeLogged: boolean;
+  /** Minimal 1 entri jurnal dibuat hari ini (WIB). */
+  journalLogged: boolean;
+  habitsRemaining: number;
+  habitsTotal: number;
+  closed: boolean;
+}
+
+/* ===== Fitur "Jaga Catatan" — treatment lupa catat keuangan ===== */
+
+export interface VaultMisses {
+  today: string;
+  /** Awal jendela observasi (maks 30 hari, tidak lebih tua dari dompet pertama). */
+  windowStart: string;
+  /** Hari lampau tanpa satu pun transaksi. */
+  gapDays: string[];
+  trackedDays: number;
+  /** Median pengeluaran per hari yang tercatat (dasar estimasi). */
+  medianDailyExpense: number;
+  /** Estimasi rupiah yang lolos tanpa catatan = median × jumlah hari bolong. */
+  estimatedUntracked: number;
+  monthExpense: number;
+  /** estimatedUntracked / pengeluaran bulan berjalan (null bila belum ada). */
+  untrackedPct: number | null;
+  todayLogged: boolean;
+  /** Hari berturut-turut dengan >=1 transaksi (grace untuk hari ini). */
+  logStreak: number;
 }
 
 /* ===== Pencarian cepat lintas modul (fitur baru) ===== */
