@@ -35,7 +35,6 @@ import {
   AlertTriangle,
   Loader2,
   Search,
-  WifiOff,
   List,
   PieChart as PieChartIcon,
   Home,
@@ -60,6 +59,7 @@ import {
   dayOfWeek,
 } from "@/lib/rutina/format";
 import { ScreenHeader, SectionCard, StatTile, EmptyState, Pill, ShowAllToggle } from "@/components/rutina/primitives";
+import { LoadErrorState } from "@/components/rutina/load-error-state";
 import { IlloDonutChart, IlloEnvelopeBudget, IlloSavingsJar, IlloSubscriptionLoop, IlloSearchList } from "@/components/rutina/illustrations";
 import {
   CLAY,
@@ -1112,18 +1112,10 @@ export default function FinanceScreen() {
       <div className="flex flex-col min-h-full">
         <ScreenHeader title="Keuangan" subtitle="Saldo, anggaran & tujuan tabunganmu" tone="vault" />
         <div className="px-4 pt-16">
-          <EmptyState
-            icon={<WifiOff className="h-6 w-6" />}
-            title="Ada kendala memuat data"
-            description="Periksa koneksi internetmu lalu coba lagi."
-            action={
-              <button
-                onClick={retryFailed}
-                className="press min-h-[44px] rounded-xl bg-vault px-4 py-2.5 text-sm font-bold text-white"
-              >
-                Coba Lagi
-              </button>
-            }
+          <LoadErrorState
+            onRetry={retryFailed}
+            error={qTx.error ?? qWallets.error ?? qBudgets.error ?? qGoals.error}
+            tone="vault"
           />
         </div>
       </div>

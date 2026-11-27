@@ -34,7 +34,6 @@ import {
   Shuffle,
   Plus,
   Loader2,
-  WifiOff,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -51,6 +50,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ScreenHeader, SectionCard, StatTile, EmptyState, ProgressRing, ShowAllToggle } from "../primitives";
+import { LoadErrorState } from "@/components/rutina/load-error-state";
 import { IlloBarbell, IlloRunRoute, IlloFoodBowl } from "../illustrations";
 import {
   MiniBars,
@@ -127,24 +127,12 @@ const TYPE_FILTERS = [
 
 // ============ Screen root ============
 
-/** Gagal muat satu tab (bukan seluruh layar) — EmptyState + coba lagi
+/** Gagal muat satu tab (bukan seluruh layar) — auto-retry + coba lagi
  *  (audit ux-guidelines: jangan tampilkan kosong palsu saat query gagal). */
-function TabLoadError({ onRetry }: { onRetry: () => void }) {
+function TabLoadError({ onRetry, error }: { onRetry: () => void; error?: Error | null }) {
   return (
     <div className="pt-10">
-      <EmptyState
-        icon={<WifiOff className="h-6 w-6" />}
-        title="Ada kendala memuat data"
-        description="Periksa koneksi internetmu lalu coba lagi."
-        action={
-          <Button
-            onClick={onRetry}
-            className="press rounded-xl bg-studio text-white font-bold hover:bg-studio-deep min-h-[44px]"
-          >
-            Coba Lagi
-          </Button>
-        }
-      />
+      <LoadErrorState onRetry={onRetry} error={error} tone="studio" />
     </div>
   );
 }
@@ -173,18 +161,10 @@ export default function FitnessScreen() {
       <div className="flex flex-col min-h-full">
         <ScreenHeader title="Bugar" subtitle="Latihan, asupan & tubuh dalam satu layar" tone="studio" />
         <div className="px-4 pt-16">
-          <EmptyState
-            icon={<WifiOff className="h-6 w-6" />}
-            title="Ada kendala memuat data"
-            description="Periksa koneksi internetmu lalu coba lagi."
-            action={
-              <button
-                onClick={retryFailed}
-                className="press min-h-[44px] rounded-xl bg-studio px-4 py-2.5 text-sm font-bold text-white"
-              >
-                Coba Lagi
-              </button>
-            }
+          <LoadErrorState
+            onRetry={retryFailed}
+            error={workoutsQuery.error ?? checkinsQuery.error}
+            tone="studio"
           />
         </div>
       </div>
@@ -1285,7 +1265,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
   };
 
   if (foodsQuery.isLoading) return <TabSkeleton />;
-  if (foodsQuery.isError) return <TabLoadError onRetry={() => foodsQuery.refetch()} />;
+  if (foodsQuery.isError) return <TabLoadError onRetry={() => foodsQuery.refetch()} error={foodsQuery.error} />;
 
   const remaining = calTarget - Math.round(totals.calories);
   const over = remaining < 0;
@@ -1735,7 +1715,7 @@ function BodyTab({
   };
 
   if (metricsQuery.isLoading) return <TabSkeleton />;
-  if (metricsQuery.isError) return <TabLoadError onRetry={() => metricsQuery.refetch()} />;
+  if (metricsQuery.isError) return <TabLoadError onRetry={() => metricsQuery.refetch()} error={metricsQuery.error} />;
 
   const checkinBars = todayCheckin
     ? [

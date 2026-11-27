@@ -33,7 +33,6 @@ import {
   Clock3,
   Link2,
   Loader2,
-  WifiOff,
   ShieldCheck,
   CircleHelp,
   Undo2,
@@ -42,6 +41,7 @@ import { toast } from "sonner";
 import { useRutinaStore } from "@/store/rutina";
 import { rutinaApi } from "@/lib/rutina/api";
 import { invalidateAfterMutation } from "@/lib/rutina/queries";
+import { LoadErrorState } from "@/components/rutina/load-error-state";
 import { Input } from "@/components/ui/input";
 import {
   todayStr,
@@ -564,7 +564,7 @@ export default function HabitsScreen() {
     setShowAllHabits(false);
   }, [tab, search, filter]);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: queryError, refetch } = useQuery({
     queryKey: ["habits"],
     queryFn: rutinaApi.habits,
   });
@@ -795,22 +795,15 @@ export default function HabitsScreen() {
   };
 
   // Error state: jangan tampilkan taman kosong palsu saat jaringan gagal.
-  // Pola sama dengan home-screen: EmptyState + tombol coba lagi (min 44px).
+  // LoadErrorState: auto-retry berjenjang + pesan error asli — pengguna tidak
+  // terjebak layar buntu saat server cold-compile / jaringan berfluktuasi.
   if (isError && !data) {
     return (
       <div className="px-4 pt-[max(4rem,env(safe-area-inset-top))]">
-        <EmptyState
-          icon={<WifiOff className="h-6 w-6" />}
-          title="Ada kendala memuat data"
-          description="Periksa koneksi internetmu lalu coba lagi."
-          action={
-            <button
-              onClick={() => refetch()}
-              className="press min-h-[44px] rounded-xl bg-garden-deep px-4 py-2.5 text-sm font-bold text-white"
-            >
-              Coba Lagi
-            </button>
-          }
+        <LoadErrorState
+          onRetry={() => refetch()}
+          error={queryError}
+          tone="garden"
         />
       </div>
     );

@@ -18,7 +18,6 @@ import {
   Wallet,
   PartyPopper,
   CircleCheck,
-  WifiOff,
   Share2,
   MoonStar,
   BadgeCheck,
@@ -37,6 +36,7 @@ import {
   weekStart,
 } from "@/lib/rutina/format";
 import { SectionCard, Pill, EmptyState, ShowAllToggle } from "@/components/rutina/primitives";
+import { LoadErrorState } from "@/components/rutina/load-error-state";
 import { IlloSproutMission } from "@/components/rutina/illustrations";
 import { habitIcon, habitColor } from "@/components/rutina/habit-icons";
 import {
@@ -85,7 +85,7 @@ export default function HomeScreen() {
     setShowAllAgenda(false);
   }, [selectedDate]);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, error: homeError, refetch } = useQuery({
     // audit B2-H2: tanggal terpilih masuk query key — ganti tanggal = refetch beranda
     queryKey: ["home", selectedDate],
     queryFn: () => rutinaApi.home(selectedDate),
@@ -250,18 +250,10 @@ export default function HomeScreen() {
   if (isError && !data) {
     return (
       <div className="px-4 pt-[max(4rem,env(safe-area-inset-top))]">
-        <EmptyState
-          icon={<WifiOff className="h-6 w-6" />}
-          title="Ada kendala memuat data"
-          description="Periksa koneksi internetmu lalu coba lagi."
-          action={
-            <button
-              onClick={() => refetch()}
-              className="press min-h-[44px] rounded-xl bg-garden-deep px-4 py-2.5 text-sm font-bold text-white"
-            >
-              Coba Lagi
-            </button>
-          }
+        <LoadErrorState
+          onRetry={() => refetch()}
+          error={homeError}
+          tone="garden"
         />
       </div>
     );
