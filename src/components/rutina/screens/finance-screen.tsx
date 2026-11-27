@@ -40,6 +40,10 @@ import {
   PieChart as PieChartIcon,
   Home,
   Plane,
+  CalendarX2,
+  RotateCcw,
+  CircleCheck,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { rutinaApi, api } from "@/lib/rutina/api";
@@ -90,7 +94,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import type { Budget, SavingsGoal, Transaction } from "@/types/rutina";
+import type { Budget, SavingsGoal, Transaction, VaultMisses } from "@/types/rutina";
 import { useRutinaStore } from "@/store/rutina";
 import { cn } from "@/lib/utils";
 
@@ -108,6 +112,8 @@ const CATEGORY_ICON: Record<string, React.ElementType> = {
   freelance: Laptop,
   hadiah: Gift,
   lainnya: CircleDollarSign,
+  // Kategori sistem — hanya dibuat otomatis oleh rekonsiliasi kas (Jaga Catatan)
+  penyesuaian: Scale,
 };
 
 const CATEGORY_TONE: Record<string, "stone" | "garden" | "studio" | "vault" | "clay" | "gold"> = {
@@ -122,6 +128,7 @@ const CATEGORY_TONE: Record<string, "stone" | "garden" | "studio" | "vault" | "c
   freelance: "garden",
   hadiah: "gold",
   lainnya: "stone",
+  penyesuaian: "vault",
 };
 
 const GOAL_ICON: Record<string, React.ElementType> = {
@@ -257,6 +264,180 @@ function DrawerActions({
   );
 }
 
+// ============ Jaga Catatan — Kartu Hari Bolong ============
+
+// Preview daftar hari bolong sebelum tombol disclosure (ux-guidelines #84)
+const GAP_PREVIEW = 4;
+
+function HariBolongCard({
+  misses,
+  isLoading,
+  isError,
+  onRetry,
+  onBackfill,
+  onReconcile,
+}: {
+  misses: VaultMisses | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  /** Buka sheet transaksi dengan tanggal hari bolong terisi (Catat Mundur). */
+  onBackfill: (date: string) => void;
+  /** Buka drawer rekonsiliasi kas. */
+  onReconcile: () => void;
+}) {
+  const [showAll, setShowAll] = React.useState(false);
+  const gapCount = misses?.gapDays.length ?? 0;
+  const gapDays = showAll ? (misses?.gapDays ?? []) : (misses?.gapDays ?? []).slice(0, GAP_PREVIEW);
+
+  return (
+    <SectionCard
+      title="Hari Bolong"
+      tone="vault"
+      icon={<CalendarX2 className="h-4 w-4 text-vault-deep" />}
+      action={
+        misses && (
+          <Pill tone={gapCount > 0 ? "clay" : "garden"}>
+            {gapCount > 0 ? `${gapCount} hari` : "Lengkap"}
+          </Pill>
+        )
+      }
+      className="rise-in rise-in-1"
+    >
+      {isLoading ? (
+        <div className="space-y-2">
+          <div className="h-16 rounded-xl bg-secondary skeleton-shimmer" />
+          <div className="h-11 rounded-xl bg-secondary skeleton-shimmer" />
+        </div>
+      ) : isError || !misses ? (
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-clay-soft p-3">
+          <p className="text-xs font-semibold text-clay-deep">Deteksi hari bolong gagal dimuat.</p>
+          <button
+            onClick={onRetry}
+            className="press min-h-[44px] shrink-0 rounded-lg bg-clay px-3 text-xs font-bold text-white"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      ) : gapCount === 0 ? (
+        <div>
+          <div className="flex items-start gap-3 rounded-xl bg-garden-soft p-3">
+            <CircleCheck className="h-5 w-5 shrink-0 text-garden-deep" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-garden-deep leading-snug">
+                Catatan lengkap — tidak ada hari bolong
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 tabular">
+                {misses.trackedDays} hari terakhir semua punya catatan
+                {misses.untrackedPct !== null && misses.estimatedUntracked > 0
+                  ? ` · estimasi ${formatRupiah(misses.estimatedUntracked, { compact: true })} masih belum pulih`
+                  : ""}
+              </p>
+            </div>
+          </div>
+          {!misses.todayLogged && (
+            <p className="mt-2 px-1 text-xs text-muted-foreground">
+              Hari ini belum ada catatan — masih ada waktu sampai tengah malam.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div>
+          {/* Dampak — kuantifikasi lupa catat (jawaban "impact-nya apa?") */}
+          <div className="rounded-xl bg-clay-soft p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-clay-deep">
+              Dampak lupa catat
+            </p>
+            <p className="mt-1 text-xl font-bold tabular leading-tight text-clay-deep">
+              {formatRupiah(misses.estimatedUntracked, { compact: true })}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-clay-deep/90">
+              Perkiraan pengeluaran yang lolos tanpa catatan pada{" "}
+              <span className="font-bold">{gapCount} hari bolong</span>
+              {misses.untrackedPct !== null && misses.untrackedPct > 0
+                ? ` — setara ${Math.round(misses.untrackedPct * 100)}% pengeluaran bulan ini. `
+                : ". "}
+              Anggaran bisa terlihat lebih sehat dari kenyataan, dan saldo dompet
+              bisa melenceng dari kas asli.
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground tabular">
+              Dasar estimasi: median belanja harian tercatat{" "}
+              {formatRupiah(misses.medianDailyExpense, { compact: true })}
+            </p>
+          </div>
+
+          {/* Daftar hari bolong + treatment Catat Mundur */}
+          <div id="hari-bolong-list" className="mt-3 space-y-2">
+            {gapDays.map((ds) => (
+              <div
+                key={ds}
+                className="flex items-center gap-2 rounded-xl border border-border/70 bg-card p-2 pr-2.5"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-soft">
+                  <CalendarX2 className="h-4 w-4 text-clay" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold leading-tight truncate">{formatDateIDRow(ds)}</p>
+                  <p className="text-xs text-muted-foreground">Tanpa satu pun catatan</p>
+                </div>
+                <button
+                  onClick={() => onBackfill(ds)}
+                  className="press inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-vault-soft px-3 text-xs font-bold text-vault-deep"
+                  aria-label={`Catat mundur untuk ${formatDateIDRow(ds)}`}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Catat Mundur
+                </button>
+              </div>
+            ))}
+            <ShowAllToggle
+              total={gapCount}
+              visibleCount={showAll ? gapCount : Math.min(gapCount, GAP_PREVIEW)}
+              expanded={showAll}
+              onToggle={() => setShowAll((v) => !v)}
+              controlsId="hari-bolong-list"
+            />
+          </div>
+
+          {/* Runing pencatatan + treatment utama */}
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-secondary px-3 py-2.5">
+            <p className="text-xs text-muted-foreground">
+              Runing pencatatan{" "}
+              <span className="font-bold text-vault-deep tabular">{misses.logStreak} hari</span>
+              {misses.todayLogged ? " · hari ini sudah tercatat" : " · hari ini belum"}
+            </p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {!misses.todayLogged && (
+              <button
+                onClick={() => onBackfill(misses.today)}
+                className="press inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-vault px-4 text-sm font-bold text-white"
+              >
+                <Plus className="h-4 w-4" />
+                Catat Hari Ini
+              </button>
+            )}
+            <button
+              onClick={onReconcile}
+              className={cn(
+                "press inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-vault/30 bg-vault-soft px-4 text-sm font-bold text-vault-deep"
+              )}
+            >
+              <Scale className="h-4 w-4" />
+              Rekonsiliasi Kas
+            </button>
+          </div>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
+/** "16 Nov" — label pendek daftar hari bolong (tanpa tahun, hemat ruang). */
+function formatDateIDRow(s: string) {
+  return formatDayMonth(s);
+}
+
 // ============ Baris transaksi (di-memo) ============
 
 // Di-memo agar mengetik di kotak pencarian tidak me-render ulang setiap baris;
@@ -355,11 +536,15 @@ export default function FinanceScreen() {
   const qc = useQueryClient();
   // CTA EmptyState → sheet aksi cepat (pola yang sama dengan layar Fitness/Profil)
   const openQuickAction = useRutinaStore((s) => s.setQuickAction);
+  // Jaga Catatan — Catat Mundur membuka sheet transaksi dengan tanggal hari bolong
+  const openTransactionSheet = useRutinaStore((s) => s.openTransactionSheet);
 
   const qTx = useQuery({ queryKey: ["transactions"], queryFn: rutinaApi.transactions });
   const qWallets = useQuery({ queryKey: ["wallets"], queryFn: rutinaApi.wallets });
   const qBudgets = useQuery({ queryKey: ["budgets"], queryFn: rutinaApi.budgets });
   const qGoals = useQuery({ queryKey: ["goals"], queryFn: rutinaApi.goals });
+  // Jaga Catatan — deteksi hari bolong (self-contained: kartu menangani loading/error sendiri)
+  const qMisses = useQuery({ queryKey: ["vault-misses"], queryFn: rutinaApi.vaultMisses, staleTime: 30_000 });
 
   // useMemo agar array stabil antar render (tidak menggunggung deps effect/memo lain)
   const transactions = React.useMemo(() => qTx.data?.transactions ?? [], [qTx.data]);
@@ -530,6 +715,51 @@ export default function FinanceScreen() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // ============ Jaga Catatan: Rekonsiliasi kas ============
+  const [reconOpen, setReconOpen] = React.useState(false);
+  const [reconWalletId, setReconWalletId] = React.useState("");
+  const [reconActual, setReconActual] = React.useState("");
+  const reconWallets = React.useMemo(() => wallets.filter((w) => !w.archived), [wallets]);
+
+  // Saat drawer dibuka, default dompet = dompet aktif pertama
+  React.useEffect(() => {
+    if (!reconOpen) return;
+    setReconWalletId((cur) =>
+      cur && reconWallets.some((w) => w.id === cur) ? cur : (reconWallets[0]?.id ?? "")
+    );
+  }, [reconOpen, reconWallets]);
+
+  const reconcileWallet = useMutation({
+    mutationFn: ({ id, actualBalance }: { id: string; actualBalance: number }) =>
+      rutinaApi.reconcileWallet(id, actualBalance),
+    onSuccess: (res) => {
+      if (res.reconciled) {
+        toast.success(
+          `Selisih ${formatRupiah(Math.abs(res.delta))} dicatat sebagai penyesuaian`
+        );
+      } else {
+        toast.success("Saldo sudah cocok dengan kas asli — tidak ada selisih");
+      }
+      invalidateAfterMutation(qc, ["wallets", "transactions", "vault-misses", "budgets"]);
+      setReconOpen(false);
+      setReconActual("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const submitRecon = () => {
+    const amount = Number(reconActual);
+    if (!reconWalletId) {
+      toast.error("Pilih dompet dulu");
+      return;
+    }
+    if (!Number.isFinite(amount) || amount < 0) {
+      toast.error("Isi saldo kas asli yang kamu hitung");
+      return;
+    }
+    reconcileWallet.mutate({ id: reconWalletId, actualBalance: amount });
+  };
 
   // ============ Agregasi (useMemo) ============
 
@@ -1022,6 +1252,16 @@ export default function FinanceScreen() {
           <span className="text-clay">keluar</span> /{" "}
           <span className="text-foreground">selisih</span>
         </p>
+
+        {/* ============ Jaga Catatan — Hari Bolong ============ */}
+        <HariBolongCard
+          misses={qMisses.data}
+          isLoading={qMisses.isLoading}
+          isError={qMisses.isError}
+          onRetry={() => qMisses.refetch()}
+          onBackfill={(date) => openTransactionSheet({ date, note: "" })}
+          onReconcile={() => setReconOpen(true)}
+        />
 
         {/* ============ Arus kas 30 hari ============ */}
         <SectionCard
@@ -1693,6 +1933,69 @@ export default function FinanceScreen() {
               onConfirm={submitWallet}
               confirmLabel="Tambah"
               pending={createWallet.isPending}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* ============ Drawer: Rekonsiliasi Kas (Jaga Catatan) ============ */}
+      <Drawer open={reconOpen} onOpenChange={(o) => !o && setReconOpen(false)}>
+        <DrawerContent className="flex flex-col h-auto max-h-[85dvh] rounded-t-2xl">
+          <DrawerHeader className="px-4 text-left">
+            <DrawerTitle>Rekonsiliasi Kas</DrawerTitle>
+            <DrawerDescription>
+              Saldo dompet melenceng dari uang asli — biasanya bekas hari bolong?
+              Hitung kas yang benar-benar ada, selisihnya ditutup satu transaksi
+              penyesuaian.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="flex flex-1 min-h-0 flex-col">
+            <div className="flex-1 min-h-0 space-y-3 overflow-y-auto scroll-thin px-4 pb-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="recon-wallet">Dompet</Label>
+                <Select value={reconWalletId} onValueChange={setReconWalletId}>
+                  <SelectTrigger id="recon-wallet" className="w-full min-h-[44px]">
+                    <SelectValue placeholder="Pilih dompet" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reconWallets.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(() => {
+                const sel = reconWallets.find((w) => w.id === reconWalletId);
+                return sel ? (
+                  <p className="text-xs text-muted-foreground tabular">
+                    Catatan saat ini: <span className="font-bold text-foreground">{formatRupiah(sel.balance ?? sel.initialBalance)}</span>
+                  </p>
+                ) : null;
+              })()}
+              <NumberField
+                id="recon-actual"
+                label="Saldo kas asli (hitung manual)"
+                value={reconActual}
+                onChange={setReconActual}
+                placeholder="0"
+                prefix
+              />
+              <div className="flex gap-2 rounded-xl bg-vault-soft p-3">
+                <Info className="h-4 w-4 shrink-0 text-vault-deep mt-0.5" />
+                <p className="text-xs leading-relaxed text-vault-deep">
+                  Selisih ditulis otomatis sebagai transaksi{" "}
+                  <span className="font-bold">Penyesuaian</span> bertanggal hari ini.
+                  Riwayat transaksi lain tidak berubah.
+                </p>
+              </div>
+            </div>
+            <DrawerActions
+              onCancel={() => setReconOpen(false)}
+              onConfirm={submitRecon}
+              confirmLabel="Rekonsiliasi"
+              pending={reconcileWallet.isPending}
             />
           </div>
         </DrawerContent>

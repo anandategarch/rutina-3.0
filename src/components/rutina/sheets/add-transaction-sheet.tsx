@@ -70,7 +70,16 @@ const SEGMENT_STYLE: Record<TxType, string> = {
   transfer: "bg-vault text-white",
 };
 
-export default function AddTransactionSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function AddTransactionSheet({
+  open,
+  onClose,
+  prefill,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Prefill dari kartu Hari Bolong (Catat Mundur): tanggal hari bolong + catatan. */
+  prefill?: { date?: string; note?: string };
+}) {
   const qc = useQueryClient();
   const qWallets = useQuery({
     queryKey: ["wallets"],
@@ -137,7 +146,9 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
     createCat.mutate({ name, type: type === "income" ? "income" : "expense" });
   };
 
-  // Reset form setiap kali sheet dibuka
+  // Reset form setiap kali sheet dibuka; prefill Catat Mundur (tanggal hari
+  // bolong) dihormati bila valid & tidak di masa depan — validasi ganda di
+  // klien sejalan dengan tolak-tanggal-masa-depan di server.
   React.useEffect(() => {
     if (!open) return;
     setType("expense");
@@ -146,12 +157,15 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
     setCategory(DEFAULT_CAT.expense);
     setWalletId("");
     setToWalletId("");
-    setDate(todayStr());
-    setNote("");
+    setDate(
+      prefill?.date && prefill.date <= todayStr() ? prefill.date : todayStr()
+    );
+    setNote(prefill?.note ? prefill.note : "");
     setRecurring("none");
     setNewCatOpen(false);
     setNewCatName("");
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, prefill?.date, prefill?.note]);
 
   // Default dompet saat data wallets tersedia
   React.useEffect(() => {

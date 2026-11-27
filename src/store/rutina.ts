@@ -20,6 +20,15 @@ export interface JournalPrefillPayload {
   folder?: string;
 }
 
+/**
+ * Prefill opsional untuk sheet transaksi — treatment "Catat Mundur" dari
+ * kartu Hari Bolong (The Vault): tanggal hari bolong terisi otomatis.
+ */
+export interface TransactionPrefillPayload {
+  date?: string;
+  note?: string;
+}
+
 interface RutinaState {
   page: RutinaPage;
   hubOpen: boolean;
@@ -28,6 +37,8 @@ interface RutinaState {
   searchOpen: boolean;
   /** Prefill jurnal aktif; dibersihkan oleh app-shell saat sheet jurnal ditutup (closeJournal). */
   journalPrefill: JournalPrefillPayload | null;
+  /** Prefill transaksi aktif; dibersihkan oleh app-shell saat sheet transaksi ditutup. */
+  transactionPrefill: TransactionPrefillPayload | null;
   setPage: (p: RutinaPage) => void;
   setHubOpen: (open: boolean) => void;
   setQuickAction: (a: QuickAction) => void;
@@ -37,6 +48,11 @@ interface RutinaState {
    * dengan prefill = isi form otomatis (dipakai prompt refleksi).
    */
   openJournalSheet: (prefill?: JournalPrefillPayload) => void;
+  /**
+   * Buka sheet transaksi; tanpa argumen = form bersih, dengan prefill =
+   * tanggal/catatan terisi otomatis (dipakai treatment Catat Mundur).
+   */
+  openTransactionSheet: (prefill?: TransactionPrefillPayload) => void;
 }
 
 export const useRutinaStore = create<RutinaState>((set) => ({
@@ -45,10 +61,13 @@ export const useRutinaStore = create<RutinaState>((set) => ({
   quickAction: null,
   searchOpen: false,
   journalPrefill: null,
+  transactionPrefill: null,
   setPage: (p) => set({ page: p, hubOpen: false }),
   setHubOpen: (open) => set({ hubOpen: open }),
   setQuickAction: (a) => set({ quickAction: a, hubOpen: false }),
   setSearchOpen: (open) => set({ searchOpen: open, hubOpen: false }),
   openJournalSheet: (prefill) =>
     set({ journalPrefill: prefill ?? null, quickAction: "journal", hubOpen: false }),
+  openTransactionSheet: (prefill) =>
+    set({ transactionPrefill: prefill ?? null, quickAction: "transaction", hubOpen: false }),
 }));

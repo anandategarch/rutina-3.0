@@ -229,12 +229,17 @@ function QuickActionHub() {
 function QuickActionSheets() {
   const quickAction = useRutinaStore((s) => s.quickAction);
   const journalPrefill = useRutinaStore((s) => s.journalPrefill);
+  const transactionPrefill = useRutinaStore((s) => s.transactionPrefill);
   const setQuickAction = useRutinaStore((s) => s.setQuickAction);
   const close = () => setQuickAction(null);
   // Prefill (mis. prompt refleksi) dibuang saat sheet ditutup agar
   // pembukaan berikutnya selalu mulai dari form yang benar.
   const closeJournal = () => {
     useRutinaStore.setState({ journalPrefill: null });
+    close();
+  };
+  const closeTransaction = () => {
+    useRutinaStore.setState({ transactionPrefill: null });
     close();
   };
   // Sheet dimuat (chunk di-fetch) hanya pada penggunaan pertama; setelah itu
@@ -250,7 +255,13 @@ function QuickActionSheets() {
       {used.has("journal") && (
         <AddJournalSheet open={quickAction === "journal"} onClose={closeJournal} prefill={journalPrefill ?? undefined} />
       )}
-      {used.has("transaction") && <AddTransactionSheet open={quickAction === "transaction"} onClose={close} />}
+      {used.has("transaction") && (
+        <AddTransactionSheet
+          open={quickAction === "transaction"}
+          onClose={closeTransaction}
+          prefill={transactionPrefill ?? undefined}
+        />
+      )}
       {used.has("workout") && <AddWorkoutSheet open={quickAction === "workout"} onClose={close} />}
       {used.has("food") && <AddFoodSheet open={quickAction === "food"} onClose={close} />}
       {used.has("checkin") && <LogCheckInSheet open={quickAction === "checkin"} onClose={close} />}
