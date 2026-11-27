@@ -526,6 +526,9 @@ function WorkoutTab({
         )}
       </SectionCard>
 
+      {/* Rekor pribadi sepanjang riwayat (fitur baru) */}
+      <PersonalRecords workouts={workouts} />
+
       {/* Kalkulator e1RM — papan rekor */}
       <E1rmCard workouts={workouts} />
 
@@ -946,6 +949,87 @@ const WorkoutHistoryCard = React.memo(function WorkoutHistoryCard({ workout: w }
     </article>
   );
 });
+
+// ---------- Rekor pribadi (fitur baru) ----------
+
+/**
+ * Rekor Pribadi — pencapaian terbaik sepanjang riwayat latihan tercatat:
+ * beban terberat per gerakan, jarak terjauh, durasi terpanjang, dan kalori
+ * terbanyak, masing-masing dengan konteks sesi (jenis + tanggal).
+ * Berbeda dari e1RM (estimasi 1RM) — kartu ini menampilkan angka mentah
+ * puncak dari SEMUA jenis latihan, kardio maupun beban.
+ */
+function PersonalRecords({ workouts }: { workouts: Workout[] }) {
+  const rec = React.useMemo(() => {
+    let heaviest: { exercise: string; weight: number; date: string } | null = null;
+    let longest: Workout | null = null;
+    let farthest: Workout | null = null;
+    let hottest: Workout | null = null;
+    for (const w of workouts) {
+      if (!longest || w.durationMin > longest.durationMin) longest = w;
+      if (w.distanceKm != null && (!farthest || (farthest.distanceKm ?? 0) < w.distanceKm)) farthest = w;
+      if (w.calories != null && (!hottest || (hottest.calories ?? 0) < w.calories)) hottest = w;
+      if (w.type === "strength") {
+        for (const it of parseStrength(w.strength)) {
+          if (!heaviest || it.weight > heaviest.weight) {
+            heaviest = { exercise: it.exercise, weight: it.weight, date: w.date };
+          }
+        }
+      }
+    }
+    return { heaviest, longest, farthest, hottest };
+  }, [workouts]);
+
+  if (!rec.heaviest && !rec.longest && !rec.farthest && !rec.hottest) return null;
+
+  const tiles = [
+    rec.heaviest && {
+      label: "Beban terberat",
+      value: `${formatNumber(rec.heaviest.weight, 1)} kg`,
+      sub: `${rec.heaviest.exercise} · ${formatDateID(rec.heaviest.date)}`,
+    },
+    rec.farthest && {
+      label: "Jarak terjauh",
+      value: `${formatNumber(rec.farthest.distanceKm ?? 0, 1)} km`,
+      sub: `${TYPE_META[rec.farthest.type].label} · ${formatDateID(rec.farthest.date)}`,
+    },
+    rec.longest && {
+      label: "Durasi terpanjang",
+      value: formatDuration(rec.longest.durationMin),
+      sub: `${TYPE_META[rec.longest.type].label} · ${formatDateID(rec.longest.date)}`,
+    },
+    rec.hottest && {
+      label: "Kalori terbanyak",
+      value: `${formatNumber(rec.hottest.calories ?? 0)} kkal`,
+      sub: `${TYPE_META[rec.hottest.type].label} · ${formatDateID(rec.hottest.date)}`,
+    },
+  ].filter(Boolean) as { label: string; value: string; sub: string }[];
+
+  return (
+    <SectionCard
+      title="Rekor Pribadi"
+      tone="gold"
+      icon={<Trophy className="h-4 w-4 text-gold" />}
+      action={<span className="text-xs text-muted-foreground font-semibold">sepanjang riwayat</span>}
+    >
+      <div className="grid grid-cols-2 gap-2.5">
+        {tiles.map((t) => (
+          <div key={t.label} className="rounded-xl bg-gold-soft/60 p-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Trophy className="h-3.5 w-3.5 text-gold" />
+              <span className="text-xs font-bold uppercase tracking-wide text-gold-deep">{t.label}</span>
+            </div>
+            <p className="text-lg font-extrabold tabular text-foreground leading-none">{t.value}</p>
+            <p className="text-xs text-muted-foreground mt-1 truncate">{t.sub}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Pencapaian terbaikmu sepanjang riwayat latihan tercatat.
+      </p>
+    </SectionCard>
+  );
+}
 
 // ---------- Tren 6 pekan ----------
 

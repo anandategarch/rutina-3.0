@@ -18,6 +18,7 @@ import {
   NotebookText,
   UserRound,
   ChevronRight,
+  Search,
 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { useRutinaStore, type MainTab, type RutinaPage } from "@/store/rutina";
@@ -41,6 +42,7 @@ const AddTransactionSheet = dynamic(() => import("@/components/rutina/sheets/add
 const AddWorkoutSheet = dynamic(() => import("@/components/rutina/sheets/add-workout-sheet"), { ssr: false, loading: () => null });
 const AddFoodSheet = dynamic(() => import("@/components/rutina/sheets/add-food-sheet"), { ssr: false, loading: () => null });
 const LogCheckInSheet = dynamic(() => import("@/components/rutina/sheets/log-checkin-sheet"), { ssr: false, loading: () => null });
+const QuickSearchSheet = dynamic(() => import("@/components/rutina/sheets/quick-search-sheet"), { ssr: false, loading: () => null });
 
 // ===== Deep link & tombol back (ux-guidelines #4/#5) =====
 // Halaman disinkronkan ke location.hash sehingga back/forward browser menutup
@@ -146,6 +148,7 @@ function QuickActionHub() {
   const setHubOpen = useRutinaStore((s) => s.setHubOpen);
   const setQuickAction = useRutinaStore((s) => s.setQuickAction);
   const setPage = useRutinaStore((s) => s.setPage);
+  const setSearchOpen = useRutinaStore((s) => s.setSearchOpen);
 
   const actions = [
     { key: "habit" as const, icon: Sprout, label: "Tambah Kebiasaan", desc: "Tanam misi baru", tone: "bg-garden-soft text-garden-deep" },
@@ -157,6 +160,7 @@ function QuickActionHub() {
   ];
 
   const shortcuts = [
+    { icon: Search, label: "Cari", onClick: () => setSearchOpen(true) },
     { icon: NotebookText, label: "Jurnal", onClick: () => setPage("journal") },
     { icon: BarChart3, label: "Statistik", onClick: () => setPage("stats") },
     { icon: UserRound, label: "Profil", onClick: () => setPage("profile") },
@@ -196,13 +200,13 @@ function QuickActionHub() {
           </div>
           <div className="mt-4 border-t border-border/60 pt-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Jelajahi</p>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-4 gap-2.5">
               {shortcuts.map((s) => {
                 const Icon = s.icon;
                 return (
                   <button
                     key={s.label}
-                    onClick={() => setPage(s.label === "Jurnal" ? "journal" : s.label === "Statistik" ? "stats" : "profile")}
+                    onClick={s.onClick}
                     className="press flex items-center justify-center gap-1.5 rounded-xl bg-secondary py-2.5 text-xs font-semibold min-h-[44px]"
                   >
                     <Icon className="h-4 w-4" />
@@ -383,6 +387,7 @@ export function RutinaApp() {
           <BottomNav />
           <OverlayPages />
           <QuickActionHub />
+          <QuickSearchSheet />
           <QuickActionSheets />
         </div>
         </MotionConfig>

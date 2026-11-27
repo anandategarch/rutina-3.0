@@ -58,6 +58,7 @@ import type {
   Profile,
   QuoteItem,
   SavingsGoal,
+  SearchResults,
   StatsPayload,
   Transaction,
   Wallet,
@@ -121,4 +122,7 @@ export const rutinaApi = {
 
   stats: () => api.get<StatsPayload>("/api/stats"),
   quote: () => api.get<{ quote: QuoteItem | null }>("/api/quote"),
+
+  // Pencarian cepat lintas modul — q wajib 2..60 karakter (server menolak di luar rentang)
+  search: (q: string) => api.get<{ results: SearchResults }>(`/api/search?q=${encodeURIComponent(q)}`),
 };

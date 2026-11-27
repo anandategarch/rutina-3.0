@@ -19,6 +19,7 @@ import {
   PartyPopper,
   CircleCheck,
   WifiOff,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRutinaStore } from "@/store/rutina";
@@ -308,6 +309,29 @@ export default function HomeScreen() {
     .filter((group) => group.items.length > 0);
 
   const HighlightIcon = d.highlight ? HIGHLIGHT_ICON[d.highlight.icon] ?? Flame : Flame;
+
+  // ===== Fitur: Bagikan Rekap Pekan =====
+  // Web Share API (mobile) dengan fallback salin ke clipboard — teks ringkas
+  // berisi capaian pekan ini vs pekan lalu, tanpa data sensitif penuh.
+  const weekRecapText = [
+    "Rekap pekan Rutina:",
+    `- Misi selesai ${d.weekRecap.missionsDone}/${d.weekRecap.missionsTotal} (pekan lalu ${d.weekRecap.prevDone}/${d.weekRecap.prevTotal})`,
+    `- Latihan ${d.weekRecap.workouts} sesi`,
+    `- Streak ${d.streak.current} hari · Level ${d.level}`,
+    `- Masuk ${formatRupiah(d.weekRecap.income, { compact: true })} · Keluar ${formatRupiah(d.weekRecap.spent, { compact: true })}`,
+  ].join("\n");
+  const shareRecap = async () => {
+    try {
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        await navigator.share({ title: "Rekap Rutina", text: weekRecapText });
+      } else {
+        await navigator.clipboard.writeText(weekRecapText);
+        toast.success("Rekap pekan disalin ke clipboard");
+      }
+    } catch {
+      // Pengguna membatalkan share sheet — bukan kondisi error
+    }
+  };
 
   return (
     <div className="flex flex-col">
@@ -664,7 +688,19 @@ export default function HomeScreen() {
           title="Rekap Pekan"
           tone="studio"
           icon={<BarChart3 className="h-4 w-4 text-studio-deep" />}
-          action={<span className="text-xs text-muted-foreground font-semibold">Sen–Min</span>}
+          action={
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-semibold">Sen–Min</span>
+              <button
+                onClick={shareRecap}
+                aria-label="Bagikan rekap pekan"
+                className="press inline-flex min-h-[44px] items-center gap-1 text-xs font-bold text-studio-deep bg-studio-soft rounded-full px-3 py-1.5"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Bagikan
+              </button>
+            </div>
+          }
         >
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-studio-soft p-3">

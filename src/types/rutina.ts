@@ -252,3 +252,13 @@ export interface HomePayload {
   quote: QuoteItem | null;
   journalDraftHint: JournalEntry | null;
 }
+
+/* ===== Pencarian cepat lintas modul (fitur baru) ===== */
+
+export interface SearchResults {
+  habits: Pick<Habit, "id" | "name" | "category" | "archived">[];
+  transactions: Pick<Transaction, "id" | "type" | "amount" | "category" | "note" | "date">[];
+  journal: { id: string; title: string | null; folder: string; createdAt: string; snippet: string | null }[];
+  workouts: Pick<Workout, "id" | "type" | "title" | "date" | "durationMin">[];
+  wallets: Pick<Wallet, "id" | "name" | "type">[];
+}
