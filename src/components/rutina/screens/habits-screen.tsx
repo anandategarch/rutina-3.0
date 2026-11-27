@@ -34,6 +34,9 @@ import {
   Link2,
   Loader2,
   WifiOff,
+  ShieldCheck,
+  CircleHelp,
+  Undo2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRutinaStore } from "@/store/rutina";
@@ -113,8 +116,25 @@ function isDoneLog(h: Habit, log?: HabitLog | null): boolean {
   return h.unitTarget !== null && (log.value ?? 0) >= h.unitTarget;
 }
 
+/** Set tanggal berpelindung Rumah Kaca (hari bolong yang dilindungi streak). */
+function shieldSetOf(h: Habit): Set<string> {
+  return new Set(h.shields ?? []);
+}
+
+/** Kuota Rumah Kaca: 1 pemakaian per habit per 7 hari berjalan (jendela geser). */
+export const SHIELD_LIMIT = 1;
+export const SHIELD_WINDOW_DAYS = 7;
+
+export function shieldsUsedThisWeek(h: Habit, today: string): number {
+  return (h.shields ?? []).filter((ds) => {
+    const diff = daysBetween(ds, today);
+    return diff >= 0 && diff < SHIELD_WINDOW_DAYS;
+  }).length;
+}
+
 function habitCurrentStreak(h: Habit, today: string): number {
   const byDate = new Map((h.logs ?? []).map((l) => [l.date, l]));
+  const shielded = shieldSetOf(h);
   let streak = 0;
   let cursor = today;
   for (let i = 0; i < 60; i++) {
@@ -124,6 +144,11 @@ function habitCurrentStreak(h: Habit, today: string): number {
     }
     if (isDoneLog(h, byDate.get(cursor))) {
       streak++;
+      cursor = addDays(cursor, -1);
+      continue;
+    }
+    // Rumah Kaca: hari bolong terlindungi netral — runtun tidak putus.
+    if (cursor !== today && shielded.has(cursor)) {
       cursor = addDays(cursor, -1);
       continue;
     }
@@ -138,6 +163,7 @@ function habitCurrentStreak(h: Habit, today: string): number {
 
 function habitBestStreak(h: Habit, today: string): number {
   const byDate = new Map((h.logs ?? []).map((l) => [l.date, l]));
+  const shielded = shieldSetOf(h);
   let best = 0;
   let run = 0;
   for (const ds of rangeDays(addDays(today, -34), today)) {
@@ -145,6 +171,8 @@ function habitBestStreak(h: Habit, today: string): number {
     if (isDoneLog(h, byDate.get(ds))) {
       run++;
       best = Math.max(best, run);
+    } else if (shielded.has(ds)) {
+      // dilindungi: run dilanjutkan tanpa menambah hitungan (semantik server)
     } else {
       run = 0;
     }
@@ -1304,6 +1332,13 @@ function HabitCard({
             <span className="block truncate text-sm font-bold leading-tight">{habit.name}</span>
             <span className="mt-1 flex items-center gap-1.5 flex-wrap">
               <Pill tone={catMeta.tone}>{catMeta.label}</Pill>
+              {/* Rumah Kaca aktif pekan ini — pelindung streak terlihat sekilas */}
+              {shieldsUsedThisWeek(habit, today) > 0 && (
+                <Pill tone="gold">
+                  <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+                  Rumah Kaca
+                </Pill>
+              )}
               {isMeasured && log && habit.unitTarget !== null && (
                 <span className="inline-flex min-w-0 items-center gap-1.5" style={{ maxWidth: 132 }}>
                   <MetricBar
@@ -1441,6 +1476,24 @@ function HabitDetailDrawer({
       toast.success(habit?.archived ? "Kebiasaan dipulihkan" : "Kebiasaan diarsipkan");
       invalidateAfterMutation(qc, ["habits"]);
       onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Rumah Kaca — lindungi hari bolong / lepas pelindung (Jaga Catatan)
+  const shieldMutation = useMutation({
+    mutationFn: (date: string) => rutinaApi.shieldHabit(habit!.id, date),
+    onSuccess: () => {
+      toast.success("Rumah Kaca dipasang — runtun tetap aman");
+      invalidateAfterMutation(qc, ["habits"]);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const unshieldMutation = useMutation({
+    mutationFn: (date: string) => rutinaApi.unshieldHabit(habit!.id, date),
+    onSuccess: () => {
+      toast.success("Pelindung dilepas");
+      invalidateAfterMutation(qc, ["habits"]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -1583,6 +1636,124 @@ function HabitDetailDrawer({
               tone="gold"
             />
           </div>
+
+          {/* Rumah Kaca — treatment lupa: lindungi runtun dari 1 hari bolong + pola lupa */}
+          {!habit.archived && (() => {
+            const shielded = shieldSetOf(habit);
+            const used = shieldsUsedThisWeek(habit, today);
+            const quotaLeft = used < SHIELD_LIMIT;
+            const missed14 = rangeDays(addDays(today, -13), addDays(today, -1)).filter(
+              (ds) => isScheduled(habit, ds) && !isDoneLog(habit, logOn(habit, ds))
+            );
+            const protectedDays = missed14.filter((ds) => shielded.has(ds));
+            const shieldable = missed14.filter((ds) => !shielded.has(ds));
+            return (
+              <div className="rounded-xl border border-border/70 divide-y divide-border/60">
+                <div className="flex items-start gap-2.5 p-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-garden-soft">
+                    <ShieldCheck className="h-4 w-4 text-garden-deep" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold leading-tight">Rumah Kaca</p>
+                      <Pill tone={quotaLeft ? "garden" : "stone"}>
+                        {used}/{SHIELD_LIMIT} pekan ini
+                      </Pill>
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      Satu hari lupa tidak perlu memutus runtun. Lindungi hari bolong
+                      dan streak tetap berjalan — kuota 1 kali per pekan.
+                    </p>
+                  </div>
+                </div>
+
+                {(protectedDays.length > 0 || shieldable.length > 0) && (
+                  <div className="space-y-2 p-3">
+                    {protectedDays.map((ds) => (
+                      <div
+                        key={ds}
+                        className="flex items-center gap-2 rounded-xl bg-garden-soft px-2.5 py-2"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-garden-deep" />
+                        <p className="min-w-0 flex-1 text-xs font-semibold text-garden-deep truncate">
+                          {formatDayMonth(ds)} · dilindungi
+                        </p>
+                        <button
+                          onClick={() => unshieldMutation.mutate(ds)}
+                          disabled={unshieldMutation.isPending}
+                          className="press inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-card border border-border px-2.5 text-xs font-bold text-muted-foreground"
+                          aria-label={`Lepas pelindung ${formatDayMonth(ds)}`}
+                        >
+                          <Undo2 className="h-3 w-3" aria-hidden="true" />
+                          Lepas
+                        </button>
+                      </div>
+                    ))}
+                    {shieldable.slice(0, 3).map((ds) => (
+                      <div
+                        key={ds}
+                        className="flex items-center gap-2 rounded-xl border border-border/70 px-2.5 py-2"
+                      >
+                        <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold truncate">
+                            {formatDayMonth(ds)} · {dayNameFromDow(dayOfWeek(ds))}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">Hari bolong karena lupa</p>
+                        </div>
+                        <button
+                          onClick={() => shieldMutation.mutate(ds)}
+                          disabled={!quotaLeft || shieldMutation.isPending}
+                          className="press inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-full bg-garden-soft px-2.5 text-xs font-bold text-garden-deep disabled:opacity-50"
+                          aria-label={`Lindungi hari ${formatDayMonth(ds)} dengan Rumah Kaca`}
+                        >
+                          {shieldMutation.isPending && shieldMutation.variables === ds ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+                          )}
+                          Lindungi
+                        </button>
+                      </div>
+                    ))}
+                    {!quotaLeft && shieldable.length > 0 && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Kuota pekan ini sudah terpakai — kembali lagi pekan depan.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Pola lupa — kapan habit ini paling sering bolong */}
+                <div className="flex items-start gap-2.5 p-3">
+                  <CircleHelp className="h-4 w-4 shrink-0 text-gold-deep mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      Pola lupa · 30 hari
+                    </p>
+                    {habit.missPattern ? (
+                      <>
+                        <p className="mt-1 text-xs leading-relaxed">
+                          Paling sering bolong pada{" "}
+                          <span className="font-bold">{dayNameFromDow(habit.missPattern.weekday)}</span>
+                          {" "}— {habit.missPattern.count}× dari {habit.missPattern.scheduled} kali terjadwal.
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {habit.reminderTime
+                            ? `Coba geser pengingat ${habit.reminderTime} lebih awal, atau stapel ke kebiasaan lain.`
+                            : "Coba pasang pengingat atau stapel ke kebiasaan yang sudah jalan."}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Belum ada pola lupa yang menonjol — 30 hari terakhir rapi.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Stepper habit terukur */}
           {isMeasured && (

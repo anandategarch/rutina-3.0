@@ -164,7 +164,6 @@ export default function AddTransactionSheet({
     setRecurring("none");
     setNewCatOpen(false);
     setNewCatName("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, prefill?.date, prefill?.note]);
 
   // Default dompet saat data wallets tersedia
