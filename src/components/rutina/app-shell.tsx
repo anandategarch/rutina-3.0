@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { useRutinaStore, type MainTab, type RutinaPage } from "@/store/rutina";
+import { rutinaApi } from "@/lib/rutina/api";
 import { cn } from "@/lib/utils";
 
 // Layar tab utama: statis (dibutuhkan segera saat app dibuka)
@@ -348,9 +349,46 @@ export function RutinaApp() {
   const [queryClient] = React.useState(
     () =>
       new QueryClient({
-        defaultOptions: { queries: { staleTime: 15_000, retry: 1, refetchOnWindowFocus: false } },
+        defaultOptions: {
+          queries: {
+            staleTime: 15_000,
+            refetchOnWindowFocus: false,
+            // Ketahanan muat: kegagalan sementara (cold-compile route di dev,
+            // restart server, jaringan mobile berfluktuasi) tidak boleh langsung
+            // membuang pengguna ke layar error. 3 percobaan + backoff eksponensial
+            // dengan jitter; setelah itu LoadErrorState melanjutkan auto-retry UI.
+            retry: 2,
+            retryDelay: (attempt) =>
+              Math.min(1000 * 2 ** attempt, 10_000) + Math.floor(Math.random() * 400),
+          },
+        },
       })
   );
+
+  // Prefetch idle: data Kebiasaan adalah GET terberat (streak server + pola lupa +
+  // log 35 hari) dan routenya dikompilasi on-demand di dev. Dipanaskan sejak awal
+  // sehingga tab Kebiasaan terbuka instan dari cache & tidak menabrak cold-compile.
+  // requestIdleCallback: prefetch baru berjalan setelah interaksi awal selesai,
+  // jadi tidak berebut bandwidth dengan home/stats yang sedang dimuat.
+  React.useEffect(() => {
+    const warmUp = () => {
+      queryClient.prefetchQuery({ queryKey: ["habits"], queryFn: rutinaApi.habits, staleTime: 15_000 });
+    };
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number };
+    let id: number | undefined;
+    if (typeof w.requestIdleCallback === "function") {
+      id = w.requestIdleCallback(warmUp, { timeout: 3_500 });
+    } else {
+      id = window.setTimeout(warmUp, 2_000);
+    }
+    return () => {
+      if (typeof w.requestIdleCallback === "function" && id !== undefined) {
+        w.cancelIdleCallback?.(id);
+      } else if (id !== undefined) {
+        clearTimeout(id);
+      }
+    };
+  }, [queryClient]);
 
   // ===== Sinkronisasi halaman ↔ history (back/forward & deep link #jurnal dll.) =====
   const page = useRutinaStore((s) => s.page);

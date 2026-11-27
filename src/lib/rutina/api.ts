@@ -2,11 +2,32 @@
 
 // ============ Typed API client for Rutina ============
 
+/**
+ * Timeout per kategori request:
+ * - GET 30 dtk: route API di dev (Turbopack) dikompilasi on-demand — hit pertama
+ *   setelah restart server bisa menunggu kompilasi berat (log: 8.5s untuk "/").
+ *   Timeout 15 dtk memicu AbortSignal → query gagal → layar "Ada kendala memuat
+ *   data" padahal server hidup. 30 dtk menutup kasus cold-compile + jaringan lambat.
+ * - Mutasi 20 dtk: umumnya tulis cepat, tapi tetap longgar untuk jaringan mobile.
+ */
+const GET_TIMEOUT_MS = 30_000;
+const MUTATION_TIMEOUT_MS = 20_000;
+
+function describeFetchError(err: unknown): Error {
+  if (err instanceof DOMException && (err.name === "TimeoutError" || err.name === "AbortError")) {
+    return new Error("Waktu tunggu habis — server sedang sibuk atau koneksi lambat. Coba lagi.");
+  }
+  if (err instanceof TypeError) {
+    // fetch() gagal total: server mati / restart / jaringan putus
+    return new Error("Tidak bisa terhubung ke server. Periksa koneksi lalu coba lagi.");
+  }
+  return err instanceof Error ? err : new Error("Terjadi kesalahan tak terduga.");
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  // Timeout 15s: jaringan mobile bisa stall tanpa EOF — tanpa batas waktu,
-  // mutation.isPending menggantung selamanya (tombol disabled + spinner abadi).
   // Signal eksplisit dari caller (mis. React Query) tetap dihormati.
-  const signal = init?.signal ?? AbortSignal.timeout(15_000);
+  const isMutation = init?.method !== undefined && init.method !== "GET";
+  const signal = init?.signal ?? AbortSignal.timeout(isMutation ? MUTATION_TIMEOUT_MS : GET_TIMEOUT_MS);
   let res: Response;
   try {
     res = await fetch(url, {
@@ -18,10 +39,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch (err) {
-    if (err instanceof DOMException && (err.name === "TimeoutError" || err.name === "AbortError")) {
-      throw new Error("Koneksi lambat atau terputus. Coba lagi.");
-    }
-    throw err;
+    throw describeFetchError(err);
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
