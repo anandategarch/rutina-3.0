@@ -16,6 +16,7 @@
  * bukan hex, agar UI tetap 100% konsisten dengan design token.
  */
 import { db } from "@/lib/db";
+import { EXERCISE_CATALOG } from "@/lib/rutina/exercise-catalog";
 
 /* ---------------- util ---------------- */
 
@@ -215,37 +216,8 @@ const QUOTES = [
 ];
 
 /** Katalog latihan untuk picker sheet Workout (tanpa ini picker kosong di install baru). */
-const EXERCISE_CATALOG = [
-  { name: "Bench Press", muscleGroup: "chest", equipment: "barbell" },
-  { name: "Incline Dumbbell Press", muscleGroup: "chest", equipment: "dumbbell" },
-  { name: "Push-Up", muscleGroup: "chest", equipment: null },
-  { name: "Cable Fly", muscleGroup: "chest", equipment: "cable" },
-  { name: "Deadlift", muscleGroup: "back", equipment: "barbell" },
-  { name: "Barbell Row", muscleGroup: "back", equipment: "barbell" },
-  { name: "Lat Pulldown", muscleGroup: "back", equipment: "cable" },
-  { name: "Pull-Up", muscleGroup: "back", equipment: null },
-  { name: "Seated Row", muscleGroup: "back", equipment: "cable" },
-  { name: "Overhead Press", muscleGroup: "shoulders", equipment: "barbell" },
-  { name: "Lateral Raise", muscleGroup: "shoulders", equipment: "dumbbell" },
-  { name: "Face Pull", muscleGroup: "shoulders", equipment: "cable" },
-  { name: "Barbell Curl", muscleGroup: "arms", equipment: "barbell" },
-  { name: "Dumbbell Curl", muscleGroup: "arms", equipment: "dumbbell" },
-  { name: "Triceps Pushdown", muscleGroup: "arms", equipment: "cable" },
-  { name: "Hammer Curl", muscleGroup: "arms", equipment: "dumbbell" },
-  { name: "Squat", muscleGroup: "legs", equipment: "barbell" },
-  { name: "Lunge", muscleGroup: "legs", equipment: "dumbbell" },
-  { name: "Leg Press", muscleGroup: "legs", equipment: "machine" },
-  { name: "Romanian Deadlift", muscleGroup: "legs", equipment: "barbell" },
-  { name: "Calf Raise", muscleGroup: "legs", equipment: "machine" },
-  { name: "Leg Curl", muscleGroup: "legs", equipment: "machine" },
-  { name: "Plank", muscleGroup: "core", equipment: null },
-  { name: "Hanging Leg Raise", muscleGroup: "core", equipment: null },
-  { name: "Cable Crunch", muscleGroup: "core", equipment: "cable" },
-  { name: "Russian Twist", muscleGroup: "core", equipment: null },
-  { name: "Burpee", muscleGroup: "fullbody", equipment: null },
-  { name: "Kettlebell Swing", muscleGroup: "fullbody", equipment: "kettlebell" },
-  { name: "Farmer Walk", muscleGroup: "fullbody", equipment: "dumbbell" },
-];
+// Katalog gerakan kini bersumber dari @/lib/rutina/exercise-catalog (data kategori
+// bugar aplikasi — 76 gerakan) supaya seed, API, dan UI memakai satu sumber.
 
 /** Katalog makanan umum untuk saran sheet Food (tanpa ini saran kosong di install baru). */
 const FOOD_ITEM_CATALOG = [
@@ -691,6 +663,22 @@ async function seedJournal() {
   return JOURNAL_SEED.length;
 }
 
+/**
+ * Impor katalog gerakan (data kategori bugar) — referensi aplikasi.
+ * Semantik top-up (sama dengan GET /api/exercises): hanya nama yang belum
+ * ada yang diimpor — DB lama ikut naik ke katalog penuh tanpa duplikat.
+ */
+async function seedExercises() {
+  const existing = await db.exercise.findMany({ select: { name: true }, take: 1000 });
+  const have = new Set(existing.map((e) => e.name.toLowerCase()));
+  const missing = EXERCISE_CATALOG.filter((e) => !have.has(e.name.toLowerCase()));
+  if (missing.length === 0) return 0;
+  await db.exercise.createMany({
+    data: missing.map((e) => ({ name: e.name, muscleGroup: e.muscleGroup, equipment: e.equipment })),
+  });
+  return missing.length;
+}
+
 async function seedGamification() {
   let n = 0;
   if ((await db.quote.count()) === 0) {
@@ -701,11 +689,8 @@ async function seedGamification() {
     await db.achievement.createMany({ data: ACHIEVEMENT_DEFS });
     n += ACHIEVEMENT_DEFS.length;
   }
-  // Katalog latihan & makanan: wajib terisi agar picker/saran di sheet tidak kosong
-  if ((await db.exercise.count()) === 0) {
-    await db.exercise.createMany({ data: EXERCISE_CATALOG });
-    n += EXERCISE_CATALOG.length;
-  }
+  // Katalog makanan: wajib terisi agar picker/saran di sheet tidak kosong
+  // (katalog gerakan bugar ditangani seedExercises — satu sumber dengan API)
   if ((await db.foodItem.count()) === 0) {
     await db.foodItem.createMany({ data: FOOD_ITEM_CATALOG });
     n += FOOD_ITEM_CATALOG.length;
@@ -725,6 +710,7 @@ async function main() {
   const metrics = await seedBodyMetrics();
   const finance = await seedFinance();
   const journal = await seedJournal();
+  const exercises = await seedExercises();
   const gamify = await seedGamification();
 
   console.log("Seed selesai:", {
@@ -736,6 +722,7 @@ async function main() {
     bodyMetrics: metrics,
     finance: finance,
     journalEntries: journal,
+    exercises,
     quotesAchievements: gamify,
   });
 }
