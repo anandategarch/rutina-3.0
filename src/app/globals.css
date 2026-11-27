@@ -472,6 +472,21 @@
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* ============================================================
+   Kertas Field Notes — grid titik halus di latar shell. Identitas
+   editorial "kertas grafis" ala jurnal fisik; warna dari foreground
+   di-mix sangat tipis (7%) sehingga teks tetap kontras penuh dan
+   tekstur mengikuti dark mode otomatis. Kartu (bg-card) duduk di
+   atasnya — tekstur hanya terlihat di celah antarkartu.
+   ============================================================ */
+.paper-grid {
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--foreground) 7%, transparent) 1px,
+    transparent 1.4px
+  );
+  background-size: 22px 22px;
+}
+
 /* Custom scrollbars for scrollable lists */
 .scroll-thin {
   scrollbar-width: thin;

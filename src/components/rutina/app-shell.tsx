@@ -289,7 +289,7 @@ function OverlayPages() {
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="absolute inset-0 z-[45] bg-background overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom,0px)]"
+          className="absolute inset-0 z-[45] bg-background paper-grid overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom,0px)]"
         >
           <div className="mx-auto w-full max-w-[512px]">
             {page === "journal" && <JournalScreen />}
@@ -383,7 +383,7 @@ export function RutinaApp() {
         <MotionConfig reducedMotion="user">
         {/* Full-bleed app shell — fills the viewport edge-to-edge at every screen size.
             Content is centered with a max-width column so wide screens stay readable. */}
-        <div className="relative h-dvh w-full bg-background flex flex-col overflow-hidden">
+        <div className="relative h-dvh w-full bg-background paper-grid flex flex-col overflow-hidden">
           <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain scroll-thin mx-auto w-full max-w-[512px]">
             <MainContent />
           </div>

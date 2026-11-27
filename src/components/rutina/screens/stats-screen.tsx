@@ -53,7 +53,8 @@ import {
   toDateStr,
   todayStr,
 } from "@/lib/rutina/format";
-import { ScreenHeader, SectionCard, StatTile, ProgressRing, Pill, HABIT_CATEGORY_META, ShowAllToggle } from "@/components/rutina/primitives";
+import { ScreenHeader, SectionCard, StatTile, ProgressRing, Pill, EmptyState, HABIT_CATEGORY_META, ShowAllToggle } from "@/components/rutina/primitives";
+import { IlloSproutMission, IlloRunRoute, IlloTrendBars } from "@/components/rutina/illustrations";
 import { Button } from "@/components/ui/button";
 import { JOURNAL_MOODS } from "@/components/rutina/sheets/add-journal-sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -337,7 +338,11 @@ export default function StatsScreen() {
         {/* ===== Komposisi kategori kebiasaan ===== */}
         <SectionCard title="Komposisi Kategori" tone="garden" icon={<PieIcon />}>
           {stats.habitCategoryComposition.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Belum ada kebiasaan aktif untuk dihitung.</p>
+            <EmptyState
+              icon={<PieIcon />}
+              illustration={<IlloSproutMission className="mx-auto h-20 w-auto" />}
+              title="Belum ada kebiasaan aktif untuk dihitung"
+            />
           ) : (
             <div className="flex items-center gap-4">
               <Donut
@@ -431,7 +436,11 @@ export default function StatsScreen() {
               highlightIndex={stats.fitness.weeklyWorkouts.length - 1}
             />
           ) : (
-            <p className="text-xs text-muted-foreground">Belum ada sesi latihan dalam enam pekan terakhir.</p>
+            <EmptyState
+              icon={<Route className="h-6 w-6" />}
+              illustration={<IlloRunRoute className="mx-auto h-20 w-auto" />}
+              title="Belum ada sesi latihan dalam enam pekan terakhir"
+            />
           )}
 
           <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mt-4 mb-1">Tren berat badan</p>
@@ -443,7 +452,12 @@ export default function StatsScreen() {
               formatValue={(v) => `${formatNumber(v, 1)} kg`}
             />
           ) : (
-            <p className="text-xs text-muted-foreground">Belum cukup data timbangan untuk menggambar tren.</p>
+            <EmptyState
+              icon={<Scale className="h-6 w-6" />}
+              illustration={<IlloTrendBars className="mx-auto h-20 w-auto" />}
+              title="Belum cukup data timbangan untuk menggambar tren"
+              description="Catat berat badan minimal dua kali untuk melihat garis trennya."
+            />
           )}
 
           <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mt-4 mb-1">Mood &amp; energi 14 hari</p>
