@@ -20,6 +20,8 @@ import {
   CircleCheck,
   WifiOff,
   Share2,
+  MoonStar,
+  BadgeCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRutinaStore } from "@/store/rutina";
@@ -72,6 +74,8 @@ export default function HomeScreen() {
   const qc = useQueryClient();
   const setQuickAction = useRutinaStore((s) => s.setQuickAction);
   const setPage = useRutinaStore((s) => s.setPage);
+  const openTransactionSheet = useRutinaStore((s) => s.openTransactionSheet);
+  const openJournalSheet = useRutinaStore((s) => s.openJournalSheet);
   const [selectedDate, setSelectedDate] = React.useState(todayStr());
 
   // ux-guidelines #84 & #115 (progressive disclosure): kembalikan agenda ke
@@ -691,6 +695,73 @@ export default function HomeScreen() {
         </motion.div>
       )}
 
+      {/* ===== Ritual Tutup Hari (Jaga Catatan) ===== */}
+      {/* Tiga ketukan sebelum tidur: misi, kas, satu kalimat refleksi. Muncul
+          hanya untuk hari ini WIB — ritual hari ini, bukan tanggal lampau. */}
+      {d.dayClose && (
+        <div className="px-4 mt-4">
+          <SectionCard
+            title="Tutup Hari"
+            tone={d.dayClose.closed ? "gold" : "stone"}
+            icon={
+              d.dayClose.closed ? (
+                <BadgeCheck className="h-4 w-4 text-gold-deep" />
+              ) : (
+                <MoonStar className="h-4 w-4 text-foreground" />
+              )
+            }
+          >
+            <div className="space-y-2">
+              <DayCloseRow
+                done={d.dayClose.habitsRemaining === 0}
+                disabled={d.dayClose.habitsTotal === 0}
+                label="Misi harian"
+                detail={
+                  d.dayClose.habitsTotal === 0
+                    ? "Belum ada misi terjadwal"
+                    : `${d.dayClose.habitsTotal - d.dayClose.habitsRemaining}/${d.dayClose.habitsTotal} selesai`
+                }
+                actionLabel="Lanjut"
+                onClick={() => setPage("habits")}
+              />
+              <DayCloseRow
+                done={d.dayClose.financeLogged}
+                label="Catatan keuangan"
+                detail={d.dayClose.financeLogged ? "Kas hari ini tercatat" : "Belum ada satu pun catatan"}
+                actionLabel="Catat"
+                onClick={() => openTransactionSheet()}
+              />
+              <DayCloseRow
+                done={d.dayClose.journalLogged}
+                label="Refleksi jurnal"
+                detail={d.dayClose.journalLogged ? "Satu catatan sudah ditulis" : "Satu kalimat pun cukup"}
+                actionLabel="Tulis"
+                onClick={() =>
+                  openJournalSheet({
+                    title: `Tutup Hari — ${formatDateID(d.today)}`,
+                    folder: "Refleksi",
+                  })
+                }
+              />
+            </div>
+            {d.dayClose.closed ? (
+              <div className="mt-3 flex items-center gap-2.5 rounded-xl bg-gold-soft p-3">
+                <BadgeCheck className="h-5 w-5 shrink-0 text-gold-deep" />
+                <p className="min-w-0 text-xs font-semibold leading-relaxed text-gold-deep">
+                  Hari ditutup rapi — misi, kas, dan refleksi semua tercatat.
+                  Selamat beristirahat.
+                </p>
+              </div>
+            ) : (
+              <p className="mt-3 px-1 text-xs text-muted-foreground">
+                Tiga ketukan kecil sebelum tidur: misi, kas, dan satu kalimat
+                refleksi — hari besok lebih ringan kalau hari ini ditutup rapi.
+              </p>
+            )}
+          </SectionCard>
+        </div>
+      )}
+
       {/* ===== Rekap Pekan ===== */}
       <div className="px-4 mt-4">
         <SectionCard
@@ -843,6 +914,64 @@ export default function HomeScreen() {
     </div>
   );
 }
+
+// ============ Ritual Tutup Hari — baris checklist ============
+
+// React.memo: baris re-render hanya saat statusnya berubah, bukan saat
+// state lain Beranda berubah (pola sama dengan AgendaRow).
+const DayCloseRow = React.memo(function DayCloseRow({
+  done,
+  label,
+  detail,
+  actionLabel,
+  onClick,
+  disabled,
+}: {
+  done: boolean;
+  label: string;
+  detail: string;
+  actionLabel: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={`${label}: ${detail}`}
+      className={cn(
+        "press flex min-h-[44px] w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-colors",
+        done ? "border-garden/20 bg-garden-soft" : "border-border/70 bg-card",
+        disabled && "opacity-60"
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+          done ? "bg-garden text-white" : "bg-secondary text-muted-foreground"
+        )}
+        aria-hidden="true"
+      >
+        <CircleCheck className="h-4 w-4" strokeWidth={done ? 2.4 : 1.8} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={cn("block text-sm font-bold leading-tight", done && "text-garden-deep")}>
+          {label}
+        </span>
+        <span className="block text-xs text-muted-foreground truncate">{detail}</span>
+      </span>
+      <span
+        className={cn(
+          "shrink-0 inline-flex items-center gap-0.5 text-xs font-bold",
+          done ? "text-garden-deep" : "text-primary"
+        )}
+      >
+        {done ? "Beres" : actionLabel}
+        <ChevronRight className="h-3.5 w-3.5 opacity-60" aria-hidden="true" />
+      </span>
+    </button>
+  );
+});
 
 // ============ Agenda row ============
 
