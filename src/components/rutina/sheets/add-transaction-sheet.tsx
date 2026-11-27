@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Banknote, Landmark, Smartphone, ArrowLeftRight, WifiOff } from "lucide-react";
+import { Loader2, Plus, Banknote, Landmark, Smartphone, ArrowLeftRight, WifiOff, Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import { rutinaApi } from "@/lib/rutina/api";
 import { todayStr, formatNumber } from "@/lib/rutina/format";
+import type { FinanceCategory } from "@/types/rutina";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -16,10 +17,17 @@ import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 
 type TxType = "income" | "expense" | "transfer";
 
+// Kategori bawaan aplikasi — kategori buatan pengguna (hasil migrasi
+// Rutina 2.0 + yang dibuat lewat lembar ini) menyatu lewat
+// /api/fin-categories (lihat customCats di bawah).
 const CATEGORY_OPTIONS: Record<"income" | "expense", string[]> = {
   income: ["gaji", "freelance", "hadiah", "lainnya"],
   expense: ["makan", "transport", "tagihan", "belanja", "hiburan", "kesehatan", "edukasi", "lainnya"],
 };
+
+// Kategori default per arus — dipakai saat jenis transaksi berganti agar
+// transaksi pemasukan tidak pernah terkirim dengan kategori pengeluaran.
+const DEFAULT_CAT: Record<"income" | "expense", string> = { income: "gaji", expense: "makan" };
 
 const RECURRING_OPTIONS: { value: "none" | "weekly" | "monthly"; label: string }[] = [
   { value: "none", label: "Tidak berulang" },
@@ -72,15 +80,62 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
   // useMemo: array stabil antar render agar useEffect default-dompet tidak jalan berulang
   const wallets: Wallet[] = React.useMemo(() => qWallets.data?.wallets ?? [], [qWallets.data]);
 
+  // Kategori buatan pengguna — hasil migrasi Rutina 2.0 + yang dibuat lewat
+  // lembar ini. staleTime 5 menit: daftar jarang berubah, hemat request.
+  const qCats = useQuery({
+    queryKey: ["fin-categories"],
+    queryFn: rutinaApi.finCategories,
+    enabled: open,
+    staleTime: 5 * 60_000,
+  });
+  const customCats: FinanceCategory[] = React.useMemo(
+    () => (qCats.data?.categories ?? []).filter((c) => !c.archived),
+    [qCats.data]
+  );
+
   const [type, setType] = React.useState<TxType>("expense");
   const [amountRaw, setAmountRaw] = React.useState("");
   const [amountFocused, setAmountFocused] = React.useState(false);
-  const [category, setCategory] = React.useState("makan");
+  const [category, setCategory] = React.useState(DEFAULT_CAT.expense);
   const [walletId, setWalletId] = React.useState("");
   const [toWalletId, setToWalletId] = React.useState("");
   const [date, setDate] = React.useState(todayStr());
   const [note, setNote] = React.useState("");
   const [recurring, setRecurring] = React.useState("none");
+
+  // Kategori pilihan: bawaan + buatan pengguna (tanpa yang diarsipkan)
+  const categoryOptions = React.useMemo(() => {
+    if (type === "transfer") return [];
+    const custom = customCats
+      .filter((c) => c.type === type)
+      .map((c) => c.name);
+    return [...CATEGORY_OPTIONS[type], ...custom];
+  }, [type, customCats]);
+
+  // ===== Tambah kategori baru (inline) =====
+  const [newCatOpen, setNewCatOpen] = React.useState(false);
+  const [newCatName, setNewCatName] = React.useState("");
+  const createCat = useMutation({
+    mutationFn: (body: { name: string; type: "expense" | "income" }) =>
+      rutinaApi.createFinCategory(body),
+    onSuccess: (res) => {
+      toast.success("Kategori baru tersimpan");
+      qc.invalidateQueries({ queryKey: ["fin-categories"] });
+      setCategory(res.category.name);
+      setNewCatOpen(false);
+      setNewCatName("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const submitNewCat = (ev: React.FormEvent) => {
+    ev.preventDefault();
+    const name = newCatName.trim().slice(0, 60);
+    if (!name) {
+      toast.error("Nama kategori wajib diisi");
+      return;
+    }
+    createCat.mutate({ name, type: type === "income" ? "income" : "expense" });
+  };
 
   // Reset form setiap kali sheet dibuka
   React.useEffect(() => {
@@ -88,12 +143,14 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
     setType("expense");
     setAmountRaw("");
     setAmountFocused(false);
-    setCategory("makan");
+    setCategory(DEFAULT_CAT.expense);
     setWalletId("");
     setToWalletId("");
     setDate(todayStr());
     setNote("");
     setRecurring("none");
+    setNewCatOpen(false);
+    setNewCatName("");
   }, [open]);
 
   // Default dompet saat data wallets tersedia
@@ -108,6 +165,13 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
     if (v === toWalletId) {
       setToWalletId(wallets.find((w) => w.id !== v)?.id ?? "");
     }
+  };
+
+  // Ganti jenis transaksi → kategori ikut default jenis baru, supaya
+  // pemasukan tidak pernah terkirim dengan kategori pengeluaran (bug lama).
+  const pickType = (t: TxType) => {
+    setType(t);
+    if (t !== "transfer") setCategory(DEFAULT_CAT[t]);
   };
 
   const invalidateFinance = React.useCallback(() => {
@@ -134,10 +198,11 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
   // tidak pernah dianggap kotor.
   const defaultWalletId = wallets[0]?.id ?? "";
   const defaultToWalletId = wallets.find((w) => w.id !== defaultWalletId)?.id ?? "";
+  const defaultCategory = type === "transfer" ? "lainnya" : DEFAULT_CAT[type];
   const dirty =
     type !== "expense" ||
     amountRaw !== "" ||
-    category !== "makan" ||
+    category !== defaultCategory ||
     note !== "" ||
     recurring !== "none" ||
     date !== todayStr() ||
@@ -211,7 +276,7 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
                 <button
                   key={s.key}
                   type="button"
-                  onClick={() => setType(s.key)}
+                  onClick={() => pickType(s.key)}
                   aria-pressed={type === s.key}
                   className={cn(
                     "press min-h-[44px] rounded-lg text-sm font-bold transition-colors",
@@ -259,14 +324,55 @@ export default function AddTransactionSheet({ open, onClose }: { open: boolean; 
                   <SelectTrigger id="tx-category" className="w-full min-h-[44px]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORY_OPTIONS[type].map((c) => (
+                  <SelectContent className="max-h-72">
+                    {categoryOptions.map((c) => (
                       <SelectItem key={c} value={c}>
                         {catLabel(c)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {newCatOpen ? (
+                  <form onSubmit={submitNewCat} className="flex items-center gap-2">
+                    <Input
+                      value={newCatName}
+                      onChange={(e) => setNewCatName(e.target.value)}
+                      placeholder={`Nama kategori ${type === "income" ? "pemasukan" : "pengeluaran"}`}
+                      maxLength={60}
+                      className="min-h-[44px]"
+                      aria-label="Nama kategori baru"
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      disabled={createCat.isPending}
+                      className="press flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl bg-garden px-3 text-sm font-bold text-white disabled:opacity-60"
+                    >
+                      {createCat.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Tag className="h-4 w-4" />}
+                      Simpan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewCatOpen(false);
+                        setNewCatName("");
+                      }}
+                      aria-label="Batal tambah kategori"
+                      className="press flex min-h-[44px] shrink-0 items-center rounded-xl border border-border/70 px-3 text-muted-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setNewCatOpen(true)}
+                    className="press flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border/70 py-2 text-xs font-semibold text-muted-foreground hover:text-garden-deep"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Tambah kategori baru
+                  </button>
+                )}
               </div>
             )}
 

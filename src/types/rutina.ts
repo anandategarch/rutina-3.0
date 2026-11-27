@@ -138,6 +138,15 @@ export interface Budget {
   spent?: number; // computed for current month
 }
 
+// Kategori keuangan buatan pengguna (termasuk hasil migrasi Rutina 2.0)
+export interface FinanceCategory {
+  id: string;
+  name: string;
+  type: "expense" | "income";
+  archived: boolean;
+  createdAt: string;
+}
+
 export interface SavingsGoal {
   id: string;
   name: string;

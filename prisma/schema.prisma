@@ -165,6 +165,18 @@ model Budget {
   monthlyLimit Float
 }
 
+// Kategori keuangan buatan pengguna — satu sistem terpadu dengan kategori
+// bawaan aplikasi (slug hardcoded di UI). Baris hasil migrasi Rutina 2.0
+// mempertahankan id aslinya (slug legacy, mis. "kopi") agar re-run
+// migrasi idempoten; kategori baru lewat API memakai cuid.
+model FinanceCategory {
+  id        String   @id
+  name      String   @unique // unik (peka huruf besar/kecil diperiksa di API)
+  type      String   @default("expense") // expense | income
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
 model SavingsGoal {
   id            String   @id @default(cuid())
   name          String

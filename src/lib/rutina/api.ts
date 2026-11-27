@@ -50,6 +50,7 @@ import type {
   Budget,
   CheckIn,
   ExerciseItem,
+  FinanceCategory,
   FoodEntry,
   FoodItem,
   Habit,
@@ -105,6 +106,12 @@ export const rutinaApi = {
   deleteTransaction: (id: string) => api.delete<{ ok: boolean }>(`/api/transactions/${id}`),
   budgets: () => api.get<{ budgets: Budget[] }>("/api/budgets"),
   createBudget: (body: Record<string, unknown>) => api.post<{ budget: Budget }>("/api/budgets", body),
+
+  // Kategori keuangan buatan pengguna (selain kategori bawaan aplikasi)
+  finCategories: () => api.get<{ categories: FinanceCategory[] }>("/api/fin-categories"),
+  createFinCategory: (body: { name: string; type: "expense" | "income" }) =>
+    api.post<{ category: FinanceCategory }>("/api/fin-categories", body),
+
   goals: () => api.get<{ goals: SavingsGoal[] }>("/api/goals"),
   createGoal: (body: Record<string, unknown>) => api.post<{ goal: SavingsGoal }>("/api/goals", body),
   // Kontribusi dana: kirim DELTA (increment atomik di server) — aman dari race
