@@ -473,7 +473,7 @@ export default function ProfileScreen() {
                 onClick={() => setFaqOpen(true)}
                 className="press rounded-full bg-secondary text-xs font-bold px-4 min-h-[44px] text-muted-foreground"
               >
-                Buka
+                Baca FAQ
               </button>
             </Row>
           </div>

@@ -200,7 +200,9 @@ function QuickActionHub() {
             })}
           </div>
           <div className="mt-4 border-t border-border/60 pt-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Jelajahi</p>
+            {/* taste-skill copy rule 3: setiap heading memuat kata benda —
+                "Jelajahi" (verb, padanan "Explore" yang dilarang) -> "Pintasan" */}
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Pintasan</p>
             <div className="grid grid-cols-4 gap-2.5">
               {shortcuts.map((s) => {
                 const Icon = s.icon;

@@ -179,7 +179,7 @@ function JournalFirstPage({ onBlank, onPrompt }: { onBlank: () => void; onPrompt
       </div>
       <button
         onClick={onBlank}
-        className="press mt-3 text-xs font-bold text-muted-foreground underline underline-offset-4 decoration-border hover:text-foreground min-h-[44px]"
+        className="press link-draw mt-3 text-xs font-bold text-muted-foreground hover:text-foreground min-h-[44px]"
       >
         atau mulai dari halaman kosong
       </button>

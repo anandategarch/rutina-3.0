@@ -441,6 +441,29 @@
   }
 }
 
+/* Link dalam teks — taste-skill motion.md: "running text rest on a faint 1px
+   hairline and an ink line draws left to right". Dua gradien bertumpuk:
+   hairline penuh (warna border) saat istirahat, garis tinta (currentColor)
+   berukuran 0 yang tumbuh kiri -> kanan saat hover. Hanya pointer presisi;
+   di sentuh & reduced-motion link tetap terbaca (hairline) tanpa animasi
+   (clamp global reduced-motion membuat gambarnya seketika). */
+.link-draw {
+  background-image:
+    linear-gradient(currentColor, currentColor),
+    linear-gradient(var(--border), var(--border));
+  background-size: 0% 1px, 100% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%, 0 100%;
+}
+@media (hover: hover) and (pointer: fine) {
+  .link-draw {
+    transition: background-size 0.15s var(--ease-ui), color 0.15s ease-out;
+  }
+  .link-draw:hover {
+    background-size: 100% 1px, 100% 1px;
+  }
+}
+
 /* Safe area helpers */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
