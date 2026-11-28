@@ -33,7 +33,7 @@ export function LoadErrorState({
   /** Error asli dari query — pesannya ditampilkan untuk diagnosa cepat. */
   error?: Error | null;
   /** Warna tombol mengikuti aksen layar (garden | vault | studio | secondary). */
-  tone?: "garden" | "vault" | "studio" | "secondary";
+  tone?: "garden" | "vault" | "studio" | "writer" | "secondary";
   title?: string;
   description?: string;
   autoRetry?: boolean;
@@ -56,25 +56,36 @@ export function LoadErrorState({
     setRetrying(false);
   }, [error]);
 
-  // audit D-L4: timer indikator "sedang mencoba" dilacak di ref agar bisa
-  // dibersihkan di cleanup effect (bukan return dari callback setTimeout,
-  // yang tidak pernah dijalankan JS).
+  // audit E-F1: timer indikator "sedang mencoba" dilacak di ref dan hanya
+  // dibersihkan saat UNMOUNT. (Versi lama membersihkannya di cleanup effect
+  // [attempt] — cleanup itu berjalan segera setelah setAttempt di callback,
+  // membunuh indikator 1,5 dtk yang baru dipasang → tombol "Coba Lagi"
+  // terkunci spinner palsu sepanjang siklus auto-retry.)
   const indicatorTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(() => {
+    return () => {
+      if (indicatorTimer.current) clearTimeout(indicatorTimer.current);
+    };
+  }, []);
+
   React.useEffect(() => {
     if (!autoRetry || attempt >= AUTO_RETRY_DELAYS_MS.length) return;
     const t = setTimeout(() => {
       setRetrying(true);
       retryRef.current();
-      // Beri jeda agar refetch benar-benar berjalan sebelum jadwal berikutnya
-      // dipasang; kalau masih gagal, error berubah → effect [error] reset siklus.
+      // Bertahap ke jadwal berikutnya; kalau masih gagal, error berubah →
+      // effect [error] reset siklus.
       setAttempt((a) => a + 1);
       indicatorTimer.current = setTimeout(() => setRetrying(false), 1_500);
     }, AUTO_RETRY_DELAYS_MS[attempt]);
-    return () => {
-      clearTimeout(t);
-      if (indicatorTimer.current) clearTimeout(indicatorTimer.current);
-    };
+    // Hanya bersihkan countdown SIKLUS INI — indikator dikelola terpisah.
+    return () => clearTimeout(t);
   }, [attempt, autoRetry]);
+
+  const scheduleIndicatorOff = () => {
+    if (indicatorTimer.current) clearTimeout(indicatorTimer.current);
+    indicatorTimer.current = setTimeout(() => setRetrying(false), 1_500);
+  };
 
   const toneClass =
     tone === "garden"
@@ -83,7 +94,9 @@ export function LoadErrorState({
         ? "bg-vault"
         : tone === "studio"
           ? "bg-studio"
-          : "bg-primary";
+          : tone === "writer"
+            ? "bg-writer-deep"
+            : "bg-primary";
 
   const isExhausted = attempt >= AUTO_RETRY_DELAYS_MS.length;
 
@@ -108,7 +121,7 @@ export function LoadErrorState({
           onClick={() => {
             setRetrying(true);
             retryRef.current();
-            setTimeout(() => setRetrying(false), 1_500);
+            scheduleIndicatorOff();
           }}
           disabled={retrying}
           className={`press ${toneClass} min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-bold text-white flex items-center gap-2 disabled:opacity-70`}

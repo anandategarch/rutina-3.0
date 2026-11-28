@@ -366,27 +366,63 @@ export function RutinaApp() {
   );
 
   // Prefetch idle: data Kebiasaan adalah GET terberat (streak server + pola lupa +
-  // log 35 hari) dan routenya dikompilasi on-demand di dev. Dipanaskan sejak awal
+  // log 35 hari) dan routenya dikompilasi on-demand di dev. Dipanaskan lebih awal
   // sehingga tab Kebiasaan terbuka instan dari cache & tidak menabrak cold-compile.
-  // requestIdleCallback: prefetch baru berjalan setelah interaksi awal selesai,
-  // jadi tidak berebut bandwidth dengan home/stats yang sedang dimuat.
+  //
+  // audit E-F2: requestIdleCallback hanya menunggu idle-nya MAIN THREAD — saat
+  // boot, main thread langsung idle padahal 4 GET beranda masih in-flight,
+  // sehingga prefetch yang "berat" ini ikut menambah burst boot paralel dan
+  // memperbesar jendela kontensi DB (akar "Gagal memuat kebiasaan"). Kini
+  // prefetch MENUNGGU muatan awal beres: berlangganan cache sampai tidak ada
+  // query yang sedang mengambil dan query beranda sudah settle (sukses/gagal),
+  // baru dijadwalkan via requestIdleCallback. Fallback 20 dtk memastikan
+  // prefetch tetap jalan walau ada query macet.
   React.useEffect(() => {
+    let done = false;
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     const warmUp = () => {
+      if (done) return;
+      done = true;
       queryClient.prefetchQuery({ queryKey: ["habits"], queryFn: rutinaApi.habits, staleTime: 15_000 });
     };
-    const w = window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number };
-    let id: number | undefined;
-    if (typeof w.requestIdleCallback === "function") {
-      id = w.requestIdleCallback(warmUp, { timeout: 3_500 });
-    } else {
-      id = window.setTimeout(warmUp, 2_000);
-    }
-    return () => {
-      if (typeof w.requestIdleCallback === "function" && id !== undefined) {
-        w.cancelIdleCallback?.(id);
-      } else if (id !== undefined) {
-        clearTimeout(id);
+
+    const scheduleWarmUp = () => {
+      const w = window as Window & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      };
+      if (typeof w.requestIdleCallback === "function") {
+        idleId = w.requestIdleCallback(warmUp, { timeout: 3_500 });
+      } else {
+        timeoutId = setTimeout(warmUp, 2_000);
       }
+    };
+
+    // Warm hanya saat: tidak ada query in-flight DAN query ["home", …] pertama
+    // sudah settle (atau belum pernah terdaftar — mis. deep link non-beranda).
+    const maybeWarm = () => {
+      if (done || queryClient.isFetching() > 0) return;
+      const homeState = queryClient
+        .getQueryCache()
+        .find({ queryKey: ["home"] })?.state;
+      if (!homeState || homeState.status === "success" || homeState.status === "error") {
+        scheduleWarmUp();
+      }
+    };
+
+    const unsub = queryClient.getQueryCache().subscribe(maybeWarm);
+    maybeWarm(); // kasus cache sudah settle sebelum subscribe terpasang
+    // Fallback: jangan tunda prefetch selamanya karena satu query macet.
+    const fallback = setTimeout(scheduleWarmUp, 20_000);
+
+    return () => {
+      done = true;
+      unsub();
+      clearTimeout(fallback);
+      if (timeoutId) clearTimeout(timeoutId);
+      const w = window as Window & { cancelIdleCallback?: (id: number) => void };
+      if (idleId !== undefined) w.cancelIdleCallback?.(idleId);
     };
   }, [queryClient]);
 

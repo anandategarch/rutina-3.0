@@ -21,6 +21,7 @@ import {
   Share2,
   MoonStar,
   BadgeCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRutinaStore } from "@/store/rutina";
@@ -336,6 +337,25 @@ export default function HomeScreen() {
 
   return (
     <div className="flex flex-col">
+      {/* audit E-F5: refetch latar yang gagal saat cache masih ada tidak boleh
+          bisu — beranda bisa menampilkan angka basi tanpa jalan pemulihan. */}
+      {isError && data && (
+        <div
+          className="mx-4 mt-3 flex items-center gap-3 rounded-xl border border-clay/40 bg-clay-soft p-3"
+          role="status"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0 text-clay" aria-hidden="true" />
+          <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-clay-deep">
+            Beranda mungkin tidak mutakhir — gagal memuat ulang data.
+          </p>
+          <button
+            onClick={() => refetch()}
+            className="press min-h-[44px] shrink-0 rounded-lg bg-clay px-3 text-xs font-bold text-white"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      )}
       {/* ===== Header ===== */}
       {/* Band header memakai tint teal (garden-soft) — disiplin tone:
           gold HANYA untuk streak/XP/piala (docs/DESIGN.md §1a). */}

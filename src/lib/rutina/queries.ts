@@ -13,7 +13,10 @@ import type { QueryClient } from "@tanstack/react-query";
  * kunci modul yang diminta. Pakai di semua mutasi.
  */
 export function invalidateAfterMutation(qc: QueryClient, keys: readonly string[]) {
-  const all = new Set<string>(["home", "stats", ...keys]);
+  // audit E-F7: "day-detail" ikut selalu — drawer detail hari (Stats) menyimpan
+  // salinan transaksi/latihan/jurnal di kunci terpisah; tanpa ini drawer bisa
+  // menampilkan data basi tepat setelah user mencatat sesuatu.
+  const all = new Set<string>(["home", "stats", "day-detail", ...keys]);
   return Promise.all(
     Array.from(all).map((key) => qc.invalidateQueries({ queryKey: [key] }))
   );

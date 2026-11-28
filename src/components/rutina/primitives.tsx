@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, ChevronDown, ChevronUp, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ============ Screen header (mobile app bar) ============
@@ -317,10 +317,6 @@ export function Pill({
   );
 }
 
-// ============ More menu placeholder icon helper ============
-
-export { MoreHorizontal };
-
 // ============ Category maps ============
 
 export const HABIT_CATEGORY_META: Record<string, { label: string; tone: keyof typeof toneMap }> = {
@@ -338,6 +334,3 @@ export const TIME_OF_DAY_META: Record<string, { label: string }> = {
   evening: { label: "Malam" },
   anytime: { label: "Kapan saja" },
 };
-
-// avoid unused import warnings in some bundlers
-void MoreHorizontal;

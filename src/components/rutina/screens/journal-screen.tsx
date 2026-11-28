@@ -34,6 +34,7 @@ import {
   monthName,
 } from "@/lib/rutina/format";
 import { MiniBars, DeltaBadge, HBarList, Sparkline, rampColor } from "@/components/rutina/charts";
+import { LoadErrorState } from "@/components/rutina/load-error-state";
 import { ScreenHeader, SectionCard, StatTile, EmptyState, Pill, ShowAllToggle } from "@/components/rutina/primitives";
 import { JOURNAL_MOODS } from "@/components/rutina/sheets/add-journal-sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -192,7 +193,7 @@ export default function JournalScreen() {
   const setPage = useRutinaStore((s) => s.setPage);
   const openJournalSheet = useRutinaStore((s) => s.openJournalSheet);
 
-  const { data, isLoading, isError, refetch, isFetching } = useQuery({ queryKey: ["journal"], queryFn: rutinaApi.journal });
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({ queryKey: ["journal"], queryFn: rutinaApi.journal });
   const entries: JournalEntry[] = React.useMemo(() => data?.entries ?? [], [data]);
 
   // ===== Filter & pencarian (debounce) =====
@@ -367,7 +368,8 @@ export default function JournalScreen() {
   const [activeEntry, setActiveEntry] = React.useState<JournalEntry | null>(null);
 
   // Gagal muat saat pertama (tanpa cache) → gate layar penuh, BUKAN statistik
-  // nol yang membaca seperti arsip hilang (pola sama dengan layar Statistik).
+  // nol yang membaca seperti arsip hilang. audit E-F4: LoadErrorState — auto-retry
+  // berjenjang + pesan error asli, satu kontrak UI dengan layar lain.
   if (isError && !data) {
     return (
       <div className="flex flex-col min-h-full">
@@ -378,23 +380,12 @@ export default function JournalScreen() {
           onBack={() => setPage("home")}
         />
         <div className="p-4">
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 flex flex-col items-center text-center gap-2.5">
-            <span className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
-              <AlertTriangle className="h-6 w-6" />
-            </span>
-            <p className="text-sm font-bold">Gagal memuat catatan</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Arsip jurnal tidak dapat diambil. Periksa koneksi internetmu, lalu coba lagi.
-            </p>
-            <button
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="press mt-1.5 min-h-[44px] rounded-xl bg-writer-deep px-5 text-sm font-bold text-white flex items-center gap-2 disabled:opacity-60"
-            >
-              {isFetching && <Loader2 className="h-4 w-4 animate-spin" />}
-              Coba Lagi
-            </button>
-          </div>
+          <LoadErrorState
+            onRetry={() => refetch()}
+            error={error}
+            tone="writer"
+            title="Gagal memuat catatan"
+          />
         </div>
       </div>
     );
@@ -503,6 +494,20 @@ export default function JournalScreen() {
         )}
 
         {/* ===== Statistik menulis ringkas ===== */}
+        {/* audit E-F6: selama muat awal, `entries` masih [] — tanpa gate ini semua
+            kartu statistik sempat tampil nol palsu (seperti "arsip hilang"). */}
+        {isLoading ? (
+          <div className="space-y-2.5" aria-hidden="true">
+            <div className="grid grid-cols-3 gap-2.5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-28 rounded-xl bg-secondary/70 skeleton-shimmer" />
+              ))}
+            </div>
+            <div className="h-32 rounded-xl bg-secondary/70 skeleton-shimmer" />
+            <div className="h-44 rounded-xl bg-secondary/70 skeleton-shimmer" />
+          </div>
+        ) : (
+          <>
         <div className="grid grid-cols-3 gap-2.5">
           <StatTile
             label="Pekan ini"
@@ -688,6 +693,8 @@ export default function JournalScreen() {
             height={8}
           />
         </SectionCard>
+          </>
+        )}
 
         {/* ===== Daftar catatan ===== */}
         <SectionCard

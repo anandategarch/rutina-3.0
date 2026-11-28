@@ -16,9 +16,6 @@ import {
   Route,
   Medal,
   CalendarDays,
-  AlertTriangle,
-  Loader2,
-  RefreshCw,
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
@@ -55,7 +52,7 @@ import {
 } from "@/lib/rutina/format";
 import { ScreenHeader, SectionCard, StatTile, ProgressRing, Pill, EmptyState, HABIT_CATEGORY_META, ShowAllToggle } from "@/components/rutina/primitives";
 import { IlloSproutMission, IlloRunRoute, IlloTrendBars } from "@/components/rutina/illustrations";
-import { Button } from "@/components/ui/button";
+import { LoadErrorState } from "@/components/rutina/load-error-state";
 import { JOURNAL_MOODS } from "@/components/rutina/sheets/add-journal-sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import type { StatsPayload, AchievementItem, MonthlyPoint } from "@/types/rutina";
@@ -169,32 +166,23 @@ function MonthlyTrendCard({ monthly }: { monthly: MonthlyPoint[] }) {
 
 export default function StatsScreen() {
   const setPage = useRutinaStore((s) => s.setPage);
-  const { data, isLoading, isError, refetch, isFetching } = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
+  const { data, isLoading, isError, error, refetch } = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
 
   // audit D-L2: gate error pada !data — refetch latar yang gagal tidak boleh
   // membuang statistik yang sudah tampil (pola sama dengan layar lain).
+  // audit E-F4: LoadErrorState — auto-retry berjenjang + pesan error asli,
+  // satu kontrak UI dengan layar lain (dulu kartu error manual tanpa auto-retry).
   if (isError && !data) {
     return (
       <div className="flex flex-col min-h-full">
         <ScreenHeader title="Statistik" subtitle="Pola & tren semua modulmu" onBack={() => setPage("home")} />
         <div className="p-4">
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 flex flex-col items-center text-center gap-2.5">
-            <span className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
-              <AlertTriangle className="h-6 w-6" />
-            </span>
-            <p className="text-sm font-bold">Gagal memuat statistik</p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Data statistik tidak dapat diambil. Periksa koneksi internetmu, lalu coba lagi.
-            </p>
-            <Button
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="mt-1.5 min-h-[44px] rounded-xl px-5 font-bold flex items-center gap-2"
-            >
-              {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              Coba Lagi
-            </Button>
-          </div>
+          <LoadErrorState
+            onRetry={() => refetch()}
+            error={error}
+            tone="secondary"
+            title="Gagal memuat statistik"
+          />
         </div>
       </div>
     );
