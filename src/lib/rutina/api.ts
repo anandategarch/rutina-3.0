@@ -35,6 +35,10 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       signal,
       headers: {
         "Content-Type": "application/json",
+        // audit E-B7: tanda tangan klien aplikasi — gerbang destruktif
+        // (/api/danger/*, /api/import) di proxy.ts menolak mutasi tanpa header
+        // ini; form/iframe lintas origin tidak bisa memasang header kustom.
+        "x-rutina-client": "1",
         ...(init?.headers || {}),
       },
     });
