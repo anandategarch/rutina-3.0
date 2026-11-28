@@ -63,11 +63,15 @@ export async function GET(req: Request) {
       });
     }
 
-    const [profile, habits, habitLogs, workouts, foodEntries, checkins, bodyMetrics, wallets, transactions, budgets, savingsGoals, journalEntries, foodItems, achievements, financeCategories] =
+    const [profile, habits, habitLogs, habitShields, workouts, foodEntries, checkins, bodyMetrics, wallets, transactions, budgets, savingsGoals, journalEntries, foodItems, achievements, financeCategories] =
       await Promise.all([
         db.profile.findFirst(),
         db.habit.findMany(),
         db.habitLog.findMany(),
+        // audit D-H1: pelindung Rumah Kaca adalah keputusan pengguna atas hari
+        // bolong — tanpa ini restore membatalkan semua perlindungan dan runtun
+        // pecah retroaktif (streak turun padahal data "pulih sempurna").
+        db.habitShield.findMany(),
         db.workout.findMany(),
         db.foodEntry.findMany(),
         db.checkIn.findMany(),
@@ -96,6 +100,7 @@ export async function GET(req: Request) {
       profile,
       habits,
       habitLogs,
+      habitShields,
       workouts,
       foodEntries,
       checkins,

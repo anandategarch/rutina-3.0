@@ -91,7 +91,9 @@ model Workout {
 
 model Exercise {
   id          String  @id @default(cuid())
-  name        String
+  // audit D-M6: unik — nama gerakan hanya dari katalog aplikasi (tidak ada
+  // POST buatan pengguna) sehingga top-up katalog tidak pernah menduplikasi.
+  name        String  @unique
   muscleGroup String // chest | back | shoulders | arms | legs | core | fullbody
   equipment   String?
 }
@@ -230,6 +232,8 @@ model Achievement {
 
 model Quote {
   id     String @id @default(cuid())
-  text   String
+  // audit D-M6: unik — kutipan hanya dari katalog aplikasi; membuat ensure
+  // idempoten (skipDuplicates efektif) tanpa duplikat saat race dua request.
+  text   String @unique
   author String
 }

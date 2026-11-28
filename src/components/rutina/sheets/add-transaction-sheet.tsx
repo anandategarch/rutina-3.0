@@ -191,6 +191,9 @@ export default function AddTransactionSheet({
     qc.invalidateQueries({ queryKey: ["transactions"] });
     qc.invalidateQueries({ queryKey: ["wallets"] });
     qc.invalidateQueries({ queryKey: ["budgets"] });
+    // audit D-M4: transaksi baru (termasuk Catat Mundur) mengubah status hari
+    // bolong — kartu Jaga Catatan harus segar saat pengguna kembali ke Vault.
+    qc.invalidateQueries({ queryKey: ["vault-misses"] });
     qc.invalidateQueries({ queryKey: ["home"] });
     qc.invalidateQueries({ queryKey: ["stats"] });
   }, [qc]);

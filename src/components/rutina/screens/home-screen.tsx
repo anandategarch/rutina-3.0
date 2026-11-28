@@ -37,6 +37,7 @@ import {
 } from "@/lib/rutina/format";
 import { SectionCard, Pill, EmptyState, ShowAllToggle } from "@/components/rutina/primitives";
 import { LoadErrorState } from "@/components/rutina/load-error-state";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import { IlloSproutMission } from "@/components/rutina/illustrations";
 import { habitIcon, habitColor } from "@/components/rutina/habit-icons";
 import {
@@ -171,7 +172,10 @@ export default function HomeScreen() {
         mood: null,
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["journal"] });
+      // audit D-M3: entri jurnal baru menambah XP +15 dan menandai refleksi
+      // selesai di Tutup Hari — home & stats wajib segar (invarian
+      // invalidateAfterMutation: selalu home + stats + kunci modul).
+      invalidateAfterMutation(qc, ["journal"]);
       toast.success("Kutipan disimpan ke Jurnal");
     },
     onError: (e: Error) => toast.error(e.message),

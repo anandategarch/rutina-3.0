@@ -105,6 +105,43 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ checkin }, { status: existing ? 200 : 201 });
   } catch (e) {
+    // audit D-B2: upsert dua langkah Prisma di SQLite bisa P2002 saat dua
+    // submit cepat untuk tanggal sama (kasus unik belum dibuat lawan) —
+    // selaras perbaikan B3-M4 di /api/body-metrics: coba sekali lagi, kini
+    // jalur update pasti menemukan baris yang dibuat request lawan.
+    if (
+      typeof e === "object" &&
+      e !== null &&
+      "code" in e &&
+      (e as { code?: string }).code === "P2002"
+    ) {
+      try {
+        const retry = await db.checkIn.upsert({
+          where: { date },
+          create: {
+            date,
+            mood: mood ?? null,
+            energy: energy ?? null,
+            soreness: soreness ?? null,
+            stress: stress ?? null,
+            sleepHours: sleepHours ?? null,
+            note: note ?? null,
+          },
+          update: {
+            ...(mood !== undefined && { mood }),
+            ...(energy !== undefined && { energy }),
+            ...(soreness !== undefined && { soreness }),
+            ...(stress !== undefined && { stress }),
+            ...(sleepHours !== undefined && { sleepHours }),
+            ...(note !== undefined && { note }),
+          },
+        });
+        return NextResponse.json({ checkin: retry }, { status: 200 });
+      } catch (e2) {
+        console.error("checkins POST retry error", e2);
+        return NextResponse.json({ error: "Gagal menyimpan check-in" }, { status: 500 });
+      }
+    }
     console.error("checkins POST error", e);
     return NextResponse.json({ error: "Gagal menyimpan check-in" }, { status: 500 });
   }

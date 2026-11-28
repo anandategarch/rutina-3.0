@@ -38,18 +38,34 @@ function bool(v: unknown, fallback = false): boolean {
 
 function pickHabit(r: Row) {
   // audit B1-B3: caps meniru POST /api/habits — potong field, jangan tolak baris
+  // audit D-L7: enum dinormalisasi ke nilai yang diterima POST — backup hasil
+  // edit tangan tidak boleh menghasilkan habit yang tidak pernah terjadwal
+  // (daysOfWeek "8" → runtun mati selamanya) atau kategori tak dikenal UI.
+  const TIME_OF_DAY = ["morning", "afternoon", "evening", "anytime"];
+  const CATEGORIES = ["health", "productivity", "mind", "finance", "social", "learning"];
+  const COLORS = ["emerald", "amber", "teal", "rose", "orange", "stone"];
   const unitTarget = numOrNull(r.unitTarget);
   const unitStep = num(r.unitStep);
   const reminderTime = strOrNull(r.reminderTime);
+  // daysOfWeek: terima CSV/array → normalisasi ke 0-6 unik terurut; kosong
+  // / tidak valid sama sekali → harian (0-6), konsisten dengan default POST.
+  const rawDays = typeof r.daysOfWeek === "string"
+    ? r.daysOfWeek
+    : Array.isArray(r.daysOfWeek)
+      ? r.daysOfWeek.join(",")
+      : "";
+  const days = Array.from(
+    new Set(rawDays.split(",").map((x) => x.trim()).filter((x) => /^[0-6]$/.test(x)))
+  ).sort();
   return {
     id: str(r.id),
     name: str(r.name)?.slice(0, 80),
-    category: str(r.category),
+    category: CATEGORIES.includes(str(r.category) ?? "") ? str(r.category) : "health",
     icon: str(r.icon)?.slice(0, 40),
-    color: str(r.color),
-    scheduleType: str(r.scheduleType),
-    daysOfWeek: str(r.daysOfWeek),
-    timeOfDay: str(r.timeOfDay),
+    color: COLORS.includes(str(r.color) ?? "") ? str(r.color) : "emerald",
+    scheduleType: str(r.scheduleType) === "custom" ? "custom" : "daily",
+    daysOfWeek: days.length > 0 ? days.join(",") : "0,1,2,3,4,5,6",
+    timeOfDay: TIME_OF_DAY.includes(str(r.timeOfDay) ?? "") ? str(r.timeOfDay) : "anytime",
     unitLabel: strOrNull(r.unitLabel)?.slice(0, 24) ?? null,
     // audit B1-B3: unit <= 0 / tidak finite → undefined (habit jatuh ke check-only)
     unitTarget: unitTarget != null && unitTarget > 0 ? unitTarget : undefined,
@@ -69,6 +85,16 @@ function pickHabitLog(r: Row) {
     status: str(r.status) ?? "done",
     value: numOrNull(r.value),
     note: strOrNull(r.note),
+  };
+}
+
+// audit D-H1: pelindung Rumah Kaca ikut dipulihkan — tanpa ini restore
+// membatalkan perlindungan hari bolong dan runtun pecah retroaktif.
+function pickHabitShield(r: Row) {
+  return {
+    id: str(r.id),
+    habitId: str(r.habitId),
+    date: str(r.date),
   };
 }
 
@@ -129,7 +155,10 @@ function pickWallet(r: Row) {
     id: str(r.id),
     name: (str(r.name) ?? "").slice(0, 60), // audit B1-B3
     type: str(r.type) ?? "cash",
-    initialBalance: round2(num(r.initialBalance) ?? 0), // audit B1-B3
+    // audit D-L7: POST menolak saldo awal negatif — restore menjepit ke 0
+    // (baris + transaksinya tetap dipulihkan; buang dompet = jatuhkan semua
+    // transaksinya, kerusakan lebih besar).
+    initialBalance: round2(Math.max(0, num(r.initialBalance) ?? 0)), // audit B1-B3
     color: str(r.color) ?? "teal",
     icon: str(r.icon) ?? "wallet",
     archived: bool(r.archived),
@@ -171,14 +200,18 @@ function pickSavingsGoal(r: Row) {
 }
 
 function pickJournalEntry(r: Row) {
+  const content = (str(r.content) ?? "").slice(0, 50_000); // audit B1-B3
+  const trimmed = content.trim();
   return {
     id: str(r.id),
     title: (str(r.title) ?? "").slice(0, 200), // audit B1-B3
-    content: (str(r.content) ?? "").slice(0, 50_000), // audit B1-B3
+    content,
     folder: str(r.folder) ?? "Umum",
     mood: strOrNull(r.mood),
     pinned: bool(r.pinned),
-    wordCount: num(r.wordCount) ?? 0,
+    // audit D-L7: wordCount dihitung ulang dari konten (rumus countWords
+    // POST /api/journal) — payload tidak boleh dipercaya begitu saja.
+    wordCount: trimmed ? trimmed.split(/\s+/).length : 0,
     createdAt: str(r.createdAt),
     updatedAt: str(r.updatedAt),
   };
@@ -320,6 +353,37 @@ export async function POST(req: Request) {
     const habitLogs = asArray(body.habitLogs)
       .map(pickHabitLog)
       .filter((l) => l.id && l.habitId && l.date && habits.some((h) => h.id === l.habitId));
+    // audit D-H1: pelindung Rumah Kaca — opsional (cadangan lama tanpa
+    // koleksi ini tetap dipulihkan; pelindungnya memang sudah hilang di
+    // cadangan lama, tidak bisa direkonstruksi).
+    const habitShieldsPayload = Array.isArray(body.habitShields)
+      ? asArray(body.habitShields)
+          .map(pickHabitShield)
+          .filter((s) => {
+            const ok = s.id && s.habitId && s.date && habits.some((h) => h.id === s.habitId);
+            if (!ok) bump("habitShields");
+            return ok;
+          })
+          // kunci unik natural habitId+date: duplikat dalam payload dibuang,
+          // id pertama menang (selaras log kebiasaan di atas yang 400 — di
+          // sini aux data, buang diam-diam lebih ramah pemulihan).
+          .filter(
+            (() => {
+              const seen = new Set<string>();
+              return (s, idx, arr) => {
+                void idx;
+                void arr;
+                const k = `${s.habitId}|${s.date}`;
+                if (seen.has(k)) {
+                  bump("habitShields");
+                  return false;
+                }
+                seen.add(k);
+                return true;
+              };
+            })()
+          )
+      : null;
     const workouts = asArray(body.workouts).map(pickWorkout).filter((w) => w.id && w.date);
     const foodEntries = asArray(body.foodEntries).map(pickFoodEntry).filter((f) => f.id);
     const checkins = asArray(body.checkins).map(pickCheckIn).filter((c) => c.id && c.date);
@@ -527,12 +591,18 @@ export async function POST(req: Request) {
       if (!ok) bump("habitLogs");
       return ok;
     });
+    const validHabitShields = (habitShieldsPayload ?? []).filter((s) => {
+      const ok = isValidDateStr(s.date);
+      if (!ok) bump("habitShields");
+      return ok;
+    });
 
     const clamp1to5 = (v: number | null | undefined): number | null =>
       v == null ? null : Math.min(5, Math.max(1, Math.round(v)));
     const validCheckins: typeof checkins = [];
     for (const c of checkins) {
-      if (!isValidDateStr(c.date) || (c.sleepHours != null && c.sleepHours < 0)) {
+      // audit D-L7: jam tidur wajar 0-24 (selaras POST /api/checkins B2-M6)
+      if (!isValidDateStr(c.date) || (c.sleepHours != null && (c.sleepHours < 0 || c.sleepHours > 24))) {
         bump("checkins");
         continue;
       }
@@ -546,9 +616,10 @@ export async function POST(req: Request) {
     }
 
     const validBodyMetrics = bodyMetrics.filter((m) => {
+      // audit D-L7: berat wajar 20-400 kg (selaras POST /api/body-metrics)
       const ok =
         isValidDateStr(m.date) &&
-        (m.weightKg == null || m.weightKg > 0) &&
+        (m.weightKg == null || (m.weightKg >= 20 && m.weightKg <= 400)) &&
         // audit B1-Medium: hidrasi 0 gelas sah (selaras POST /api/body-metrics)
         (m.hydrationGlasses == null || m.hydrationGlasses >= 0);
       if (!ok) bump("bodyMetrics");
@@ -615,7 +686,8 @@ export async function POST(req: Request) {
     const p = body.profile && typeof body.profile === "object" ? (body.profile as Row) : null;
     const profileData: { name?: string; identityVoice?: string; dailyMissionTarget?: number } = {};
     if (p) {
-      if (typeof p.name === "string" && p.name.trim()) profileData.name = p.name.trim();
+      if (typeof p.name === "string" && p.name.trim())
+        profileData.name = p.name.trim().slice(0, 60); // audit D-L7: cap selaras POST /api/profile
       if (typeof p.identityVoice === "string" && p.identityVoice.trim())
         profileData.identityVoice = p.identityVoice;
       const target = Number(p.dailyMissionTarget);
@@ -631,6 +703,7 @@ export async function POST(req: Request) {
     const txResult = await db.$transaction(
       async (tx) => {
         // ===== Fase hapus (urutan aman FK) =====
+        await tx.habitShield.deleteMany({}); // audit D-H1: eksplisit (cascade habit juga menghapus)
         await tx.habitLog.deleteMany({});
         await tx.transaction.deleteMany({});
         await tx.habit.deleteMany({});
@@ -676,6 +749,20 @@ export async function POST(req: Request) {
               date: l.date as string,
             })),
           });
+        // audit D-H1: pelindung Rumah Kaca dipulihkan setelah habit dibuat
+        // (FK habitId). Cadangan lama tanpa koleksi ini → shields kosong.
+        let restoredHabitShields = 0;
+        if (habitShieldsPayload) {
+          if (validHabitShields.length)
+            await tx.habitShield.createMany({
+              data: validHabitShields.map((s) => ({
+                id: s.id as string,
+                habitId: s.habitId as string,
+                date: s.date as string,
+              })),
+            });
+          restoredHabitShields = validHabitShields.length;
+        }
         if (validTransactions.length)
           await tx.transaction.createMany({ data: validTransactions });
 
@@ -738,7 +825,7 @@ export async function POST(req: Request) {
             create: { id: "main", ...profileData },
           });
         }
-        return { restoredFoodItems, restoredAchievements, restoredFinanceCategories };
+        return { restoredFoodItems, restoredAchievements, restoredFinanceCategories, restoredHabitShields };
       },
       { timeout: 30_000 }
     );
@@ -749,6 +836,7 @@ export async function POST(req: Request) {
         wallets: wallets.length,
         habits: habits.length,
         habitLogs: validHabitLogs.length,
+        habitShields: txResult.restoredHabitShields,
         workouts: validWorkouts.length,
         foodEntries: validFoodEntries.length,
         checkins: validCheckins.length,

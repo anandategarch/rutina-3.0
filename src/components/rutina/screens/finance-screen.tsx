@@ -661,7 +661,11 @@ export default function FinanceScreen() {
     mutationFn: (id: string) => rutinaApi.deleteTransaction(id),
     onSuccess: () => {
       toast.success("Transaksi dihapus");
-      invalidateAfterMutation(qc, ["transactions", "wallets"]);
+      // audit D-H3: penghapusan transaksi mengubah spent anggaran & status
+      // hari bolong (Jaga Catatan) — tanpa keys ini kartu Anggaran/Hari Bolong
+      // menampilkan angka lama sampai user pindah tab (staleTime 15-30 dtk,
+      // refetchOnWindowFocus off, layar tetap terpasang).
+      invalidateAfterMutation(qc, ["transactions", "wallets", "budgets", "vault-misses"]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -749,6 +753,13 @@ export default function FinanceScreen() {
   });
 
   const submitRecon = () => {
+    // audit D-H2: input kosong = Number("") = 0 — tanpa guard ini, tap
+    // "Rekonsiliasi" tanpa mengisi nominal mengirim saldo asli 0 dan
+    // MENGHAPUS seluruh saldo dompet lewat transaksi penyesuaian.
+    if (reconActual.trim() === "") {
+      toast.error("Isi saldo kas asli yang kamu hitung");
+      return;
+    }
     const amount = Number(reconActual);
     if (!reconWalletId) {
       toast.error("Pilih dompet dulu");
