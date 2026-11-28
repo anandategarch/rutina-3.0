@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, getXpData, computeStreaks } from "@/lib/rutina/server";
-import { ensureAchievementCatalog } from "@/lib/rutina/catalog-ensure";
+import { ensureBootData } from "@/lib/rutina/boot";
+import { withDbRetry } from "@/lib/rutina/db-retry";
 import {
   addDays,
   rangeDays,
@@ -49,12 +50,15 @@ export async function GET() {
   try {
     const today = jakartaToday();
 
-    // Top-up definisi piala — DB baru hasil db push/Turso baru tidak boleh
-    // menampilkan "Koleksi Piala" kosong hanya karena belum pernah di-seed.
-    await ensureAchievementCatalog();
+    // Top-up definisi piala dijamin ensureBootData (sekali per proses,
+    // berurutan) — audit E-B1: GET kini tidak menulis apa pun, sehingga tidak
+    // pernah balapan transaksi tulis dengan pembaca paralel (akar 500
+    // intermiten "Gagal memuat statistik"/"Gagal memuat kebiasaan" saat boot dingin).
+    await ensureBootData();
 
     const [xpData, streak, habits, allLogs, workouts, bodyMetrics, checkinRows, wallets, transactions, journalEntries, achievements] =
-      await Promise.all([
+      await withDbRetry(() =>
+        Promise.all([
         getXpData(),
         computeStreaks(),
         db.habit.findMany({ where: { archived: false }, orderBy: { createdAt: "asc" } }),
@@ -77,7 +81,8 @@ export async function GET() {
           select: { createdAt: true, wordCount: true, mood: true },
         }),
         db.achievement.findMany(),
-      ]);
+        ])
+      );
 
     const habitMap = new Map(habits.map((h) => [h.id, h]));
     // audit B2-H1: habit belum dijadwalkan sebelum tanggal dibuatnya (yyyy-MM-dd WIB)

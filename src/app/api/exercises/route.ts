@@ -1,40 +1,24 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/rutina/server";
-import { EXERCISE_CATALOG } from "@/lib/rutina/exercise-catalog";
+import { ensureBootData } from "@/lib/rutina/boot";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Impor katalog gerakan (data kategori bugar) ke library.
- *
- * Katalog adalah data referensi aplikasi — bukan data pengguna — sehingga
- * tidak ikut backup/restore; cara ini membuat library gerakan selalu terisi
- * di lingkungan mana pun (SQLite lokal maupun Turso) tanpa langkah manual.
- *
- * Semantik top-up: hanya nama yang belum ada yang diimpor, sehingga DB lama
- * (dengan katalog versi awal) ikut naik ke katalog penuh, dan nama yang
- * sudah ada — beserta riwayat latihan yang merujuknya — tidak tersentuh.
- */
-async function ensureExerciseCatalog(): Promise<number> {
-  const existing = await db.exercise.findMany({ select: { name: true }, take: 1000 });
-  const have = new Set(existing.map((e) => e.name.toLowerCase()));
-  const missing = EXERCISE_CATALOG.filter((e) => !have.has(e.name.toLowerCase()));
-  if (missing.length === 0) return 0;
-  await db.exercise.createMany({
-    data: missing.map((e) => ({ name: e.name, muscleGroup: e.muscleGroup, equipment: e.equipment })),
-  });
-  return missing.length;
-}
-
 // GET /api/exercises → { exercises } library gerakan beban
+//
+// Katalog gerakan (data referensi aplikasi, bukan data pengguna) diimpor oleh
+// ensureBootData (catalog-ensure.ts) — sekali per proses, berurutan, dengan
+// guard P2002. Audit E-B1: fungsi ensure lokal yang dulu di sini bisa balapan
+// createMany saat dua request pertama berbarengan → 500 "Gagal memuat library
+// gerakan"; GET kini murni baca.
 export async function GET() {
   try {
-    const imported = await ensureExerciseCatalog();
+    await ensureBootData();
     const exercises = await db.exercise.findMany({
       orderBy: [{ muscleGroup: "asc" }, { name: "asc" }],
       take: 500, // audit B3-B4: batasi hasil query
     });
-    return NextResponse.json({ exercises, imported });
+    return NextResponse.json({ exercises });
   } catch (e) {
     console.error("exercises GET error", e);
     return NextResponse.json({ error: "Gagal memuat library gerakan" }, { status: 500 });

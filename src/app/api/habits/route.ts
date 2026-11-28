@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, computeHabitStreaks, computeStreaks } from "@/lib/rutina/server";
+import { ensureBootData } from "@/lib/rutina/boot";
+import { withDbRetry } from "@/lib/rutina/db-retry";
 import {
   addDays,
   dayOfWeek,
@@ -53,11 +55,19 @@ function computeMissPattern(h: {
  */
 export async function GET() {
   try {
+    // audit E-B1: tunggu seeding boot (profil + katalog) selesai dulu —
+    // sebelumnya request ini (read-only) bisa kalah balapan lock dengan
+    // transaksi tulis seeding dari GET paralel lain di SQLite non-WAL →
+    // SQLITE_BUSY → 500 "Gagal memuat kebiasaan". ensureBootData memoized,
+    // jadi setelah boot pertama ini praktis gratis.
+    await ensureBootData();
+
     // Jendela 35 hari mengikuti zona WIB (bukan TZ server), konsisten dengan hari ini WIB
     const sinceStr = addDays(jakartaToday(), -34); // 35 hari inklusif
     const today = jakartaToday();
 
-    const [habitsRaw, streaks, overallStreak, lifetimeDone] = await Promise.all([
+    const [habitsRaw, streaks, overallStreak, lifetimeDone] = await withDbRetry(() =>
+      Promise.all([
       db.habit.findMany({
         include: {
           logs: {
@@ -84,7 +94,8 @@ export async function GET() {
       // 35 hari — tanpa angka ini taman bisa "mundur" saat log lama keluar
       // jendela (user dengan 300 check-in tampil "Tunas").
       db.habitLog.count({ where: { status: "done" } }),
-    ]);
+      ])
+    );
 
     const habits = habitsRaw.map((h) => ({
       ...h,

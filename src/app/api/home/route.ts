@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getXpData, computeStreaks, db } from "@/lib/rutina/server";
-import { ensureQuoteCatalog } from "@/lib/rutina/catalog-ensure";
+import { getProfile } from "@/lib/rutina/boot";
+import { withDbRetry } from "@/lib/rutina/db-retry";
 import {
   addDays,
   dayOfWeek,
@@ -30,14 +31,6 @@ export async function GET(req: Request) {
     }
     const dow = dayOfWeek(reqDate);
 
-    // audit B2-M7: upsert — findFirst ?? create bisa balapan & membuat 2 baris profil
-    const profile = await db.profile.upsert({
-      where: { id: "main" },
-      update: {},
-      create: { id: "main" },
-    });
-    const xpData = await getXpData();
-
     // audit B2-H2: jendela log diperlebar agar log tanggal yang diminta tetap termuat
     // (buffer 7 hari di bawah batas lama), tanpa menggeser jendela rekap pekan/bulan
     // audit D-B4: batas bawah 730 hari — ?date= jauh di masa lalu (bug klien /
@@ -47,14 +40,21 @@ export async function GET(req: Request) {
     // perbandingan string YYYY-MM-DD (Math.max mengonversi ke Number → NaN)
     const widestStart = reqDate < existingStart ? reqDate : existingStart;
     const logsFrom = addDays(widestStart < floorStart ? widestStart : floorStart, -7);
+
+    // audit E-B1: profil & katalog dijamin ensureBootData (sekali per proses,
+    // berurutan) — GET ini murni baca, tidak lagi membuka transaksi tulis
+    // BEGIN IMMEDIATE yang memblokir pembaca paralel (akar "Gagal memuat
+    // kebiasaan" saat boot dingin). Tiga baca awal digabung satu retry.
     // audit B2-H3: log masa depan tidak boleh masuk payload beranda
-    const habits = await db.habit.findMany({
-      where: { archived: false },
-      include: {
-        logs: { where: { date: { gte: logsFrom, lte: todayStr } } },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+    const [profile, xpData, habits] = await withDbRetry(() =>
+      Promise.all([getProfile(), getXpData(), db.habit.findMany({
+        where: { archived: false },
+        include: {
+          logs: { where: { date: { gte: logsFrom, lte: todayStr } } },
+        },
+        orderBy: { createdAt: "asc" },
+      })])
+    );
 
     // Agenda untuk tanggal yang diminta (bukan selalu hari ini) — audit B2-H2
     const agenda = habits
@@ -177,9 +177,8 @@ export async function GET(req: Request) {
     }
 
     // ============ Quote ============
-    // Top-up katalog kutipan — beranda tidak boleh kehilangan kartu kutipan
-    // hanya karena DB baru belum pernah di-seed.
-    await ensureQuoteCatalog();
+    // Katalog kutipan dijamin terisi oleh ensureBootData (via getProfile di atas)
+    // — beranda tidak boleh kehilangan kartu kutipan hanya karena DB baru.
     // audit B2-M4: orderBy id — indeks harian deterministik atas urutan baris DB
     const quotes = await db.quote.findMany({ orderBy: { id: "asc" } });
     let quote: (typeof quotes)[number] | null = null;

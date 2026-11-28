@@ -127,6 +127,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const wallet = await db.wallet.update({ where: { id }, data });
     return NextResponse.json({ wallet });
   } catch (e) {
+    // audit E-B9 (TOCTOU): dompet sudah terhapus request lain
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
+      return NextResponse.json({ error: "Dompet tidak ditemukan" }, { status: 404 });
+    }
     console.error("PATCH /api/wallets/[id] error", e);
     return NextResponse.json({ error: "Gagal memperbarui dompet" }, { status: 500 });
   }

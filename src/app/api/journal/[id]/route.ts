@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/rutina/server";
+import { isP2025 } from "@/lib/rutina/catalog-ensure";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const entry = await db.journalEntry.update({ where: { id }, data });
     return NextResponse.json({ entry });
   } catch (e) {
+    // audit E-B9 (TOCTOU): catatan dihapus request lain antara findUnique & update
+    if (isP2025(e)) {
+      return NextResponse.json({ error: "Catatan tidak ditemukan" }, { status: 404 });
+    }
     console.error("journal PATCH error", e);
     return NextResponse.json({ error: "Gagal memperbarui catatan" }, { status: 500 });
   }
@@ -75,6 +80,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     await db.journalEntry.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (e) {
+    // audit E-B9 (TOCTOU): catatan sudah terhapus request lain
+    if (isP2025(e)) {
+      return NextResponse.json({ error: "Catatan tidak ditemukan" }, { status: 404 });
+    }
     console.error("journal DELETE error", e);
     return NextResponse.json({ error: "Gagal menghapus catatan" }, { status: 500 });
   }

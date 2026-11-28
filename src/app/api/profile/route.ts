@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/rutina/server";
+import { getProfile } from "@/lib/rutina/boot";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
     // Pastikan profil default selalu ada — GET tidak boleh mengembalikan null.
-    const profile = await db.profile.upsert({
-      where: { id: "main" },
-      update: {},
-      create: { id: "main" },
-    });
+    // audit E-B1: getProfile (findUnique ?? default) menggantikan upsert —
+    // GET kini murni baca, tanpa transaksi tulis yang bisa memblokir
+    // pembaca paralel di SQLite.
+    const profile = await getProfile();
     return NextResponse.json({ profile });
   } catch (e) {
     console.error("profile GET error", e);
