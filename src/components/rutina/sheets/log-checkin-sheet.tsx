@@ -85,6 +85,10 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
   const prefilledRef = React.useRef(false);
   // Penanda bahwa user sudah mengedit tidur/catatan saat query prefill masih berjalan
   const userEditedRef = React.useRef(false);
+  // audit D-M10: skala (mood/energy/soreness/stress) juga dilindungi — tanpa
+  // ini, respons ["checkins"] yang tiba terlambat menimpa tap user yang sudah
+  // memilih nilai saat query awal masih berjalan (race prefill).
+  const scaleEditedRef = React.useRef<Set<ScaleKey>>(new Set());
   // Snapshot nilai awal (reset atau hasil prefill) sebagai acuan dirty-guard
   const [initialSnap, setInitialSnap] = React.useState<{ scales: ScaleState; sleepHours: string; note: string }>({
     scales: { mood: null, energy: null, soreness: null, stress: null },
@@ -103,6 +107,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
     if (open) {
       prefilledRef.current = false;
       userEditedRef.current = false;
+      scaleEditedRef.current = new Set();
       setScales({ mood: null, energy: null, soreness: null, stress: null });
       setSleepHours("");
       setNote("");
@@ -117,10 +122,11 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
     const today = data.find((c: CheckIn) => c.date === todayStr());
     if (today) {
       const nextScales: ScaleState = {
-        mood: today.mood ?? null,
-        energy: today.energy ?? null,
-        soreness: today.soreness ?? null,
-        stress: today.stress ?? null,
+        // audit D-M10: tap user pada skala tidak ditimpa prefill
+        mood: scaleEditedRef.current.has("mood") ? scales.mood : (today.mood ?? null),
+        energy: scaleEditedRef.current.has("energy") ? scales.energy : (today.energy ?? null),
+        soreness: scaleEditedRef.current.has("soreness") ? scales.soreness : (today.soreness ?? null),
+        stress: scaleEditedRef.current.has("stress") ? scales.stress : (today.stress ?? null),
       };
       setScales(nextScales);
       const nextSleep = today.sleepHours !== null ? String(today.sleepHours) : "";
@@ -134,7 +140,9 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
       }
     }
     prefilledRef.current = true;
-  }, [open, checkinsQuery.data]);
+    // `scales` masuk deps hanya demi guard scaleEditedRef (pembacaan nilai
+    // terkini); effect sendiri sekali jalan per buka karena prefilledRef.
+  }, [open, checkinsQuery.data, scales]);
 
   const mutation = useMutation({
     mutationFn: rutinaApi.upsertCheckin,
@@ -245,7 +253,10 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                             <button
                               key={n}
                               type="button"
-                              onClick={() => setScales((prev) => ({ ...prev, mood: n }))}
+                              onClick={() => {
+                                scaleEditedRef.current.add("mood");
+                                setScales((prev) => ({ ...prev, mood: n }));
+                              }}
                               aria-pressed={active}
                               aria-label={`Mood: ${scale.labels[i]} (${n})`}
                               className={cn(
@@ -269,7 +280,10 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                             <button
                               key={n}
                               type="button"
-                              onClick={() => setScales((prev) => ({ ...prev, energy: n }))}
+                              onClick={() => {
+                                scaleEditedRef.current.add("energy");
+                                setScales((prev) => ({ ...prev, energy: n }));
+                              }}
                               aria-pressed={active}
                               aria-label={`Energi: ${scale.labels[n - 1]} (${n})`}
                               className={cn(
@@ -292,7 +306,10 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
                             <button
                               key={n}
                               type="button"
-                              onClick={() => setScales((prev) => ({ ...prev, [scale.key]: n }))}
+                              onClick={() => {
+                                scaleEditedRef.current.add(scale.key);
+                                setScales((prev) => ({ ...prev, [scale.key]: n }));
+                              }}
                               aria-pressed={active}
                               aria-label={`${scale.label}: ${scale.labels[n - 1]} (${n})`}
                               className={cn(

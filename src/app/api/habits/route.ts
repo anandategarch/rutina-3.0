@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db, computeHabitStreaks } from "@/lib/rutina/server";
+import { db, computeHabitStreaks, computeStreaks } from "@/lib/rutina/server";
 import {
   addDays,
   dayOfWeek,
@@ -57,7 +57,7 @@ export async function GET() {
     const sinceStr = addDays(jakartaToday(), -34); // 35 hari inklusif
     const today = jakartaToday();
 
-    const [habitsRaw, streaks] = await Promise.all([
+    const [habitsRaw, streaks, overallStreak, lifetimeDone] = await Promise.all([
       db.habit.findMany({
         include: {
           logs: {
@@ -74,6 +74,16 @@ export async function GET() {
       }),
       // Streak dihitung dari SELURUH riwayat di server — klien tak lagi capped 35 hari
       computeHabitStreaks(),
+      // audit D-M2: runtun keseluruhan (semua habit aktif, riwayat penuh) dari
+      // server — satu sumber kebenaran yang sama dengan Beranda & Statistik.
+      // Sebelumnya klien menghitung sendiri dari jendela log 35 hari: streak
+      // "Terbaik" mentok 35 dan ikut menghitung habit yang diarsipkan.
+      computeStreaks(),
+      // audit D-M2: jumlah check-in SEUMUR HIDUP untuk tahap Taman Pertumbuhan.
+      // Threshold tahap berbentuk lifetime, sementara logs pada payload hanya
+      // 35 hari — tanpa angka ini taman bisa "mundur" saat log lama keluar
+      // jendela (user dengan 300 check-in tampil "Tunas").
+      db.habitLog.count({ where: { status: "done" } }),
     ]);
 
     const habits = habitsRaw.map((h) => ({
@@ -83,7 +93,11 @@ export async function GET() {
       missPattern: computeMissPattern(h, h.logs, today),
     }));
 
-    return NextResponse.json({ habits });
+    return NextResponse.json({
+      habits,
+      overallStreak,
+      lifetimeCheckIns: lifetimeDone,
+    });
   } catch (e) {
     console.error("habits GET error", e);
     return NextResponse.json({ error: "Gagal memuat kebiasaan" }, { status: 500 });

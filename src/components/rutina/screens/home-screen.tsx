@@ -1008,7 +1008,9 @@ const AgendaRow = React.memo(function AgendaRow({
 
   const incr = () => {
     setPop((p) => p + 1); // +step selalu menaikkan nilai → selalu pop
-    const next = (log?.value ?? 0) + habit.unitStep;
+    // audit D-L6: jepit ke unitTarget — selaras HabitCard di layar Kebiasaan;
+    // tanpa clamp, bar optimistis bisa melampaui target sebelum server menjepit.
+    const next = Math.min(habit.unitTarget ?? Infinity, (log?.value ?? 0) + habit.unitStep);
     onCheck(next);
   };
 

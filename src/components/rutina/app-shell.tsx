@@ -393,6 +393,13 @@ export function RutinaApp() {
   // ===== Sinkronisasi halaman ↔ history (back/forward & deep link #jurnal dll.) =====
   const page = useRutinaStore((s) => s.page);
   const setPage = useRutinaStore((s) => s.setPage);
+  // audit D-L8: sheet pencarian lazy sama seperti sheet lain — chunk-nya baru
+  // di-fetch pada penggunaan pertama, bukan menumpuk beban startup.
+  const searchOpen = useRutinaStore((s) => s.searchOpen);
+  const [searchUsed, setSearchUsed] = React.useState(false);
+  React.useEffect(() => {
+    if (searchOpen) setSearchUsed(true);
+  }, [searchOpen]);
   const hydrated = React.useRef(false);
 
   // Mount: adopsi hash jika valid, kalau tidak — selaraskan URL tanpa menambah entri.
@@ -417,10 +424,21 @@ export function RutinaApp() {
 
   // Back/forward browser → ikuti hash.
   React.useEffect(() => {
-    const onPop = () => setPage(HASH_PAGE[window.location.hash] ?? "home");
+    const onPop = () => {
+      const target = HASH_PAGE[window.location.hash];
+      if (target) {
+        setPage(target);
+      } else {
+        // audit D-L5: hash tak dikenal (mis. user ketik #foo) → pulihkan hash
+        // halaman aktif dengan replaceState, BUKAN pushState — loop lama
+        // menambah satu entri history per tekan back sehingga tombol back
+        // terasa macet di halaman yang sama.
+        history.replaceState(null, "", PAGE_HASH[page] || window.location.pathname);
+      }
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [setPage]);
+  }, [setPage, page]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -439,7 +457,7 @@ export function RutinaApp() {
           <BottomNav />
           <OverlayPages />
           <QuickActionHub />
-          <QuickSearchSheet />
+          {searchUsed && <QuickSearchSheet />}
           <QuickActionSheets />
         </div>
         </MotionConfig>

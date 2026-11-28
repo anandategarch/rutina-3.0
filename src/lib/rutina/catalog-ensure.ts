@@ -26,8 +26,12 @@ export async function ensureQuoteCatalog(): Promise<number> {
   const missing = QUOTE_CATALOG.filter((q) => !have.has(q.text.toLowerCase()));
   if (missing.length === 0) return 0;
   // audit D-M6: dua request bersamaan bisa lolos check-then-create → P2002.
-  // skipDuplicates membuat top-up idempoten tanpa try/catch (SQLite didukung).
-  await db.quote.createMany({ data: missing, skipDuplicates: true });
+  // Quote.text kini @unique — kolisi race tertangkap sebagai sukses.
+  try {
+    await db.quote.createMany({ data: missing });
+  } catch (e) {
+    if (!isP2002(e)) throw e;
+  }
   return missing.length;
 }
 
@@ -38,13 +42,11 @@ export async function ensureFoodCatalog(): Promise<number> {
   const have = new Set(existing.map((f) => f.name.toLowerCase()));
   const missing = FOOD_CATALOG.filter((f) => !have.has(f.name.toLowerCase()));
   if (missing.length === 0) return 0;
-  // audit D-M6: idempoten terhadap race (lihat ensureQuoteCatalog).
-  // CATATAN: FoodItem.name belum @unique — skipDuplicates hanya menahan
-  // duplikasi antar-baris payload yang sama; race lintar-request masih bisa
-  // menyisip dua kali bila filter `have` dihitung sebelum insert lawan.
-  // Kolisi P2002 tertangkap di bawah agar /api/stats tetap hidup.
+  // audit D-M6: idempoten terhadap race — FoodItem.name belum @unique (item
+  // buatan pengguna boleh bernama sama dengan katalog), jadi race lintar-
+  // request masih bisa menyisip dua kali; ditoleransi, tak pernah 500.
   try {
-    await db.foodItem.createMany({ data: missing, skipDuplicates: true });
+    await db.foodItem.createMany({ data: missing });
   } catch (e) {
     if (!isP2002(e)) throw e;
   }
@@ -64,7 +66,6 @@ export async function ensureAchievementCatalog(): Promise<number> {
   try {
     await db.achievement.createMany({
       data: missing.map((a) => ({ ...a, unlockedAt: null })),
-      skipDuplicates: true,
     });
   } catch (e) {
     if (!isP2002(e)) throw e;

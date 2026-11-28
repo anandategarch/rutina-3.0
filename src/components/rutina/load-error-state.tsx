@@ -41,24 +41,40 @@ export function LoadErrorState({
   const [attempt, setAttempt] = React.useState(0);
   const [retrying, setRetrying] = React.useState(false);
 
+  // audit D-L4: caller umumnya mengirim inline arrow (onRetry={() => refetch()})
+  // yang berubah tiap render induk — jika masuk deps effect, countdown auto-retry
+  // terus terjadwal ulang dan bisa menunda pemulihan selamanya. Ref menjaga
+  // identitas stabil tanpa memaksa caller memoize.
+  const retryRef = React.useRef(onRetry);
+  React.useEffect(() => {
+    retryRef.current = onRetry;
+  });
+
   // Setiap error baru (mis. auto-retry React Query gagal lagi) reset siklus.
   React.useEffect(() => {
     setAttempt(0);
     setRetrying(false);
   }, [error]);
 
+  // audit D-L4: timer indikator "sedang mencoba" dilacak di ref agar bisa
+  // dibersihkan di cleanup effect (bukan return dari callback setTimeout,
+  // yang tidak pernah dijalankan JS).
+  const indicatorTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => {
     if (!autoRetry || attempt >= AUTO_RETRY_DELAYS_MS.length) return;
     const t = setTimeout(() => {
       setRetrying(true);
-      onRetry();
+      retryRef.current();
       // Beri jeda agar refetch benar-benar berjalan sebelum jadwal berikutnya
       // dipasang; kalau masih gagal, error berubah → effect [error] reset siklus.
       setAttempt((a) => a + 1);
-      setTimeout(() => setRetrying(false), 1_500);
+      indicatorTimer.current = setTimeout(() => setRetrying(false), 1_500);
     }, AUTO_RETRY_DELAYS_MS[attempt]);
-    return () => clearTimeout(t);
-  }, [attempt, autoRetry, onRetry]);
+    return () => {
+      clearTimeout(t);
+      if (indicatorTimer.current) clearTimeout(indicatorTimer.current);
+    };
+  }, [attempt, autoRetry]);
 
   const toneClass =
     tone === "garden"
@@ -91,7 +107,7 @@ export function LoadErrorState({
         <button
           onClick={() => {
             setRetrying(true);
-            onRetry();
+            retryRef.current();
             setTimeout(() => setRetrying(false), 1_500);
           }}
           disabled={retrying}

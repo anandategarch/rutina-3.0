@@ -93,7 +93,14 @@ export const rutinaApi = {
   updateProfile: (body: Partial<Pick<Profile, "name" | "identityVoice" | "dailyMissionTarget">>) =>
     api.patch<{ profile: Profile }>("/api/profile", body),
 
-  habits: () => api.get<{ habits: Habit[] }>("/api/habits"),
+  habits: () =>
+    api.get<{
+      habits: Habit[];
+      /** Runtun keseluruhan dari server (riwayat penuh, habit aktif saja) — audit D-M2 */
+      overallStreak?: { current: number; best: number };
+      /** Jumlah check-in seumur hidup (semua habit) untuk tahap Taman — audit D-M2 */
+      lifetimeCheckIns?: number;
+    }>("/api/habits"),
   createHabit: (body: Record<string, unknown>) => api.post<{ habit: Habit }>("/api/habits", body),
   updateHabit: (id: string, body: Record<string, unknown>) =>
     api.patch<{ habit: Habit }>(`/api/habits/${id}`, body),

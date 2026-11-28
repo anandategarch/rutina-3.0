@@ -540,8 +540,15 @@ interface CheckVars {
 
 type CheckAction = "created" | "upgraded" | "removed";
 interface CheckActionCtx {
-  prev: { habits: Habit[] } | undefined;
+  prev: HabitsQueryData | undefined;
   action: CheckAction;
+}
+
+/** audit D-M2: bentuk cache ["habits"] — field server opsional dengan fallback klien. */
+interface HabitsQueryData {
+  habits: Habit[];
+  overallStreak?: { current: number; best: number };
+  lifetimeCheckIns?: number;
 }
 
 export default function HabitsScreen() {
@@ -575,55 +582,68 @@ export default function HabitsScreen() {
 
   // ===== Check cepat (optimistic) =====
   const checkMutation = useMutation({
-    mutationFn: (vars: CheckVars) => rutinaApi.checkHabit(vars.id, today, vars.value),
+    // audit D-M9: tanggal dihitung SAAT mutasi (bukan closure dari render) —
+    // app yang tertinggal semalam lalu di-check setelah tengah malam WIB tak
+    // lagi mencatat ke tanggal kemarin.
+    mutationFn: (vars: CheckVars) => rutinaApi.checkHabit(vars.id, todayStr(), vars.value),
     onMutate: async (vars): Promise<CheckActionCtx> => {
       await qc.cancelQueries({ queryKey: ["habits"] });
-      const prev = qc.getQueryData<{ habits: Habit[] }>(["habits"]);
+      const prev = qc.getQueryData<HabitsQueryData>(["habits"]);
       let action: CheckAction = "created";
-      qc.setQueryData<{ habits: Habit[] }>(["habits"], (old) => {
+      const optimisticToday = todayStr();
+      qc.setQueryData<HabitsQueryData>(["habits"], (old) => {
         if (!old) return old;
-        return {
-          habits: old.habits.map((h) => {
-            if (h.id !== vars.id) return h;
-            const logs = [...(h.logs ?? [])];
-            const idx = logs.findIndex((l) => l.date === today);
-            if (idx >= 0) {
-              const existing = logs[idx];
-              if (
-                h.unitTarget !== null &&
-                typeof vars.value === "number" &&
-                vars.value > 0 &&
-                (existing.value ?? 0) !== vars.value
-              ) {
-                // Habit terukur: value berbeda (naik ATAU turun) → perbarui nilai log.
-                // Progres parsial tidak boleh hilang hanya karena nilai dikurangi.
-                logs[idx] = { ...existing, value: vars.value, status: "done", note: null };
-                action = "upgraded";
-              } else {
-                logs.splice(idx, 1);
-                action = "removed";
-              }
+        let delta = 0;
+        const habits = old.habits.map((h) => {
+          if (h.id !== vars.id) return h;
+          const logs = [...(h.logs ?? [])];
+          const idx = logs.findIndex((l) => l.date === optimisticToday);
+          if (idx >= 0) {
+            const existing = logs[idx];
+            if (
+              h.unitTarget !== null &&
+              typeof vars.value === "number" &&
+              vars.value > 0 &&
+              (existing.value ?? 0) !== vars.value
+            ) {
+              // Habit terukur: value berbeda (naik ATAU turun) → perbarui nilai log.
+              // Progres parsial tidak boleh hilang hanya karena nilai dikurangi.
+              logs[idx] = { ...existing, value: vars.value, status: "done", note: null };
+              action = "upgraded";
             } else {
-              const value =
-                h.unitTarget !== null
-                  ? typeof vars.value === "number" && vars.value > 0
-                    ? vars.value
-                    : h.unitTarget
-                  : null;
-              logs.push({
-                id: `optimistic-${h.id}`,
-                habitId: h.id,
-                date: today,
-                status: "done",
-                value,
-                note: null,
-              });
-              action = "created";
+              logs.splice(idx, 1);
+              action = "removed";
+              if (existing.status === "done") delta -= 1;
             }
-            // Buang streak server (bisa stale pada cache optimistis) → UI fallback
-            // ke hitungan lokal dari logs optimistis.
-            return { ...h, logs, streak: undefined };
-          }),
+          } else {
+            const value =
+              h.unitTarget !== null
+                ? typeof vars.value === "number" && vars.value > 0
+                  ? vars.value
+                  : h.unitTarget
+                : null;
+            logs.push({
+              id: `optimistic-${h.id}`,
+              habitId: h.id,
+              date: optimisticToday,
+              status: "done",
+              value,
+              note: null,
+            });
+            action = "created";
+            delta += 1;
+          }
+          // Buang streak server (bisa stale pada cache optimistis) → UI fallback
+          // ke hitungan lokal dari logs optimistis.
+          return { ...h, logs, streak: undefined };
+        });
+        // audit D-M2: pertahankan field server (overallStreak) & sesuaikan
+        // lifetimeCheckIns agar tahap Taman tidak melompat balik selama
+        // jendela optimistis; nilai asli kembali setelah invalidate refetch.
+        return {
+          ...old,
+          habits,
+          lifetimeCheckIns: Math.max(0, (old.lifetimeCheckIns ?? 0) + delta),
         };
       });
       return { prev, action };
@@ -644,18 +664,27 @@ export default function HabitsScreen() {
   });
 
   // ===== Statistik agregat =====
-  const totalCheckIns = React.useMemo(
-    () => habits.reduce((acc, h) => acc + (h.logs ?? []).filter((l) => l.status === "done").length, 0),
-    [habits]
-  );
-  const stage = stageOf(totalCheckIns);
+  // audit D-M2: total check-in SEUMUR HIDUP dari server (getXpData) — threshold
+  // tahap Taman berbentuk lifetime, sementara logs payload hanya 35 hari.
+  // Tanpa ini taman bisa mundur saat log lama keluar jendela.
+  // Fallback: hitung dari jendela (cadangan lama / cache optimistis tanpa field).
+  const lifetimeCheckIns =
+    data?.lifetimeCheckIns ??
+    habits.reduce((acc, h) => acc + (h.logs ?? []).filter((l) => l.status === "done").length, 0);
+  const stage = stageOf(lifetimeCheckIns);
   const stageProgress = React.useMemo(() => {
     if (stage.next === null) return 1;
-    return Math.min(1, (totalCheckIns - stage.min) / (stage.next - stage.min));
-  }, [stage, totalCheckIns]);
+    return Math.min(1, (lifetimeCheckIns - stage.min) / (stage.next - stage.min));
+  }, [stage, lifetimeCheckIns]);
   const stageIdx = STAGES.indexOf(stage);
 
-  const streaks = React.useMemo(() => overallStreaks(habits, today), [habits, today]);
+  // audit D-M2: runtun keseluruhan kini dari server (computeStreaks: riwayat
+  // penuh + habit aktif saja) — identik dengan Beranda & Statistik.
+  // Fallback ke hitungan lokal 35 hari hanya bila field belum ada di cache.
+  const streaks = React.useMemo(
+    () => data?.overallStreak ?? overallStreaks(habits, today),
+    [data, habits, today]
+  );
   const nextMilestone = nextStreakMilestone(streaks.current);
   const milestonesDone = MILESTONES.filter((m) => streaks.current >= m).length;
 
@@ -841,12 +870,12 @@ export default function HabitsScreen() {
               <p className="font-script text-2xl leading-none text-garden-deep">{stage.label}</p>
               <p className="text-xs text-muted-foreground mt-1.5">
                 {stage.next !== null
-                  ? `${formatNumber(stage.next - totalCheckIns)} check-in lagi ke tahap berikutnya`
+                  ? `${formatNumber(stage.next - lifetimeCheckIns)} check-in lagi ke tahap berikutnya`
                   : "Tamanmu sedang berbunga penuh — pertahankan."}
               </p>
             </div>
             <Pill tone="gold" className="shrink-0">
-              {formatNumber(totalCheckIns)} check-in
+              {formatNumber(lifetimeCheckIns)} check-in
             </Pill>
           </div>
           <MetricBar value={stageProgress} max={1} height={6} className="mt-2.5" />
