@@ -13,9 +13,9 @@ Panduan untuk agent AI yang bekerja di repo ini.
 - **Runtime**: bun. `bun run dev` (port 3000), `bun run lint`, `bun run typecheck`,
   `bun run db:push` setelah mengubah `prisma/schema.prisma`.
 - **PERINGATAN DATABASE_URL**: shell sandbox bisa mengekspor `DATABASE_URL` lama yang
-  menunjuk ke proyek scaffold lain — env proses **meng-override** `.env`. Saat memulai
+  menunjuk ke folder proyek lain — env proses **meng-override** `.env`. Saat memulai
   server, paksa secara eksplisit:
-  `env DATABASE_URL=file:/home/z/rutina-audit/db/custom.db bun run dev`.
+  `env DATABASE_URL=file:/home/z/my-project/db/custom.db bun run dev`.
   Gejala salah sambung: data tiba-tiba kosong / profil null.
 - **Zona waktu**: semua "hari ini" wajib lewat `jakartaToday()` (`src/lib/rutina/format.ts`),
   bukan `new Date()` UTC.
