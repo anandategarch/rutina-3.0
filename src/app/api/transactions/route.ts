@@ -65,6 +65,9 @@ export async function POST(req: Request) {
     // Tanggal tidak dikirim → hari ini (WIB); dikirim tapi tidak valid → tolak
     const date = typeof body.date === "string" && body.date.trim() ? body.date.trim() : jakartaToday();
     if (!isValidDateStr(date)) return bad("Format tanggal tidak valid");
+    // audit D-L1: tolak tanggal masa depan — selaras guard habit-check (B2-H3);
+    // transaksi bertanggal maju menggelembungkan spent anggaran & tren kasflow.
+    if (date > jakartaToday()) return bad("Tanggal tidak boleh di masa depan");
 
     const recurring = RECURRING.includes(body.recurring) ? body.recurring : "none";
 

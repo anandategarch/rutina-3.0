@@ -28,6 +28,7 @@ import {
   rangeDays,
   parseDateStr,
   toDateStr,
+  jakartaDateStr,
   formatNumber,
   formatDayMonth,
   monthName,
@@ -254,7 +255,12 @@ export default function JournalScreen() {
     moodCounts,
     maxMood,
   } = React.useMemo(() => {
-    const dayOf = (iso: string) => toDateStr(new Date(iso));
+    // audit D-M7: bucketing timestamp → tanggal WIB (bukan zona perangkat).
+    // toDateStr(new Date(iso)) memakai zona lokal; perangkat di UTC+8 dekat
+    // tengah malam WIB menaruh entri di tanggal yang salah (kalender jurnal
+    // vs statistik vs server berbeda hari). jakartaDateStr selaras dengan
+    // /api/stats yang sudah memakai helper ini.
+    const dayOf = (iso: string) => jakartaDateStr(new Date(iso));
     const ws = weekStart(today);
     const ms = startOfMonth(today);
     const wordsThisWeek = entries.filter((e) => dayOf(e.createdAt) >= ws).reduce((a, e) => a + e.wordCount, 0);
@@ -892,7 +898,7 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
             <DrawerTitle className="text-writer-deep">Baca & Edit Catatan</DrawerTitle>
             {entry && (
               <p className="text-xs text-muted-foreground">
-                Terakhir diperbarui {relativeDate(toDateStr(new Date(entry.updatedAt)))}
+                Terakhir diperbarui {relativeDate(jakartaDateStr(new Date(entry.updatedAt)))}
               </p>
             )}
           </DrawerHeader>

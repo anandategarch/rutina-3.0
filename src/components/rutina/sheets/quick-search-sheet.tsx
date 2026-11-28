@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, Sprout, Wallet, NotebookText, Dumbbell, CreditCard, SearchX } from "lucide-react";
 import { useRutinaStore } from "@/store/rutina";
 import { rutinaApi } from "@/lib/rutina/api";
-import { formatDateID, formatRupiah, formatDuration } from "@/lib/rutina/format";
+import { formatDateID, formatRupiah, formatDuration, jakartaDateStr } from "@/lib/rutina/format";
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/rutina/primitives";
@@ -232,7 +232,8 @@ export default function QuickSearchSheet() {
                   <Row
                     key={j.id}
                     title={j.title || j.snippet || "Tanpa judul"}
-                    sub={`${j.folder} · ${formatDateID(j.createdAt.slice(0, 10))}`}
+                    // audit D-M7: tanggal WIB dari timestamp, bukan slice UTC
+                    sub={`${j.folder} · ${formatDateID(jakartaDateStr(new Date(j.createdAt)))}`}
                     onClick={() => go("journal")}
                   />
                 ))}

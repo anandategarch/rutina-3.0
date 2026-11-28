@@ -8,7 +8,6 @@ import {
   jakartaDateStr,
   jakartaToday,
   isValidDateStr,
-  parseDateStr,
   rangeDays,
   startOfMonth,
   weekStart,
@@ -41,8 +40,13 @@ export async function GET(req: Request) {
 
     // audit B2-H2: jendela log diperlebar agar log tanggal yang diminta tetap termuat
     // (buffer 7 hari di bawah batas lama), tanpa menggeser jendela rekap pekan/bulan
+    // audit D-B4: batas bawah 730 hari — ?date= jauh di masa lalu (bug klien /
+    // panggilan manual) tak lagi menarik SELURUH riwayat log ke payload beranda.
     const existingStart = addDays(todayStr, -40);
-    const logsFrom = addDays(reqDate < existingStart ? reqDate : existingStart, -7);
+    const floorStart = addDays(todayStr, -730);
+    // perbandingan string YYYY-MM-DD (Math.max mengonversi ke Number → NaN)
+    const widestStart = reqDate < existingStart ? reqDate : existingStart;
+    const logsFrom = addDays(widestStart < floorStart ? widestStart : floorStart, -7);
     // audit B2-H3: log masa depan tidak boleh masuk payload beranda
     const habits = await db.habit.findMany({
       where: { archived: false },
@@ -90,9 +94,11 @@ export async function GET(req: Request) {
       const d = dayOfWeek(ds);
       // Tanggal lampau: habit yang dibuat setelah tanggal tsb belum dijadwalkan saat itu
       // audit B2-H2: acuan "sekarang" = tanggal yang diminta (?date=), bukan selalu hari ini
-      const createdBefore = ds < reqDate ? parseDateStr(ds) : null;
+      // audit D-M5: bandingkan TANGGAL WIB (jakartaDateStr), bukan timestamp
+      // vs tengah malam server-local — habit yang dibuat hari itu juga kini
+      // dihitung di rekap pekan, konsisten dengan guard agenda & /api/stats.
       return habits.filter((h) => {
-        if (createdBefore && h.createdAt > createdBefore) return false;
+        if (ds < reqDate && jakartaDateStr(h.createdAt) > ds) return false;
         return h.scheduleType === "daily" || h.daysOfWeek.split(",").map(Number).includes(d);
       }).length;
     };

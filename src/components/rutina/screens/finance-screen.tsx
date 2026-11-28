@@ -617,9 +617,10 @@ export default function FinanceScreen() {
   const [gDeadline, setGDeadline] = React.useState("");
 
   // ---- Mutasi states ----
-  const now = new Date();
-  const [viewYear, setViewYear] = React.useState(now.getFullYear());
-  const [viewMonthIdx, setViewMonthIdx] = React.useState(now.getMonth()); // 0-based
+  // audit D-M8: tahun/bulan acuan dari tanggal WIB (todayStr), bukan new Date()
+  // lokal — perangkat non-WIB dekat tengah malam tanggal 1 menampilkan bulan salah.
+  const [viewYear, setViewYear] = React.useState(() => Number(todayStr().slice(0, 4)));
+  const [viewMonthIdx, setViewMonthIdx] = React.useState(() => Number(todayStr().slice(5, 7)) - 1); // 0-based
   const [typeFilter, setTypeFilter] = React.useState<"all" | "income" | "expense" | "transfer">("all");
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
@@ -996,9 +997,9 @@ export default function FinanceScreen() {
     type Insight = { icon: React.ElementType; tone: "sage" | "clay"; text: string };
     const out: Insight[] = [];
     const today = todayStr();
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = d.getMonth();
+    // audit D-M8: turunkan tahun/bulan dari tanggal WIB, bukan zona perangkat
+    const y = Number(today.slice(0, 4));
+    const m = Number(today.slice(5, 7)) - 1; // 0-based
     const prevDate = new Date(y, m - 1, 1);
     const curPrefix = `${y}-${pad2(m + 1)}`;
     const prevPrefix = `${prevDate.getFullYear()}-${pad2(prevDate.getMonth() + 1)}`;

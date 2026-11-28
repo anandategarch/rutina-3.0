@@ -15,7 +15,10 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
   try {
-    const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
+    const rawQ = (req.nextUrl.searchParams.get("q") ?? "").trim();
+    // audit D-B3: buang wildcard LIKE (% _) — selaras perbaikan B3-M5 pada
+    // /api/food-items; pencarian "100%" tak lagi mencocokkan sembarangan.
+    const q = rawQ.replace(/[%_]/g, "");
     // Query terlalu pendek: kembalikan hasil kosong (bukan error) agar UI
     // bisa memakai kueri yang sama tanpa percabangan khusus.
     if (q.length < 2) {

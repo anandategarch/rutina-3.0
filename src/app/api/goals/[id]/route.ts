@@ -28,13 +28,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       const contribution = Number(body.contribution);
       if (!Number.isFinite(contribution) || contribution <= 0)
         return NextResponse.json({ error: "Jumlah kontribusi harus lebih dari 0" }, { status: 400 });
-      data.currentAmount = { increment: contribution };
+      // audit D-L3: bulatkan sebelum increment — penambahan berulang 0.1 tanpa
+      // round2 menumpuk drift biner pada currentAmount (Float SQLite).
+      data.currentAmount = { increment: round2(contribution) };
     }
 
     if (body.name !== undefined) {
       const name = typeof body.name === "string" ? body.name.trim() : "";
       if (!name) return NextResponse.json({ error: "Nama tujuan tidak boleh kosong" }, { status: 400 });
-      data.name = name;
+      // audit D-L8: cap 120 karakter selaras POST /api/goals — PATCH tak boleh
+      // meloloskan nama sepanjang apa pun yang POST larang.
+      data.name = name.slice(0, 120);
     }
     if (body.targetAmount !== undefined) {
       const targetAmount = Number(body.targetAmount);

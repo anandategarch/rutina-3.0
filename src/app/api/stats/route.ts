@@ -64,7 +64,9 @@ export async function GET() {
           select: { habitId: true, date: true, status: true, value: true },
         }),
         db.workout.findMany({ where: { date: { gte: addDays(today, -185) } } }),
-        db.bodyMetric.findMany({ orderBy: { date: "asc" } }),
+        // audit D-L11: batasi 365 baris terakhir (selaras /api/body-metrics B3-B4)
+        // — payload weightTrend tidak tumbuh tanpa batas seiring pemakaian.
+        db.bodyMetric.findMany({ orderBy: { date: "desc" }, take: 365 }),
         db.checkIn.findMany({ where: { date: { gte: addDays(today, -13) } } }),
         db.wallet.findMany(),
         // Hanya kolom yang dipakai agregasi (type/amount/date) — netBalance butuh seluruh riwayat
@@ -160,7 +162,11 @@ export async function GET() {
       };
     });
 
+    // audit D-L11: query diambil desc+365 (baris terbaru), kembalikan urutan
+    // asc agar weightTrend tetap kronologis (latest = elemen terakhir).
     const weightTrend = bodyMetrics
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date))
       .filter((m) => m.weightKg != null)
       .map((m) => ({ date: m.date, weightKg: Number(m.weightKg!.toFixed(1)) }));
     const latestWeight = weightTrend.length ? weightTrend[weightTrend.length - 1].weightKg : null;
@@ -229,12 +235,14 @@ export async function GET() {
       );
       const wInMonth = workouts.filter((w) => inMonth(w.date));
       // Hari efektif bulan ini (bulan berjalan berhenti di hari ini)
+      // audit D-M1: guard startsWith salah — "2026-02-31".startsWith("2026-02")
+      // true, sehingga bulan pendek menghitung tanggal palsu (02-29/30/31) dan
+      // menggelembungkan missionsScheduled. Validasi dengan jumlah hari riil.
+      const daysInMonth = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)), 0).getDate();
       const monthDates: string[] = [];
-      for (let d = 1; d <= 31; d++) {
+      for (let d = 1; d <= daysInMonth; d++) {
         const ds = `${ym}-${String(d).padStart(2, "0")}`;
         if (ds > today) break;
-        // validitas hari: masih di bulan yang sama (28-31 aman lewat perbandingan bulan)
-        if (!ds.startsWith(ym)) break;
         monthDates.push(ds);
       }
       let missionsDone = 0;

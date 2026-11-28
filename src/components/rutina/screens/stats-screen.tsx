@@ -50,7 +50,7 @@ import {
   formatDuration,
   monthName,
   parseDateStr,
-  toDateStr,
+  jakartaDateStr,
   todayStr,
 } from "@/lib/rutina/format";
 import { ScreenHeader, SectionCard, StatTile, ProgressRing, Pill, EmptyState, HABIT_CATEGORY_META, ShowAllToggle } from "@/components/rutina/primitives";
@@ -171,7 +171,9 @@ export default function StatsScreen() {
   const setPage = useRutinaStore((s) => s.setPage);
   const { data, isLoading, isError, refetch, isFetching } = useQuery({ queryKey: ["stats"], queryFn: rutinaApi.stats });
 
-  if (isError) {
+  // audit D-L2: gate error pada !data — refetch latar yang gagal tidak boleh
+  // membuang statistik yang sudah tampil (pola sama dengan layar lain).
+  if (isError && !data) {
     return (
       <div className="flex flex-col min-h-full">
         <ScreenHeader title="Statistik" subtitle="Pola & tren semua modulmu" onBack={() => setPage("home")} />
@@ -773,7 +775,8 @@ function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: S
   );
   const dayWorkouts = React.useMemo(() => (day ? (data?.workouts ?? []).filter((w) => w.date === day) : []), [data, day]);
   const dayEntries = React.useMemo(
-    () => (day ? (data?.entries ?? []).filter((e) => toDateStr(new Date(e.createdAt)) === day) : []),
+    // audit D-M7: bucketing createdAt → tanggal WIB, selaras kalender jurnal
+    () => (day ? (data?.entries ?? []).filter((e) => jakartaDateStr(new Date(e.createdAt)) === day) : []),
     [data, day]
   );
 

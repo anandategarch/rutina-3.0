@@ -454,9 +454,12 @@ export default function AddTransactionSheet({
             {/* Tanggal */}
             <div className="space-y-1.5">
               <Label htmlFor="tx-date">Tanggal</Label>
+              {/* audit D-L1: max hari ini (WIB) — guard server kini nyata,
+                  picker mencegah lebih awal */}
               <Input
                 id="tx-date"
                 type="date"
+                max={todayStr()}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="min-h-[44px] tabular"
