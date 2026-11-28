@@ -50,10 +50,19 @@ export function LoadErrorState({
     retryRef.current = onRetry;
   });
 
-  // Setiap error baru (mis. auto-retry React Query gagal lagi) reset siklus.
+  // audit 1-b P1: siklus auto-retry TIDAK boleh reset setiap kali objek Error
+  // baru dibuat (tiap refetch gagal → objek baru → attempt balik ke 0 → siklus
+  // 4/8/16 dtk berulang selamanya, pesan "sudah habis" tak pernah muncul).
+  // Reset hanya jika PESAN error berubah (mode kegagalan berbeda), atau saat
+  // pengguna men-tap "Coba Lagi" secara manual.
+  const lastMsgRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    setAttempt(0);
-    setRetrying(false);
+    const msg = error?.message ?? null;
+    if (msg !== lastMsgRef.current) {
+      lastMsgRef.current = msg;
+      setAttempt(0);
+      setRetrying(false);
+    }
   }, [error]);
 
   // audit E-F1: timer indikator "sedang mencoba" dilacak di ref dan hanya
@@ -119,6 +128,8 @@ export function LoadErrorState({
       <div className="mt-3 flex flex-col items-center gap-2">
         <button
           onClick={() => {
+            // Tap manual = putaran baru: nyalakan ulang siklus auto-retry.
+            setAttempt(0);
             setRetrying(true);
             retryRef.current();
             scheduleIndicatorOff();

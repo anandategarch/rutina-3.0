@@ -25,16 +25,23 @@ function describeFetchError(err: unknown): Error {
 }
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  // Signal eksplisit dari caller (mis. React Query) tetap dihormati.
+  // Signal eksplisit dari caller (mis. React Query) DIKOMBINASI dengan batas
+  // waktu sendiri — audit 1-b: `init.signal ?? timeout` dulu membuat caller
+  // signal MENONAKTIFKAN timeout total (tak ada guard 30 dtk).
   const isMutation = init?.method !== undefined && init.method !== "GET";
-  const signal = init?.signal ?? AbortSignal.timeout(isMutation ? MUTATION_TIMEOUT_MS : GET_TIMEOUT_MS);
+  const limitSignal = AbortSignal.timeout(isMutation ? MUTATION_TIMEOUT_MS : GET_TIMEOUT_MS);
+  const signal =
+    init?.signal && typeof AbortSignal.any === "function"
+      ? AbortSignal.any([init.signal, limitSignal])
+      : (init?.signal ?? limitSignal);
   let res: Response;
   try {
     res = await fetch(url, {
       ...init,
       signal,
       headers: {
-        "Content-Type": "application/json",
+        // audit 1-b P2: GET/DELETE tanpa body tidak perlu Content-Type.
+        ...(isMutation ? { "Content-Type": "application/json" } : {}),
         // audit E-B7: tanda tangan klien aplikasi — gerbang destruktif
         // (/api/danger/*, /api/import) di proxy.ts menolak mutasi tanpa header
         // ini; form/iframe lintas origin tidak bisa memasang header kustom.
@@ -46,6 +53,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     throw describeFetchError(err);
   }
   if (!res.ok) {
+    // Body error bisa berupa HTML gateway (502/504) — jangan biarkan
+    // res.json() melempar SyntaxError mentah ke pengguna.
     const body = await res.json().catch(() => ({}));
     const e = new Error(
       (body as { error?: string }).error || `Request gagal (${res.status})`
@@ -53,7 +62,16 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     e.status = res.status; // status dipertahankan agar UI bisa membedakan 4xx vs 5xx
     throw e;
   }
-  return res.json() as Promise<T>;
+  // audit 1-b P1: respons 200 dari gateway antara bisa berupa HTML kosong
+  // (interstitial) — parse gagal diterjemahkan jadi pesan yang jelas, bukan
+  // "Unexpected token '<'".
+  try {
+    return (await res.json()) as T;
+  } catch {
+    throw new Error(
+      "Respons server tidak dapat dibaca. Coba lagi sebentar."
+    );
+  }
 }
 
 export const api = {

@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { rutinaApi } from "@/lib/rutina/api";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import { cn } from "@/lib/utils";
 import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 
@@ -72,9 +73,8 @@ export default function AddJournalSheet({
         pinned,
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["journal"] });
-      qc.invalidateQueries({ queryKey: ["home"] });
-      qc.invalidateQueries({ queryKey: ["stats"] });
+      // audit 1-b P2: helper tunggal — ikut mengosongkan day-detail (Stats).
+      invalidateAfterMutation(qc, ["journal"]);
       toast.success("Catatan tersimpan");
       onClose();
     },

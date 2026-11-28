@@ -85,6 +85,8 @@ export { db };
  */
 export async function computeHabitStreaks(): Promise<Record<string, { current: number; best: number }>> {
   const today = jakartaToday();
+  // audit 1-a P2: batas rentang perhitungan best streak (10 tahun ke belakang).
+  const rangeFloor = addDays(today, -3650);
   const [habits, logs, shieldRows] = await Promise.all([
     db.habit.findMany({
       select: { id: true, createdAt: true, scheduleType: true, daysOfWeek: true, unitTarget: true },
@@ -174,7 +176,10 @@ export async function computeHabitStreaks(): Promise<Record<string, { current: n
     let run = 0;
     if (doneSet.size > 0) {
       const firstDone = Array.from(doneSet).sort()[0];
-      for (const ds of rangeDays(firstDone, today)) {
+      // audit 1-a P2: import backdate (mis. tahun 1900) membuat rentang puluhan
+      // ribu entri per habit — batas 10 tahun cukup untuk data nyata.
+      const bestFloor = firstDone < rangeFloor ? rangeFloor : firstDone;
+      for (const ds of rangeDays(bestFloor, today)) {
         if (!isScheduled(h.daysOfWeek, h.scheduleType, ds)) continue;
         if (doneSet.has(ds)) {
           run++;

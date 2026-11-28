@@ -313,7 +313,8 @@ export default function AddHabitSheet({
                         active ? "ring-2 ring-foreground/50" : "ring-0"
                       )}
                     >
-                      {active && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                      {/* audit 1-c P2: swatch terang (secondary) membuat Check putih tak terlihat */}
+                      {active && <Check className="h-4 w-4 text-foreground" strokeWidth={3} />}
                     </button>
                   );
                 })}

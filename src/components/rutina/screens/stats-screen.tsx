@@ -17,6 +17,7 @@ import {
   Medal,
   CalendarDays,
   TrendingUp,
+  WifiOff,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -552,8 +553,9 @@ export default function StatsScreen() {
         {/* ===== Insight list ===== */}
         <SectionCard title="Wawasan Statistik" tone="garden" icon={<Lightbulb className="h-4 w-4 text-garden-deep" />}>
           <ul className="space-y-2.5">
-            {stats.insights.map((ins) => (
-              <li key={ins.slice(0, 40)} className="flex items-start gap-2.5 rounded-xl bg-secondary/60 p-3">
+            {/* audit 1-c P2: key berbasis prefix 40 karakter bisa berdupe — pakai index stabil */}
+            {stats.insights.map((ins, i) => (
+              <li key={i} className="flex items-start gap-2.5 rounded-xl bg-secondary/60 p-3">
                 <Lightbulb className="h-4 w-4 text-garden-deep shrink-0 mt-0.5" />
                 <p className="text-xs leading-relaxed text-foreground">{ins}</p>
               </li>
@@ -745,7 +747,7 @@ function LegendDot({ className, label }: { className: string; label: string }) {
 }
 
 function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: StatsPayload; onClose: () => void }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["day-detail", day],
     queryFn: async () => {
       const [tx, wk, jn] = await Promise.all([rutinaApi.transactions(), rutinaApi.workouts(), rutinaApi.journal()]);
@@ -776,6 +778,23 @@ function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: S
           <p className="text-xs text-muted-foreground">Ringkasan aktivitas lintas modul</p>
         </DrawerHeader>
         <div className="px-4 pb-6 space-y-3 overflow-y-auto scroll-thin">
+          {/* audit 1-b P1: drawer tanpa error branch menampilkan "0 catatan" palsu
+              saat fetch gagal — tampilkan status nyata + tombol coba lagi. */}
+          {isError && !data ? (
+            <div role="alert" className="flex flex-col items-center gap-3 rounded-xl bg-clay-soft p-4 text-center">
+              <WifiOff className="h-5 w-5 text-clay-deep" aria-hidden="true" />
+              <p className="text-xs font-semibold text-clay-deep">
+                {error?.message || "Gagal memuat rincian hari ini."}
+              </p>
+              <button
+                onClick={() => refetch()}
+                className="press min-h-[44px] rounded-xl bg-clay px-4 text-sm font-bold text-white"
+              >
+                Coba Lagi
+              </button>
+            </div>
+          ) : (
+          <>
           <div className="rounded-xl bg-garden-soft p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-bold text-garden-deep uppercase tracking-wide">Misi selesai</span>
@@ -865,6 +884,8 @@ function DayDetailDrawer({ day, stats, onClose }: { day: string | null; stats: S
               )}
             </div>
           </div>
+          </>
+          )}
         </div>
       </DrawerContent>
     </Drawer>

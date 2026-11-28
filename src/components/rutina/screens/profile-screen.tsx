@@ -171,7 +171,9 @@ export default function ProfileScreen() {
       const payload = { ...parsed, confirm: importConfirmText };
       const res = await fetch("/api/import", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // audit 1-b P0: gerbang destruktif proxy.ts menuntut header klien —
+        // tanpa ini, pemulihan cadangan SELALU 403.
+        headers: { "Content-Type": "application/json", "x-rutina-client": "1" },
         body: JSON.stringify(payload),
       });
       const body = await res.json().catch(() => ({}));
@@ -200,7 +202,8 @@ export default function ProfileScreen() {
       // audit B1-A1: server menuntut body.confirm === "RESET RUTINA"
       const res = await fetch("/api/danger/reset", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // audit 1-b P0: sama — tanpa header ini reset SELALU 403.
+        headers: { "Content-Type": "application/json", "x-rutina-client": "1" },
         body: JSON.stringify({ confirm: resetConfirmText }),
       });
       const b = (await res.json().catch(() => ({}))) as { error?: string };
@@ -234,7 +237,10 @@ export default function ProfileScreen() {
       <div className="p-4 space-y-4">
         {/* ===== Banner gagal muat (ikuti pola layar Beranda) ===== */}
         {(profileError || statsError) && (
-          <div className="flex items-center gap-3 rounded-xl border border-clay/40 bg-clay-soft p-3">
+          <div
+            role="status"
+            className="flex items-center gap-3 rounded-xl border border-clay/40 bg-clay-soft p-3"
+          >
             <AlertTriangle className="h-4 w-4 shrink-0 text-clay" />
             <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-clay-deep">
               Gagal memuat data profil — periksa koneksi internetmu.

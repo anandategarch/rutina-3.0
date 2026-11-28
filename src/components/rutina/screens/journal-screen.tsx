@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { JournalEntry } from "@/types/rutina";
 import { cn } from "@/lib/utils";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 
 const FOLDERS = ["Umum", "Refleksi", "Ide", "Sorotan"];
 const FOLDER_TONE: Record<string, "stone" | "writer" | "studio" | "garden"> = {
@@ -702,7 +703,9 @@ export default function JournalScreen() {
           tone="writer"
           icon={<NotebookText className="h-4 w-4 text-writer-deep" />}
         >
-          {isError ? (
+          {/* audit 1-b P0: error hanya layak tampil saat TIDAK ada data stale;
+              dengan cache, daftar tetap hidup dan refetch berjalan diam-diam. */}
+          {isError && entries.length === 0 ? (
             <EmptyState
               icon={<AlertTriangle className="h-6 w-6" />}
               title="Gagal memuat catatan"
@@ -718,7 +721,7 @@ export default function JournalScreen() {
                 </button>
               }
             />
-          ) : isLoading ? (
+          ) : isLoading && entries.length === 0 ? (
             <div className="space-y-3">
               {/* motion.csv #15: skeleton-shimmer menggantikan pulse lama */}
               {Array.from({ length: 3 }).map((_, i) => (
@@ -752,7 +755,17 @@ export default function JournalScreen() {
               />
             )
           ) : (
-            <div id="jurnal-list" className="space-y-2.5">
+            <div
+              id="jurnal-list"
+              className={cn(
+                "space-y-2.5",
+                // audit 1-c P1: "Muat semua" bisa mengembang ratusan entri —
+                // batasi tinggi dengan gulir internal agar DOM & layar terkendali.
+                visibleCount >= filtered.length && filtered.length > 10
+                  ? "max-h-[480px] overflow-y-auto scroll-thin"
+                  : null
+              )}
+            >
               {filtered.slice(0, visibleCount).map((e) => {
                 const moodMeta = e.mood ? JOURNAL_MOODS.find((m) => m.key === e.mood) : null;
                 const MoodIcon = moodMeta?.icon as LucideIcon | undefined;
@@ -850,9 +863,8 @@ function EntrySheet({ entry, onClose }: { entry: JournalEntry | null; onClose: (
       pinned !== entry.pinned);
 
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["journal"] });
-    qc.invalidateQueries({ queryKey: ["home"] });
-    qc.invalidateQueries({ queryKey: ["stats"] });
+    // audit 1-b P2: lewat helper tunggal — juga mengosongkan day-detail (Stats).
+    invalidateAfterMutation(qc, ["journal"]);
   };
 
   const saveMutation = useMutation({

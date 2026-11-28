@@ -145,11 +145,21 @@ export default function FitnessScreen() {
   const checkins = checkinsQuery.data?.checkins ?? [];
 
   // Sasaran kebugaran: satu sumber state untuk tab Latihan & Tubuh (sinkron dengan localStorage)
-  const [goals, setGoals] = React.useState<FitnessGoals>(readGoals);
+  // audit 1-c P1: localStorage HANYA dibaca setelah mount — pembacaan di
+  // initializer membuat server render DEFAULT sedangkan klien render nilai
+  // tersimpan → hydration mismatch pada "Ringkasan Pekan" untuk pengguna lama.
+  const [goals, setGoals] = React.useState<FitnessGoals>(DEFAULT_GOALS);
+  React.useEffect(() => {
+    setGoals(readGoals());
+  }, []);
 
   // Pola gagal muat yang sama dengan layar Keuangan (audit ux-guidelines):
   // semua sumber utama gagal → layar penuh + coba lagi; sebagian gagal → banner.
-  const allFailed = workoutsQuery.isError && checkinsQuery.isError;
+  // audit 1-b P0: data stale tetap layak dirender — React Query v5 menyimpan
+  // data sukses terakhir walau refetch gagal, jadi layar penuh hanya saat
+  // TIDAK ada data sama sekali.
+  const allFailed =
+    workoutsQuery.isError && !workoutsQuery.data && checkinsQuery.isError && !checkinsQuery.data;
   const anyFailed = workoutsQuery.isError || checkinsQuery.isError;
   const retryFailed = () => {
     if (workoutsQuery.isError) workoutsQuery.refetch();
@@ -203,7 +213,10 @@ export default function FitnessScreen() {
 
         {/* Banner gagal muat sebagian (query masih punya cache → tetap tampilkan data) */}
         {anyFailed && (
-          <div className="mx-4 mt-3 flex items-center gap-3 rounded-xl border border-clay/40 bg-clay-soft p-3">
+          <div
+            role="status"
+            className="mx-4 mt-3 flex items-center gap-3 rounded-xl border border-clay/40 bg-clay-soft p-3"
+          >
             <AlertTriangle className="h-4 w-4 shrink-0 text-clay" />
             <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-clay-deep">
               Sebagian data gagal dimuat — angka di bawah mungkin tidak lengkap.
@@ -1265,7 +1278,10 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
   };
 
   if (foodsQuery.isLoading) return <TabSkeleton />;
-  if (foodsQuery.isError) return <TabLoadError onRetry={() => foodsQuery.refetch()} error={foodsQuery.error} />;
+  // audit 1-b P0: dengan data stale, tab tetap hidup — error penuh hanya saat
+  // tidak ada data sama sekali.
+  if (foodsQuery.isError && !foodsQuery.data)
+    return <TabLoadError onRetry={() => foodsQuery.refetch()} error={foodsQuery.error} />;
 
   const remaining = calTarget - Math.round(totals.calories);
   const over = remaining < 0;
@@ -1448,7 +1464,7 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
                       Belum ada catatan.
                     </p>
                   ) : (
-                    <ul className="space-y-1.5">
+                    <ul className="max-h-72 space-y-1.5 overflow-y-auto scroll-thin">
                       {mealEntries.map((e) => (
                         <li
                           key={e.id}
@@ -1715,7 +1731,9 @@ function BodyTab({
   };
 
   if (metricsQuery.isLoading) return <TabSkeleton />;
-  if (metricsQuery.isError) return <TabLoadError onRetry={() => metricsQuery.refetch()} error={metricsQuery.error} />;
+  // audit 1-b P0: hormati data stale — sama dengan tab Asupan.
+  if (metricsQuery.isError && !metricsQuery.data)
+    return <TabLoadError onRetry={() => metricsQuery.refetch()} error={metricsQuery.error} />;
 
   const checkinBars = todayCheckin
     ? [

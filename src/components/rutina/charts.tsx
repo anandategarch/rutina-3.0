@@ -692,7 +692,9 @@ export function MetricBar({
           style={{
             background: over
               ? overColor
-              : `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 72%, white) 130%)`,
+              // audit 1-c P2: mix ke var(--card) alih-alih white — di mode gelap
+              // ujung bar tidak lagi "bloom" terang yang menyilaukan.
+              : `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 72%, var(--card)) 130%)`,
             boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 25%, transparent) inset`,
             transform: `scaleX(${fillScale})`,
             transformOrigin: "left",

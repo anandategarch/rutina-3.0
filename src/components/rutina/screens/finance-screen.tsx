@@ -309,9 +309,13 @@ function HariBolongCard({
           <div className="h-16 rounded-xl bg-secondary skeleton-shimmer" />
           <div className="h-11 rounded-xl bg-secondary skeleton-shimmer" />
         </div>
-      ) : isError || !misses ? (
+      ) : !misses ? (
+        // audit 1-b P0: error penuh hanya saat tidak ada data stale sama sekali;
+        // dengan cache, konten tetap dirender dan refetch berjalan latar belakang.
         <div className="flex items-center justify-between gap-3 rounded-xl bg-clay-soft p-3">
-          <p className="text-xs font-semibold text-clay-deep">Deteksi hari bolong gagal dimuat.</p>
+          <p className="text-xs font-semibold text-clay-deep">
+            {isError ? "Deteksi hari bolong gagal dimuat." : "Deteksi hari bolong belum tersedia."}
+          </p>
           <button
             onClick={onRetry}
             className="press min-h-[44px] shrink-0 rounded-lg bg-clay px-3 text-xs font-bold text-white"
@@ -399,10 +403,10 @@ function HariBolongCard({
             />
           </div>
 
-          {/* Runing pencatatan + treatment utama */}
+          {/* Runtun pencatatan + treatment utama */}
           <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-secondary px-3 py-2.5">
             <p className="text-xs text-muted-foreground">
-              Runing pencatatan{" "}
+              Runtun pencatatan{" "}
               <span className="font-bold text-vault-deep tabular">{misses.logStreak} hari</span>
               {misses.todayLogged ? " · hari ini sudah tercatat" : " · hari ini belum"}
             </p>
@@ -590,7 +594,17 @@ export default function FinanceScreen() {
   const loading = qTx.isLoading || qWallets.isLoading || qBudgets.isLoading || qGoals.isLoading;
 
   // ---- Status gagal muat (ikuti pola layar Beranda) ----
-  const allFailed = qTx.isError && qWallets.isError && qBudgets.isError && qGoals.isError;
+  // audit 1-b P0: layar penuh error hanya jika TIDAK ada data stale sama
+  // sekali; React Query v5 menyimpan data sukses terakhir saat refetch gagal.
+  const allFailed =
+    qTx.isError &&
+    !qTx.data &&
+    qWallets.isError &&
+    !qWallets.data &&
+    qBudgets.isError &&
+    !qBudgets.data &&
+    qGoals.isError &&
+    !qGoals.data;
   const anyFailed = qTx.isError || qWallets.isError || qBudgets.isError || qGoals.isError;
   const retryFailed = () => {
     if (qTx.isError) qTx.refetch();
@@ -1149,7 +1163,10 @@ export default function FinanceScreen() {
 
       {/* Banner gagal muat sebagian (query masih punya cache → tetap tampilkan data) */}
       {anyFailed && (
-        <div className="mx-4 mt-3 flex items-center gap-3 rounded-xl border border-clay/40 bg-clay-soft p-3">
+        <div
+          role="status"
+          className="mx-4 mt-3 flex items-center gap-3 rounded-xl border border-clay/40 bg-clay-soft p-3"
+        >
           <AlertTriangle className="h-4 w-4 shrink-0 text-clay" />
           <p className="min-w-0 flex-1 text-xs font-semibold leading-snug text-clay-deep">
             Sebagian data gagal dimuat — angka di bawah mungkin tidak lengkap.

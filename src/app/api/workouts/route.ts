@@ -55,6 +55,11 @@ export async function POST(req: Request) {
     if (!isValidDateStr(date)) {
       return NextResponse.json({ error: "Format tanggal tidak valid" }, { status: 400 });
     }
+    // audit 1-a P1: selaras guard habit-check (B2-H3) & transaksi (D-L1) —
+    // latihan bertanggal masa depan menggelembungkan statistik 30 hari.
+    if (date > jakartaToday()) {
+      return NextResponse.json({ error: "Tanggal tidak boleh di masa depan" }, { status: 400 });
+    }
 
     // audit B3-B2: startTime harus "HH:MM" (00:00–23:59); selain itu dianggap tidak diisi
     const rawStart = str(body.startTime);
@@ -100,7 +105,10 @@ export async function POST(req: Request) {
     // Strength items → JSON string array
     let strengthJson: string | null = null;
     if (type === "strength" && Array.isArray(body.strength) && body.strength.length > 0) {
+      // audit 1-a P2: array bisa berisi null/bukan-objek → .map melempar TypeError
+      // dan route 500; saring dulu.
       const items = body.strength
+        .filter((s: unknown): s is Record<string, unknown> => !!s && typeof s === "object" && !Array.isArray(s))
         .map((s: Record<string, unknown>) => ({
           exercise: str(s.exercise) ?? "",
           muscleGroup: str(s.muscleGroup) ?? "",

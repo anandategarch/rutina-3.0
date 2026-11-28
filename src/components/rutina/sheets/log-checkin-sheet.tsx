@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { rutinaApi } from "@/lib/rutina/api";
 import { todayStr } from "@/lib/rutina/format";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 import type { CheckIn } from "@/types/rutina";
 
@@ -147,9 +148,8 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
   const mutation = useMutation({
     mutationFn: rutinaApi.upsertCheckin,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["checkins"] });
-      queryClient.invalidateQueries({ queryKey: ["home"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      // audit 1-b P2: helper tunggal — ikut mengosongkan day-detail (Stats).
+      invalidateAfterMutation(queryClient, ["checkins"]);
       toast.success("Check-in tersimpan");
       onClose();
     },

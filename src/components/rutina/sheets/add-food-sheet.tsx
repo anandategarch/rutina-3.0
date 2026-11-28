@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { rutinaApi } from "@/lib/rutina/api";
 import { todayStr, formatNumber } from "@/lib/rutina/format";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 import type { FoodItem } from "@/types/rutina";
 
@@ -95,9 +96,8 @@ export default function AddFoodSheet({ open, onClose }: { open: boolean; onClose
   const mutation = useMutation({
     mutationFn: rutinaApi.createFood,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["foods"] });
-      queryClient.invalidateQueries({ queryKey: ["home"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      // audit 1-b P2: helper tunggal — ikut mengosongkan day-detail (Stats).
+      invalidateAfterMutation(queryClient, ["foods"]);
       toast.success("Asupan tersimpan");
       onClose();
     },

@@ -47,6 +47,10 @@ export async function POST(req: Request) {
     if (!isValidDateStr(date)) {
       return NextResponse.json({ error: "Format tanggal tidak valid" }, { status: 400 });
     }
+    // audit 1-a P1: selaras guard habit-check (B2-H3) — tolak tanggal masa depan.
+    if (date > jakartaToday()) {
+      return NextResponse.json({ error: "Tanggal tidak boleh di masa depan" }, { status: 400 });
+    }
 
     const mood = int1to5(body.mood);
     const energy = int1to5(body.energy);

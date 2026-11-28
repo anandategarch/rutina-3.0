@@ -158,9 +158,8 @@ export default function HomeScreen() {
       toast.error(e.message);
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["home"] });
-      qc.invalidateQueries({ queryKey: ["habits"] });
-      qc.invalidateQueries({ queryKey: ["stats"] });
+      // audit 1-b P2: helper tunggal — ikut mengosongkan day-detail (Stats).
+      invalidateAfterMutation(qc, ["habits"]);
     },
   });
 

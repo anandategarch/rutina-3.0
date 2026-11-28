@@ -78,11 +78,16 @@ function pickHabit(r: Row) {
 }
 
 function pickHabitLog(r: Row) {
+  // audit 1-a P2: status tidak dikenal dinormalisasi ke "done" — skema HabitLog
+  // hanya menerima done|missed|rest, nilai asing dari berkas lain membuat
+  // pemulihan gagal (union violation) alih-alih baris diletakkan aman.
+  const rawStatus = str(r.status);
+  const status = rawStatus === "missed" || rawStatus === "rest" ? rawStatus : "done";
   return {
     id: str(r.id),
     habitId: str(r.habitId),
     date: str(r.date),
-    status: str(r.status) ?? "done",
+    status,
     value: numOrNull(r.value),
     note: strOrNull(r.note),
   };

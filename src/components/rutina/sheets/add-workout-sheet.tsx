@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { rutinaApi } from "@/lib/rutina/api";
 import { todayStr, formatPace } from "@/lib/rutina/format";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import ConfirmDiscard from "@/components/rutina/sheets/confirm-discard";
 import type { Workout, StrengthItem, ExerciseItem } from "@/types/rutina";
 
@@ -134,9 +135,8 @@ export default function AddWorkoutSheet({ open, onClose }: { open: boolean; onCl
   const mutation = useMutation({
     mutationFn: rutinaApi.createWorkout,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
-      queryClient.invalidateQueries({ queryKey: ["home"] });
-      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      // audit 1-b P2: helper tunggal — ikut mengosongkan day-detail (Stats).
+      invalidateAfterMutation(queryClient, ["workouts"]);
       toast.success("Latihan tersimpan");
       onClose();
     },

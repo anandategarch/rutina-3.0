@@ -324,7 +324,7 @@ function GardenIllustration({ stage }: { stage: number }) {
       </g>
 
       {/* Awan */}
-      <g fill="#ffffff" opacity="0.9">
+      <g fill="var(--card)" opacity="0.9">
         <ellipse cx="66" cy="42" rx="26" ry="10" />
         <ellipse cx="86" cy="36" rx="17" ry="8" />
         <ellipse cx="152" cy="56" rx="20" ry="7" opacity="0.7" />

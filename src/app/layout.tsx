@@ -23,6 +23,9 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
+  // audit 1-d P1: metadataBase menstabilkan URL OG/twitter di balik proxy/pratinjau
+  // (tanpa ini, URL absolut bergantung pada host runtime — tidak deterministik).
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "Rutina 3.0 — Rutinitas & Perkembangan Hidup",
   description:
     "Aplikasi personal untuk mengelola rutinitas dan perkembangan hidup sehari-hari: kebiasaan, kebugaran, keuangan, jurnal, dan statistik dalam satu tempat.",

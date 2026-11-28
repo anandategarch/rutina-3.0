@@ -23,6 +23,7 @@ import {
 import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { useRutinaStore, type MainTab, type RutinaPage } from "@/store/rutina";
 import { rutinaApi } from "@/lib/rutina/api";
+import { attachOfflinePersistence, restoreOfflineCache } from "@/lib/rutina/offline-cache";
 import { cn } from "@/lib/utils";
 
 // Layar tab utama: statis (dibutuhkan segera saat app dibuka)
@@ -365,6 +366,16 @@ export function RutinaApp() {
       })
   );
 
+  // Offline-first: restore snapshot SEBELUM render pertama TERNYATA memicu
+  // hydration mismatch (server render skeleton tanpa data, client render
+  // konten ter-restore). Karena itu restore + persist keduanya dipasang
+  // SETELAH mount: paint pertama selalu cocok dengan HTML server, lalu data
+  // tersimpan muncul satu frame berikutnya.
+  React.useEffect(() => {
+    restoreOfflineCache(queryClient);
+    return attachOfflinePersistence(queryClient);
+  }, [queryClient]);
+
   // Prefetch idle: data Kebiasaan adalah GET terberat (streak server + pola lupa +
   // log 35 hari) dan routenya dikompilasi on-demand di dev. Dipanaskan lebih awal
   // sehingga tab Kebiasaan terbuka instan dari cache & tidak menabrak cold-compile.
@@ -389,9 +400,15 @@ export function RutinaApp() {
     };
 
     const scheduleWarmUp = () => {
+      // audit 1-b: batalkan jadwal sebelumnya dulu — maybeWarm dipanggil pada
+      // SETIAP event cache; tanpa cancel, callback menumpuk di antrean idle
+      // (semua dibereskan guard `done`, tapi tetap kebocoran jadwal).
       const w = window as Window & {
         requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        cancelIdleCallback?: (id: number) => void;
       };
+      if (idleId !== undefined) w.cancelIdleCallback?.(idleId);
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
       if (typeof w.requestIdleCallback === "function") {
         idleId = w.requestIdleCallback(warmUp, { timeout: 3_500 });
       } else {

@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Banknote, Landmark, Smartphone, ArrowLeftRight, WifiOff, Tag, X } from "lucide-react";
 import { toast } from "sonner";
 import { rutinaApi } from "@/lib/rutina/api";
+import { invalidateAfterMutation } from "@/lib/rutina/queries";
 import { todayStr, formatNumber } from "@/lib/rutina/format";
 import type { FinanceCategory } from "@/types/rutina";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
@@ -188,14 +189,8 @@ export default function AddTransactionSheet({
   };
 
   const invalidateFinance = React.useCallback(() => {
-    qc.invalidateQueries({ queryKey: ["transactions"] });
-    qc.invalidateQueries({ queryKey: ["wallets"] });
-    qc.invalidateQueries({ queryKey: ["budgets"] });
-    // audit D-M4: transaksi baru (termasuk Catat Mundur) mengubah status hari
-    // bolong — kartu Jaga Catatan harus segar saat pengguna kembali ke Vault.
-    qc.invalidateQueries({ queryKey: ["vault-misses"] });
-    qc.invalidateQueries({ queryKey: ["home"] });
-    qc.invalidateQueries({ queryKey: ["stats"] });
+    // audit 1-b P2: helper tunggal — selalu home + stats + day-detail (Stats).
+    invalidateAfterMutation(qc, ["transactions", "wallets", "budgets", "vault-misses"]);
   }, [qc]);
 
   const createTx = useMutation({
