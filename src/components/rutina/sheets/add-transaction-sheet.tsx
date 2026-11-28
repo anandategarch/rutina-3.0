@@ -232,8 +232,12 @@ export default function AddTransactionSheet({
   const amount = Number(amountRaw || 0);
   const targetWallets = wallets.filter((w) => w.id !== walletId);
 
-  const handleSubmit = (ev: React.FormEvent) => {
-    ev.preventDefault();
+  // audit G2: lihat add-habit-sheet — iframe sandbox tanpa allow-forms
+  // memblokir submisi form native; handler juga dipanggil dari onClick tombol.
+  const handleSubmit = (ev?: { preventDefault: () => void }) => {
+    ev?.preventDefault();
+    // audit 3-b#7: guard dobel-submit (onClick + Enter/submit bersamaan)
+    if (createTx.isPending) return;
     if (!wallets.length) {
       toast.error("Tambahkan dompet terlebih dahulu");
       return;
@@ -509,6 +513,7 @@ export default function AddTransactionSheet({
             )}
             <button
               type="submit"
+              onClick={() => handleSubmit()}
               disabled={createTx.isPending || qWallets.isLoading || !wallets.length}
               className="press flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-vault text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { jakartaToday } from "@/lib/rutina/format";
+import { withDbRetry } from "@/lib/rutina/db-retry";
 
 export const dynamic = "force-dynamic";
 
@@ -53,39 +54,45 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
     const actualBalance = round2(actual);
 
-    const wallet = await db.wallet.findUnique({ where: { id } });
-    if (!wallet) {
+    // audit 3-a#3: hitung-dan-tulis kini ATOMIK di satu transaksi — versi lama
+    // read-modify-write terpisah: transaksi baru yang masuk di antara baca dan
+    // tulis membuat delta basi dan menulis angka penyesuaian yang salah.
+    // withDbRetry menyerap SQLITE_BUSY/P2034 transien.
+    const result = await withDbRetry(() =>
+      db.$transaction(async (tx) => {
+        const wallet = await tx.wallet.findUnique({ where: { id } });
+        if (!wallet) return null;
+
+        const txs = await tx.transaction.findMany({
+          where: { OR: [{ walletId: id }, { toWalletId: id }] },
+          select: { type: true, amount: true, walletId: true, toWalletId: true },
+        });
+        const computed = computeBalance(id, wallet.initialBalance, txs);
+        const delta = round2(actualBalance - computed);
+
+        if (Math.abs(delta) < 0.005) {
+          return { reconciled: false as const, delta: 0, transaction: null, computed };
+        }
+
+        const transaction = await tx.transaction.create({
+          data: {
+            type: delta > 0 ? "income" : "expense",
+            amount: round2(Math.abs(delta)),
+            category: "penyesuaian",
+            walletId: id,
+            date: jakartaToday(),
+            note: `Rekonsiliasi kas "${wallet.name}" — catatan ${computed}, kas asli ${actualBalance}`,
+          },
+        });
+        return { reconciled: true as const, delta, transaction, computed };
+      }, { timeout: 15_000 })
+    );
+
+    if (result === null) {
       return NextResponse.json({ error: "Dompet tidak ditemukan" }, { status: 404 });
     }
 
-    const txs = await db.transaction.findMany({
-      where: { OR: [{ walletId: id }, { toWalletId: id }] },
-      select: { type: true, amount: true, walletId: true, toWalletId: true },
-    });
-    const computed = computeBalance(id, wallet.initialBalance, txs);
-    const delta = round2(actualBalance - computed);
-
-    if (Math.abs(delta) < 0.005) {
-      return NextResponse.json({
-        reconciled: false,
-        delta: 0,
-        transaction: null,
-        computed,
-      });
-    }
-
-    const transaction = await db.transaction.create({
-      data: {
-        type: delta > 0 ? "income" : "expense",
-        amount: round2(Math.abs(delta)),
-        category: "penyesuaian",
-        walletId: id,
-        date: jakartaToday(),
-        note: `Rekonsiliasi kas "${wallet.name}" — catatan ${computed}, kas asli ${actualBalance}`,
-      },
-    });
-
-    return NextResponse.json({ reconciled: true, delta, transaction, computed }, { status: 201 });
+    return NextResponse.json(result, { status: result.reconciled ? 201 : 200 });
   } catch (e) {
     console.error("wallet reconcile POST error", e);
     return NextResponse.json({ error: "Gagal merekonsiliasi dompet" }, { status: 500 });

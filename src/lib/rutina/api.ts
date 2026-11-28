@@ -34,6 +34,14 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     init?.signal && typeof AbortSignal.any === "function"
       ? AbortSignal.any([init.signal, limitSignal])
       : (init?.signal ?? limitSignal);
+  // audit G1: header kustom HANYA untuk gerbang destruktif. Sebelumnya semua
+  // request membawa "x-rutina-client" — header non-simple memicu CORS
+  // preflight OPTIONS di konteks origin opaque (iframe Preview Panel
+  // sandboxed), menggandakan request per GET dan membuat muat pertama
+  // bergantung pada jawaban preflight. Endpoint biasa tidak menuntut header
+  // ini (gate di proxy.ts hanya memeriksa /api/danger/* dan /api/import).
+  const isDestructiveEndpoint =
+    url.includes("/api/danger/") || url.includes("/api/import");
   let res: Response;
   try {
     res = await fetch(url, {
@@ -45,7 +53,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
         // audit E-B7: tanda tangan klien aplikasi — gerbang destruktif
         // (/api/danger/*, /api/import) di proxy.ts menolak mutasi tanpa header
         // ini; form/iframe lintas origin tidak bisa memasang header kustom.
-        "x-rutina-client": "1",
+        ...(isDestructiveEndpoint ? { "x-rutina-client": "1" } : {}),
         ...(init?.headers || {}),
       },
     });

@@ -137,7 +137,11 @@ export default function ProfileScreen() {
   const downloadExport = async (format: "json" | "csv") => {
     setBusyExport(format);
     try {
-      const res = await fetch(`/api/export?format=${format}`);
+      // audit 3-b#5: raw fetch tanpa timeout — kalau transport menggantung,
+      // tombol ekspor macet selamanya. 60 dtk: payload ekspor bisa besar.
+      const res = await fetch(`/api/export?format=${format}`, {
+        signal: AbortSignal.timeout(60_000),
+      });
       if (!res.ok) throw new Error("Gagal membuat berkas ekspor");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -173,7 +177,9 @@ export default function ProfileScreen() {
         method: "POST",
         // audit 1-b P0: gerbang destruktif proxy.ts menuntut header klien —
         // tanpa ini, pemulihan cadangan SELALU 403.
+        // audit 3-b#5: guard timeout — payload cadangan bisa besar (60 dtk).
         headers: { "Content-Type": "application/json", "x-rutina-client": "1" },
+        signal: AbortSignal.timeout(60_000),
         body: JSON.stringify(payload),
       });
       const body = await res.json().catch(() => ({}));
@@ -203,7 +209,9 @@ export default function ProfileScreen() {
       const res = await fetch("/api/danger/reset", {
         method: "POST",
         // audit 1-b P0: sama — tanpa header ini reset SELALU 403.
+        // audit 3-b#5: guard timeout agar tombol reset tak bisa macet.
         headers: { "Content-Type": "application/json", "x-rutina-client": "1" },
+        signal: AbortSignal.timeout(30_000),
         body: JSON.stringify({ confirm: resetConfirmText }),
       });
       const b = (await res.json().catch(() => ({}))) as { error?: string };

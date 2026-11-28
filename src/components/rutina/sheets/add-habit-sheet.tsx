@@ -185,8 +185,15 @@ export default function AddHabitSheet({
     }));
   };
 
-  const handleSubmit = (ev: React.FormEvent) => {
-    ev.preventDefault();
+  // audit G2: ev dilebarkan + opsional — iframe Preview Panel disandbox TANPA
+  // `allow-forms`, sehingga submisi form native (klik tombol submit maupun
+  // Enter) DIBLOKIR browser sebelum event submit terbentuk → tombol Simpan
+  // mati diam-diam. Tombol submit kini juga memanggil handler via onClick;
+  // preventDefault mencegah dobel di konteks biasa.
+  const handleSubmit = (ev?: { preventDefault: () => void }) => {
+    ev?.preventDefault();
+    // audit 3-b#7: guard dobel-submit (onClick + Enter/submit bersamaan)
+    if (mutation.isPending) return;
     if (!form.name.trim()) {
       toast.error("Nama kebiasaan wajib diisi");
       return;
@@ -501,6 +508,7 @@ export default function AddHabitSheet({
           <div className="border-t border-border/60 bg-background p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
             <button
               type="submit"
+              onClick={() => handleSubmit()}
               disabled={mutation.isPending}
               className="press w-full h-11 rounded-xl bg-garden-deep text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
             >

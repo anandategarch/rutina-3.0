@@ -191,8 +191,12 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
     document.getElementById(nextId)?.focus();
   };
 
-  const handleSubmit = (ev: React.FormEvent) => {
-    ev.preventDefault();
+  // audit G2: lihat add-habit-sheet — iframe sandbox tanpa allow-forms
+  // memblokir submisi form native; handler juga dipanggil dari onClick tombol.
+  const handleSubmit = (ev?: { preventDefault: () => void }) => {
+    ev?.preventDefault();
+    // audit 3-b#7: guard dobel-submit (onClick + Enter/submit bersamaan)
+    if (mutation.isPending) return;
     if (!canSubmit) return;
     mutation.mutate({
       date: todayStr(),
@@ -407,6 +411,7 @@ export default function LogCheckInSheet({ open, onClose }: { open: boolean; onCl
           <div className="border-t border-border/60 bg-background p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
             <Button
               type="submit"
+              onClick={() => handleSubmit()}
               disabled={!canSubmit}
               className="press w-full h-12 rounded-xl text-sm font-bold bg-studio text-white hover:bg-studio-deep min-h-[44px]"
             >

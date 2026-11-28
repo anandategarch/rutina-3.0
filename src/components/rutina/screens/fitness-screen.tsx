@@ -1272,7 +1272,15 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
       return;
     }
     const v = Math.round(n);
-    if (typeof window !== "undefined") window.localStorage.setItem("rutina-calorie-target", String(v));
+    // audit G3-P1: iframe opaque menolak setItem — jangan biarkan tombol mati
+    // diam-diam; state tetap diperbarui untuk sesi ini.
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("rutina-calorie-target", String(v));
+      } catch {
+        /* origin opaque / quota — abaikan, state in-memory tetap berlaku */
+      }
+    }
     setCalTarget(v);
     toast.success("Target kalori diperbarui");
   };
@@ -1561,9 +1569,18 @@ function NutritionTab({ workouts = [] }: { workouts?: Workout[] }) {
 
 function readCalorieTarget(): number {
   if (typeof window === "undefined") return 2200;
-  const raw = window.localStorage.getItem("rutina-calorie-target");
-  const n = raw ? Number(raw) : NaN;
-  return Number.isFinite(n) && n >= 500 && n <= 10000 ? n : 2200;
+  // audit G3-P0: getter localStorage itu sendiri melempar SecurityError di
+  // iframe sandboxed (origin opaque — lingkungan Preview Panel). Tanpa try/
+  // catch, useState initializer ini meledak saat render pertama tab Asupan →
+  // SELURUH app jatuh ke error boundary ("error semua"). Pola sama dengan
+  // readGoals() yang sudah ber-guard.
+  try {
+    const raw = window.localStorage.getItem("rutina-calorie-target");
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) && n >= 500 && n <= 10000 ? n : 2200;
+  } catch {
+    return 2200;
+  }
 }
 
 // ============================================================
@@ -1724,7 +1741,15 @@ function BodyTab({
       return;
     }
     const next: FitnessGoals = { weeklySessions: s, weeklyMinutes: m, dailyHydration: h, weightGoalKg: w };
-    if (typeof window !== "undefined") window.localStorage.setItem("rutina-fitness-goals", JSON.stringify(next));
+    // audit G3-P1: guard setItem seperti saveTarget — iframe opaque / Safari
+    // private mode melempar SecurityError; state tetap hidup untuk sesi ini.
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("rutina-fitness-goals", JSON.stringify(next));
+      } catch {
+        /* origin opaque / quota — abaikan */
+      }
+    }
     onGoalsChange(next);
     setEditingGoals(false);
     toast.success("Sasaran kebugaran diperbarui");

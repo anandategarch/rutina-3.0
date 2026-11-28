@@ -322,15 +322,24 @@ export default function HomeScreen() {
     `- Masuk ${formatRupiah(d.weekRecap.income, { compact: true })} · Keluar ${formatRupiah(d.weekRecap.spent, { compact: true })}`,
   ].join("\n");
   const shareRecap = async () => {
+    // audit 3-b#6: kegagalan share/clipboard TIDAK BOLEH bisu — di iframe
+    // sandboxed (Preview Panel) navigator.share tak tersedia dan clipboard
+    // ditolak; dulu tombol ini no-op senyap. AbortError = pengguna batal, bukan
+    // error. Selain itu: coba clipboard, bila gagal toast penjelas.
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         await navigator.share({ title: "Rekap Rutina", text: weekRecapText });
-      } else {
-        await navigator.clipboard.writeText(weekRecapText);
-        toast.success("Rekap pekan disalin ke clipboard");
+        return;
       }
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      // jatuh ke clipboard di bawah
+    }
+    try {
+      await navigator.clipboard.writeText(weekRecapText);
+      toast.success("Rekap pekan disalin ke clipboard");
     } catch {
-      // Pengguna membatalkan share sheet — bukan kondisi error
+      toast.error("Tidak bisa membagikan di lingkungan ini — salin manual bila perlu.");
     }
   };
 

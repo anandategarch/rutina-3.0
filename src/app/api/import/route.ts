@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/rutina/server";
 import { isValidDateStr, isValidTimeStr } from "@/lib/rutina/format";
 import { ensureAchievementCatalog } from "@/lib/rutina/catalog-ensure";
+import { withDbRetry } from "@/lib/rutina/db-retry";
 
 export const dynamic = "force-dynamic";
 
@@ -289,17 +290,18 @@ function findDupId(rows: { id: unknown }[], label: string): string | null {
  */
 export async function POST(req: Request) {
   try {
-    // (audit B1-Medium) cek same-origin lokal dihapus — middleware.ts sudah
-    // menegakkan CSRF same-origin untuk semua mutasi /api.
+    // (audit B1-Medium, diperbarui audit G) cek same-origin lokal dihapus —
+    // gate CSRF kini di src/proxy.ts (konvensi Next.js 16), ditambah gerbang
+    // destruktif `x-rutina-client` khusus /api/danger/* dan /api/import.
 
     // Pra-cek Content-Length SEBELUM membuffer body — mencegah body multi-GB
     // dibaca penuh ke memori hanya untuk ditolak belakangan.
-    // (audit B1-Medium) header wajib ada — tanpa itu pra-cek ukuran tak bisa diandalkan
+    // (audit 3-a#6) header TIDAK lagi diwajibkan: klien streaming/chunked
+    // (beberapa proxy HTTP/2) tidak mengirim Content-Length. Tanpa header,
+    // ukuran tetap terkendali oleh batas karakter `raw.length` di bawah;
+    // 413 hanya diputuskan saat header ADA dan nilainya melebihi batas.
     const contentLengthHeader = req.headers.get("content-length");
-    if (contentLengthHeader == null || contentLengthHeader.trim() === "") {
-      return NextResponse.json({ error: "Content-Length wajib ada" }, { status: 411 });
-    }
-    const declaredBytes = Number(contentLengthHeader);
+    const declaredBytes = contentLengthHeader ? Number(contentLengthHeader.trim()) : NaN;
     if (Number.isFinite(declaredBytes) && declaredBytes > MAX_PAYLOAD_BYTES) {
       return NextResponse.json(
         { error: "Payload terlalu besar (maksimal 10 juta karakter)" },
@@ -705,7 +707,11 @@ export async function POST(req: Request) {
     // (cadangan lama/baru sama-sama butuh definisi katalog di DB).
     await ensureAchievementCatalog();
 
-    const txResult = await db.$transaction(
+    // audit 3-a#2: transaksi besar ini rawan P2034/SQLITE_BUSY bila penulis
+    // lain (seed/db push) berjalan bersamaan — bungkus withDbRetry agar
+    // konflik transien di-coba ulang, bukan langsung 500.
+    const txResult = await withDbRetry(() =>
+      db.$transaction(
       async (tx) => {
         // ===== Fase hapus (urutan aman FK) =====
         await tx.habitShield.deleteMany({}); // audit D-H1: eksplisit (cascade habit juga menghapus)
@@ -833,7 +839,7 @@ export async function POST(req: Request) {
         return { restoredFoodItems, restoredAchievements, restoredFinanceCategories, restoredHabitShields };
       },
       { timeout: 30_000 }
-    );
+    ));
 
     return NextResponse.json({
       ok: true,

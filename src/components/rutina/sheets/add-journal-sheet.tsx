@@ -102,8 +102,12 @@ export default function AddJournalSheet({
 
   const canSubmit = content.trim().length > 0 && !createMutation.isPending;
 
-  const handleSubmit = (ev: React.FormEvent) => {
-    ev.preventDefault();
+  // audit G2: lihat add-habit-sheet — iframe sandbox tanpa allow-forms
+  // memblokir submisi form native; handler juga dipanggil dari onClick tombol.
+  const handleSubmit = (ev?: { preventDefault: () => void }) => {
+    ev?.preventDefault();
+    // audit 3-b#7: guard dobel-submit (onClick + Enter/submit bersamaan)
+    if (createMutation.isPending) return;
     if (!content.trim()) {
       toast.error("Isi catatan belum ditulis");
       return;
@@ -224,6 +228,7 @@ export default function AddJournalSheet({
           <div className="border-t border-border/60 bg-background p-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
             <button
               type="submit"
+              onClick={() => handleSubmit()}
               disabled={!canSubmit}
               className="press w-full min-h-[48px] rounded-xl bg-writer-deep text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >

@@ -50,6 +50,15 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
       return NextResponse.json({ error: "Dompet tidak ditemukan" }, { status: 404 });
     }
+    // audit 3-a#4: TOCTOU antara hitung txCount dan hapus — transaksi baru yang
+    // masuk di sela waktu memicu P2003 (FK) saat delete non-force; petakan ke
+    // 409 agar UI meminta force, bukan 500 generik.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
+      return NextResponse.json(
+        { error: "Dompet masih memiliki riwayat transaksi. Hapus transaksinya terlebih dahulu." },
+        { status: 409 }
+      );
+    }
     console.error("DELETE /api/wallets/[id] error", e);
     return NextResponse.json({ error: "Gagal menghapus dompet" }, { status: 500 });
   }
